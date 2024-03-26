@@ -1,0 +1,24 @@
+on:
+  workflow_dispatch: { }
+
+jobs:
+  move:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: canonical/xiilib
+          ref: my-branch
+          path: xiilib
+      - run: mv xiilib ..
+      - run: rm ../xiilib/.git
+      - uses: actions/checkout@v4
+      - run: rm -rf .github
+      - run: mv ../xiilib/* ../xiilib/.* .
+      - uses: canonical/create-pull-request@move
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Rename from an old internal project
+          branch-name: main
+          title: Test pull request
+          body: Test pull request body
