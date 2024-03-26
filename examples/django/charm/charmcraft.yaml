@@ -1,0 +1,88 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: django-k8s
+
+bases:
+  - build-on:
+      - name: ubuntu
+        channel: "22.04"
+    run-on:
+      - name: ubuntu
+        channel: "22.04"
+
+summary: An example Django application.
+
+description: An example Django application.
+
+actions:
+  rotate-secret-key:
+    description: Rotate the django secret key. Users will be forced to log in again.
+      This might be useful if a security breach occurs.
+  create-superuser:
+    description: Create a new Django superuser account.
+    params:
+      username:
+        type: string
+      email:
+        type: string
+    required:
+      - username
+      - email
+
+assumes:
+  - k8s-api
+
+config:
+  options:
+    django-allowed-hosts:
+      description: A comma-separated list of host/domain names that this Django site
+        can serve. This configuration will set the DJANGO_ALLOWED_HOSTS environment
+        variable with its content being a JSON encoded list.
+      type: string
+    django-debug:
+      description: Whether Django debug mode is enabled.
+      type: boolean
+    django-secret-key:
+      description: The secret key used for securely signing the session cookie and
+        for any other security related needs by your Django application. This configuration
+        will set the DJANGO_SECRET_KEY environment variable.
+      type: string
+    webserver-keepalive:
+      description: Time in seconds for webserver to wait for requests on a Keep-Alive
+        connection.
+      type: int
+    webserver-threads:
+      description: Run each webserver worker with the specified number of threads.
+      type: int
+    webserver-timeout:
+      description: Time in seconds to kill and restart silent webserver workers.
+      type: int
+    webserver-workers:
+      description: The number of webserver worker processes for handling requests.
+      type: int
+containers:
+  django-app:
+    resource: django-app-image
+peers:
+  secret-storage:
+    interface: secret-storage
+provides:
+  grafana-dashboard:
+    interface: grafana_dashboard
+  metrics-endpoint:
+    interface: prometheus_scrape
+requires:
+  ingress:
+    interface: ingress
+    limit: 1
+  logging:
+    interface: loki_push_api
+  postgresql:
+    interface: postgresql_client
+    limit: 1
+resources:
+  django-app-image:
+    description: django application image.
+    type: oci-image
+type: charm

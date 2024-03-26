@@ -1,0 +1,12 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: django-app
+summary: Example Django application image.
+description: Example Django application image.
+version: "0.1"
+base: bare
+license: Apache-2.0
+
+extensions:
+  - django-framework
