@@ -2,8 +2,8 @@
 # See LICENSE file for licensing details.
 [project]
 name = "paas-app-charmer"
-version = "0.2.0"
-description = "Companion library for 12-factor charms"
+version = "0.2.1"
+description = "Companion library for PaaS app charmer."
 authors = [
     {name = "Canonical IS DevOps team", email="is-devops-team@canonical.com"},
 ]
