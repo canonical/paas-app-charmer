@@ -1,5 +1,31 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
+[project]
+name = "paas-app-charmer"
+version = "0.2.0"
+description = "Companion library for 12-factor charms"
+authors = [
+    {name = "Canonical IS DevOps team", email="is-devops-team@canonical.com"},
+]
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+
+
+[project.urls]
+Repository = "https://github.com/canonical/paas-app-charmer"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.package-data]
+paas_app_charmer = ["**/cos/**", "**/cos/**/.**"]
 
 # Testing tools configuration
 [tool.coverage.run]
