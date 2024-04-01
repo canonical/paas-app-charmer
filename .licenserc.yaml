@@ -9,6 +9,7 @@ header:
     - '**'
   paths-ignore:
     - '.github/**'
+    - '.woke.yaml'
     - '**/*.json'
     - '**/*.j2'
     - '**/*.md'
@@ -28,4 +29,6 @@ header:
     - '**/grafana_dashboards/**'
     - '**/loki_alert_rules/**'
     - '**/prometheus_alert_rules/**'
+    - 'examples/django/charm/lib/charms/redis_k8s/v0/redis.py'
+    - 'examples/flask/lib/charms/redis_k8s/v0/redis.py'
   comment: on-failure

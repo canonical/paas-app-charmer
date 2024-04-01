@@ -76,6 +76,8 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
                 env[proxy_variable] = str(proxy_value)
                 env[proxy_variable.upper()] = str(proxy_value)
         env.update(self._charm_state.database_uris)
+        if self._charm_state.redis_uri:
+            env["REDIS_DB_CONNECT_STRING"] = self._charm_state.redis_uri
         return env
 
     def _wsgi_layer(self) -> ops.pebble.LayerDict:

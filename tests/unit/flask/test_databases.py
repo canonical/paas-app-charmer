@@ -5,10 +5,9 @@
 
 import unittest.mock
 
-import ops.testing
 import pytest
 
-from paas_app_charmer.databases import _RedisDatabaseRequiresShim, get_uris
+from paas_app_charmer.databases import get_uris
 
 DATABASE_URL_TEST_PARAMS = [
     (
@@ -45,10 +44,6 @@ DATABASE_URL_TEST_PARAMS = [
                 "postgresql://test-username:test-password" "@test-postgresql:5432/test-database"
             )
         },
-    ),
-    (
-        ({"interface": "redis", "data": {"endpoints": "test:6379"}},),
-        {"REDIS_DB_CONNECT_STRING": "redis://test:6379"},
     ),
     (
         ({"interface": "mongodb", "data": {"uris": "mongodb://foobar/"}},),
@@ -108,17 +103,3 @@ def test_database_uri_mocked(
         _databases[interface] = database_require
 
     assert get_uris(_databases) == expected_output
-
-
-def test_redis_database_requires_shim(harness: ops.testing.Harness) -> None:
-    """
-    arrange: start the harness with redis relation data
-    act: call fetch_relation_data on the shim.
-    assert: fetch_relation_data() should return the correct data.
-    """
-    harness.add_relation("redis", "redis", unit_data={"hostname": "foobar", "port": "1234"})
-    harness.begin()
-    shim = _RedisDatabaseRequiresShim(harness.charm, relation_name="redis")
-    assert shim.fetch_relation_data(
-        fields=["uris", "endpoints", "username", "password", "database"]
-    ) == {0: {"endpoints": "foobar:1234"}}

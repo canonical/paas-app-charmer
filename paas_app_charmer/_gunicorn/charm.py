@@ -8,6 +8,7 @@ import logging
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
+from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
 from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
@@ -19,12 +20,17 @@ from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
 from paas_app_charmer.databases import Databases, make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
+from paas_app_charmer.helpers import load_requires
 
 logger = logging.getLogger(__name__)
 
 
 class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-attributes
-    """Gunicorn-based charm service mixin."""
+    """Gunicorn-based charm service mixin.
+
+    Attrs:
+        on: charm events replaced by Redis ones for the Redis charm library.
+    """
 
     @abc.abstractmethod
     def get_wsgi_config(self) -> BaseModel:
@@ -33,6 +39,9 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
     @abc.abstractmethod
     def get_cos_dir(self) -> str:
         """Return the directory with COS related files."""
+
+    on = RedisRelationCharmEvents()
+    _store = ops.StoredState()
 
     def __init__(self, framework: ops.Framework, wsgi_framework: str) -> None:
         """Initialize the instance.
@@ -52,12 +61,21 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             self._update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return
 
+        requires = load_requires()
+        if "redis" in requires and requires["redis"]["interface"] == "redis":
+            self._store.set_default(redis_relation={})
+            self._redis = RedisRequires(charm=self, _stored=self._store, relation_name="redis")
+            self.framework.observe(self.on.redis_relation_updated, self._on_redis_relation_updated)
+        else:
+            self._redis = None
+
         self._charm_state = CharmState.from_charm(
             charm=self,
             framework=wsgi_framework,
             wsgi_config=wsgi_config,
             secret_storage=self._secret_storage,
             database_requirers=self._database_requirers,
+            redis_uri=self._redis.url if self._redis is not None else None,
         )
         self._database_migration = DatabaseMigration(
             container=self.unit.get_container(self._charm_state.container_name),
@@ -223,14 +241,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         """Handle the postgresql's relation-broken event."""
         self.restart()
 
-    def _on_redis_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
+    def _on_redis_relation_updated(self, _event: DatabaseRequiresEvent) -> None:
         """Handle the redis's database-created event."""
-        self.restart()
-
-    def _on_redis_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle the mysql's endpoints-changed event."""
-        self.restart()
-
-    def _on_redis_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
-        """Handle the postgresql's relation-broken event."""
         self.restart()

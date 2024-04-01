@@ -52,7 +52,8 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         base_dir: The project base directory in the WSGI application container.
         app_dir: The WSGI application directory in the WSGI application container.
         user: The UNIX user name for running the service.
-        group: The UNIX group name for running the service
+        group: The UNIX group name for running the service.
+        redis_uri: The redis uri provided by the redis charm.
     """
 
     statsd_host = "localhost:9125"
@@ -70,6 +71,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         database_requirers: dict[str, DatabaseRequires] | None = None,
         wsgi_config: dict[str, int | str] | None = None,
         secret_key: str | None = None,
+        redis_uri: str | None = None,
     ):
         """Initialize a new instance of the CharmState class.
 
@@ -81,6 +83,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             wsgi_config: The value of the WSGI application specific charm configuration.
             secret_key: The secret storage manager associated with the charm.
             database_requirers: All declared database requirers.
+            redis_uri: The redis uri provided by the redis charm.
         """
         self.framework = framework
         self.service_name = self.framework
@@ -91,6 +94,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         self.application_log_file = pathlib.Path(f"/var/log/{self.framework}/access.log")
         self.application_error_log_file = pathlib.Path(f"/var/log/{self.framework}/error.log")
         self.webserver_config = webserver_config
+        self.redis_uri = redis_uri
         self._wsgi_config = wsgi_config if wsgi_config is not None else {}
         self._app_config = app_config if app_config is not None else {}
         self._is_secret_storage_ready = is_secret_storage_ready
@@ -105,6 +109,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         wsgi_config: BaseModel,
         secret_storage: GunicornSecretStorage,
         database_requirers: dict[str, DatabaseRequires],
+        redis_uri: str | None = None,
     ) -> "CharmState":
         """Initialize a new instance of the CharmState class from the associated charm.
 
@@ -114,6 +119,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             wsgi_config: The WSGI framework specific configurations.
             secret_storage: The secret storage manager associated with the charm.
             database_requirers: All database requirers object declared by the charm.
+            redis_uri: The redis uri provided by the redis charm.
 
         Return:
             The CharmState instance created by the provided charm.
@@ -134,6 +140,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
                 secret_storage.get_secret_key() if secret_storage.is_initialized else None
             ),
             is_secret_storage_ready=secret_storage.is_initialized,
+            redis_uri=redis_uri,
         )
 
     @property
