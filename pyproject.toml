@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 [project]
 name = "paas-app-charmer"
-version = "0.2.1"
+version = "1.0.0"
 description = "Companion library for PaaS app charmer."
 authors = [
     {name = "Canonical IS DevOps team", email="is-devops-team@canonical.com"},
@@ -10,7 +10,7 @@ authors = [
 requires-python = ">=3.10"
 dynamic = ["dependencies"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
