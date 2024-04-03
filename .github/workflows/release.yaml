@@ -34,11 +34,10 @@ jobs:
       url: https://pypi.org/p/paas-app-charmer
     permissions:
       id-token: write
-    if: github.event_name == 'workflow_dispatch'
     needs: [ build ]
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
