@@ -12,6 +12,8 @@ jobs:
 
       - name: Set up Python
         uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
 
       - name: Install dependencies
         run: python3 -m pip install --upgrade build
@@ -23,17 +25,23 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist/*
+          path: dist/
 
   release:
     runs-on: ubuntu-latest
-    environment: release
+    environment:
+      name: release
+      url: https://pypi.org/p/paas-app-charmer
+    permissions:
+      id-token: write
     if: github.event_name == 'workflow_dispatch'
+    needs: [ build ]
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
           name: dist
+          path: dist/
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
