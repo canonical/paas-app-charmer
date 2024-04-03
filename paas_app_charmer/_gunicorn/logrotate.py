@@ -5,7 +5,7 @@
 
 """Rotate Gunicorn logs.
 
-It will be injected into the container and must not dependencies on non-standard libraries.
+It will be injected into the container and does not depend on non-standard libraries.
 """
 import argparse
 import datetime
