@@ -28,6 +28,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     environment: release
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v3
@@ -36,6 +37,5 @@ jobs:
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        if: github.event_name == 'workflow_dispatch'
         with:
           verbose: true
