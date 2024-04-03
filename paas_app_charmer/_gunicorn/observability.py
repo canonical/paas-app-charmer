@@ -78,9 +78,4 @@ class Observability(ops.Object):  # pylint: disable=too-few-public-methods
             },
             combine=True,
         )
-        try:
-            container.replan()
-        except ops.pebble.ChangeError:
-            # It's possible for replan to fail if we have a main application in error state.
-            # Ignore this case, as it will start once the main application starts.
-            pass
+        container.start("logrotate.py")
