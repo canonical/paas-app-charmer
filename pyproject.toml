@@ -4,6 +4,7 @@
 name = "paas-app-charmer"
 version = "1.0.0"
 description = "Companion library for PaaS app charmer."
+readme = "README.md"
 authors = [
     {name = "Canonical IS DevOps team", email="is-devops-team@canonical.com"},
 ]
