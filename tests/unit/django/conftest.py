@@ -33,6 +33,7 @@ def harness_fixture() -> typing.Generator[Harness, None, None]:
     container = "django-app"
     root = harness.get_filesystem_root(container)
     (root / "django/app").mkdir(parents=True)
+    (root / "bin").mkdir(parents=True)
     harness.set_can_connect(container, True)
 
     def check_config_handler(_):

@@ -32,6 +32,7 @@ def harness_fixture() -> typing.Generator[Harness, None, None]:
     harness.set_leader()
     root = harness.get_filesystem_root(FLASK_CONTAINER_NAME)
     (root / "flask/app").mkdir(parents=True)
+    (root / "bin").mkdir(parents=True)
     harness.set_can_connect(FLASK_CONTAINER_NAME, True)
 
     def check_config_handler(_):

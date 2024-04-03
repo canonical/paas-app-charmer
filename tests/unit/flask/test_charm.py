@@ -2,20 +2,22 @@
 # See LICENSE file for licensing details.
 
 """Flask charm unit tests."""
-
-# this is a unit test file
-# pylint: disable=protected-access
-
+import datetime
+import os
 import unittest.mock
 
 from ops.testing import Harness
 
+from paas_app_charmer._gunicorn import logrotate
 from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.flask import Charm
 
 from .constants import DEFAULT_LAYER, FLASK_CONTAINER_NAME
+
+# this is a unit test file
+# pylint: disable=protected-access
 
 
 def test_flask_pebble_layer(harness: Harness) -> None:
@@ -79,3 +81,40 @@ def test_rotate_secret_key_action(harness: Harness):
     harness.charm._on_rotate_secret_key_action(action_event)
     new_secret_key = harness.get_relation_data(0, harness.charm.app)["flask_secret_key"]
     assert secret_key != new_secret_key
+
+
+def test_log_rotate(tmp_path):
+    """
+    arrange: create a log file larger than the max log file size
+    act: run the log rotate function
+    assert: the log file has rotated
+    """
+    log_file = tmp_path / "access.log"
+    log_file.touch()
+    os.truncate(log_file, logrotate.MAX_SIZE + 1)
+    assert logrotate.rotate(str(log_file.absolute()))
+    assert not log_file.exists()
+    files = list(tmp_path.iterdir())
+    assert len(files) == 1
+    archive = files[0]
+    datetime.datetime.strptime(archive.name, "access-%Y-%m-%d-%H-%M-%S.log")
+
+
+def test_log_rotate_cleanup(tmp_path):
+    """
+    arrange: create a log file larger than the max log file size, along with many archive files
+    act: run the log rotate function
+    assert: the log file has rotated and old archive files were removed
+    """
+    log_file = tmp_path / "access.log"
+    log_file.touch()
+    os.truncate(log_file, logrotate.MAX_SIZE + 1)
+    for i in range(10):
+        (tmp_path / f"access-0001-01-01-01-01-{i:0>2}.log").touch()
+    assert logrotate.rotate(str(log_file.absolute()))
+    assert not log_file.exists()
+    files = list(tmp_path.iterdir())
+    assert len(files) == logrotate.KEEP_ARCHIVES
+    assert (
+        len([f for f in files if f.name.startswith("access-0001")]) == logrotate.KEEP_ARCHIVES - 1
+    )

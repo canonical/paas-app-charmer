@@ -3,38 +3,14 @@
 
 """Provide the Observability class to represent the observability stack for charms."""
 import os.path
-import pathlib
-import typing
 
 import ops
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 
-
-class ObservabilityCharmState(typing.Protocol):
-    """CharmState interface required by Observability class.
-
-    Attrs:
-        application_log_file: the path to the application's main log file.
-        application_error_log_file: the path to the application's error error file.
-    """
-
-    @property
-    def application_log_file(self) -> pathlib.Path:
-        """Return the path to the application's main log file.
-
-        Returns:
-            The path to the application's main log file.
-        """
-
-    @property
-    def application_error_log_file(self) -> pathlib.Path:
-        """Return the path to the application's error log file.
-
-        Returns:
-            The path to the application's error log file.
-        """
+from paas_app_charmer._gunicorn import logrotate
+from paas_app_charmer._gunicorn.charm_state import CharmState
 
 
 class Observability(ops.Object):  # pylint: disable=too-few-public-methods
@@ -43,7 +19,7 @@ class Observability(ops.Object):  # pylint: disable=too-few-public-methods
     def __init__(
         self,
         charm: ops.CharmBase,
-        charm_state: ObservabilityCharmState,
+        charm_state: CharmState,
         container_name: str,
         cos_dir: str,
     ):
@@ -58,6 +34,7 @@ class Observability(ops.Object):  # pylint: disable=too-few-public-methods
         """
         super().__init__(charm, "observability")
         self._charm = charm
+        self._charm_state = charm_state
         self._metrics_endpoint = MetricsEndpointProvider(
             charm,
             alert_rules_path=os.path.join(cos_dir, "prometheus_alert_rules"),
@@ -68,10 +45,7 @@ class Observability(ops.Object):  # pylint: disable=too-few-public-methods
             charm,
             alert_rules_path=os.path.join(cos_dir, "loki_alert_rules"),
             container_name=container_name,
-            log_files=[
-                str(charm_state.application_log_file),
-                str(charm_state.application_error_log_file),
-            ],
+            log_files=["/var/log/**/*.log", "/var/log/*.log"],
             relation_name="logging",
         )
         self._grafana_dashboards = GrafanaDashboardProvider(
@@ -79,3 +53,34 @@ class Observability(ops.Object):  # pylint: disable=too-few-public-methods
             dashboards_path=os.path.join(cos_dir, "grafana_dashboards"),
             relation_name="grafana-dashboard",
         )
+        container_name = charm_state.container_name.replace("-", "_")
+        self.framework.observe(
+            getattr(self._charm.on, f"{container_name}_pebble_ready"),
+            self._install_logrotate,
+        )
+
+    def _install_logrotate(self, _event: ops.PebbleReadyEvent) -> None:
+        """Install and start logrotate service in the application container."""
+        container = self._charm.unit.get_container(self._charm_state.container_name)
+        with open(logrotate.__file__, encoding="utf-8") as f:
+            log_rotate_script = f.read()
+        container.push("/bin/logrotate.py", log_rotate_script, encoding="utf-8", permissions=0o555)
+        container.add_layer(
+            "logrotate.py",
+            {
+                "services": {
+                    "logrotate.py": {
+                        "override": "replace",
+                        "command": f"/bin/logrotate.py --framework {self._charm_state.framework}",
+                        "startup": "enabled",
+                    }
+                }
+            },
+            combine=True,
+        )
+        try:
+            container.replan()
+        except ops.pebble.ChangeError:
+            # It's possible for replan to fail if we have a main application in error state.
+            # Ignore this case, as it will start once the main application starts.
+            pass
