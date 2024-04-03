@@ -97,7 +97,22 @@ def test_log_rotate(tmp_path):
     files = list(tmp_path.iterdir())
     assert len(files) == 1
     archive = files[0]
+    # if the filename doesn't match the pattern, a ValueError will be raised here
     datetime.datetime.strptime(archive.name, "access-%Y-%m-%d-%H-%M-%S.log")
+
+
+def test_log_rotate_not_rotated(tmp_path):
+    """
+    arrange: create a small log file
+    act: run the log rotate function
+    assert: the log file should not be rotated
+    """
+    log_file = tmp_path / "access.log"
+    log_file.touch()
+    assert not logrotate.rotate(str(log_file.absolute()))
+    assert log_file.exists()
+    files = list(tmp_path.iterdir())
+    assert len(files) == 1
 
 
 def test_log_rotate_cleanup(tmp_path):

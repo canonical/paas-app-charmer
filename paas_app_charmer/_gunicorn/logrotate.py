@@ -7,10 +7,13 @@
 
 It will be injected into the container and does not depend on non-standard libraries.
 """
+
 import argparse
 import datetime
 import glob
 import os
+
+# this script runs similarly to a shell script, disable the warning for using subprocess
 import subprocess  # nosec B404
 import time
 
