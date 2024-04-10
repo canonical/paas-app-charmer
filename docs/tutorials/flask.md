@@ -346,12 +346,16 @@ ubuntu@charm-dev-vm:~/sample-flask$ curl 10.1.30.206:8000
 
 ## Enable `juju config sample-flask language=<language>`
 
-Let's now expand the functionality of the `sample-flask` Flask application to return the greeting in different languages.
-To achieve this, we will introduce a new configuration for changing the language selection.
-The PaaS app charmer Flask framework offers a variety of standard configurations; these can be explored by executing the `juju config sample-flask` command.
-And it's very simple to integrating custom configurations, such as the required language option mentioned before.
+Let's now expand the functionality of the `sample-flask` Flask application to
+return the greeting in different languages. To achieve this, we will introduce a
+new configuration for changing the language selection. The PaaS app charmer
+Flask framework offers a variety of standard configurations; these can be
+explored by executing the `juju config sample-flask` command. And it's very
+simple to integrating custom configurations, such as the required language
+option mentioned above.
 
-Let's first checkout the `feat-translation` branch of the `sample-flask` repository to load the new version of the `sample-flask` application.
+Let's first checkout the `feat-translation` branch of the `sample-flask`
+repository to load the new version of the `sample-flask` application.
 
 ```bash
 ubuntu@charm-dev-vm:~/sample-flask$ git checkout feat-translation
@@ -359,7 +363,8 @@ Branch 'feat-translation' set up to track remote branch 'feat-translation' from 
 Switched to a new branch 'feat-translation'
 ```
 
-Since the `sample-flask` Flask application has changed, we need to repack the rock image and push the new image to the registry.
+Since the `sample-flask` Flask application has changed, we need to repack the
+rock image and push the new image to the registry.
 
 ```bash
 # Change the version of rock in the rockcraft.yaml file, this is not necessary required but a good practice
@@ -367,8 +372,8 @@ ubuntu@charm-dev-vm:~/sample-flask$ sed -i "s/version: '0.1'/version: '0.2'/g" r
 
 # Run the pack command again
 ubuntu@charm-dev-vm:~/sample-flask$ rockcraft pack
-*EXPERIMENTAL* extension 'flask-framework' enabled
-*EXPERIMENTAL* extension 'flask-framework' enabled
+deleting current features configuration
+deleting current features configuration
 Packed sample-flask_0.2_amd64.rock
 
 # Verify that we have the version 0.2 rock packed
@@ -388,33 +393,32 @@ Writing manifest to image destination
 Storing signatures
 ```
 
-The next step, we need to define the new language configuration option.
-In your local editor, in your `charm/charmcraft.yaml` file, define the configuration option as below:
+The next step, we need to define the new language configuration option. In your
+local editor, in your `charm/charmcraft.yaml` file, define the configuration
+option as below:
 
 ```yaml
 config:
   options:
     language:
       description: |
-        Language for the greeting message in ISO 639‑2 code.
+        Language for the greeting message in ISO 639-2 code.
         Valid options are: "ara", "eng", "fra", "hin", "por", "spa", "swa", and "zho".
       default: "eng"
       type: string
 ```
 
-Now, in your Multipass VM shell, inside the charm directory, repack the charm, refresh it in the Juju model, and inspect the results:
+Now, in your Multipass VM shell, inside the charm directory, repack the charm,
+refresh it in the Juju model, and inspect the results:
+
 ```bash
 # Repack the charm, the old .charm file will be overwritten
 ubuntu@charm-dev-vm:~/sample-flask/charm$ charmcraft pack
-*EXPERIMENTAL* extension 'flask-framework' enabled
-*EXPERIMENTAL* extension 'flask-framework' enabled
-Created 'sample-flask_ubuntu-22.04-amd64.charm'.
-Charms packed:
-    sample-flask_ubuntu-22.04-amd64.charm
+Packed sample-flask_ubuntu-22.04-amd64.charm
 
 # Refresh the sample-flask juju application with the repacked charm
 # Remember to provide the new rock image (localhost:32000/sample-flask:translation) in the resource we just built during the refresh
-ubuntu@charm-dev-vm:~/sample-flask/charm$ juju refresh sample-flask --path=./sample-flask_ubuntu-22.04-amd64.charm --resource flask-app-image=localhost:32000/sample-flask:translation --resource statsd-prometheus-exporter-image=prom/statsd-exporter:v0.24.0
+ubuntu@charm-dev-vm:~/sample-flask/charm$ juju refresh sample-flask --path=./sample-flask_ubuntu-22.04-amd64.charm --resource flask-app-image=localhost:32000/sample-flask:translation
 Added local charm "sample-flask", revision 1, to the model
 no change to endpoints in space "alpha": grafana-dashboard, ingress, logging, metrics-endpoint, secret-storage
 
@@ -430,7 +434,8 @@ ubuntu@charm-dev-vm:~/sample-flask/charm$ juju config sample-flask | grep -A 7 l
     value: eng
 ```
 
-Now we are able to change the language setting of the `sample-flask` Flask application.
+Now we are able to change the language setting of the `sample-flask` Flask
+application.
 
 ```bash
 # Change the 'language' config to 'spa':
@@ -454,11 +459,14 @@ ubuntu@charm-dev-vm:~/sample-flask/charm$ curl 10.1.30.207:8000
 
 ## Enable `juju integrate sample-flask mysql-k8s`
 
-Let's enhance the sample-flask Flask application by adding a new feature: basic visitor analytics.
-To implement this feature, it's necessary to connect the sample-flask Flask application to a database.
-The Juju ecosystem offers a range of high quality database charms which can be seamlessly integrated with the PaaS app charmer charms.
+Let's enhance the sample-flask Flask application by adding a new feature:
+basic visitor analytics. To implement this feature, it's necessary to connect
+the sample-flask Flask application to a database. The Juju ecosystem offers a
+range of high quality database charms which can be seamlessly integrated with
+app charms.
 
-First, checkout the `feat-database` branch of the `sample-flask` repository and rebuild the rock image.
+First, checkout the `feat-database` branch of the `sample-flask` repository and
+rebuild the rock image.
 
 ```bash
 ubuntu@charm-dev-vm:~/sample-flask$ git checkout feat-database
@@ -468,8 +476,8 @@ Switched to a new branch 'feat-database'
 # Change the version of rock in the rockcraft.yaml file again, repack the rock image
 ubuntu@charm-dev-vm:~/sample-flask$ sed -i "s/version: '0.2'/version: '0.3'/g" rockcraft.yaml
 ubuntu@charm-dev-vm:~/sample-flask$ rockcraft pack
-*EXPERIMENTAL* extension 'flask-framework' enabled
-*EXPERIMENTAL* extension 'flask-framework' enabled
+deleting current features configuration
+deleting current features configuration
 Packed sample-flask_0.3_amd64.rock
 
 # Push the rock image to the microk8s container registry, use the tag 'sample-flask:database' this time
@@ -485,7 +493,8 @@ Writing manifest to image destination
 Storing signatures
 ```
 
-Then, in your `charm/charmcraft.yaml` file, add the declaration for requiring the connectivity to a postgresql database charm.
+Then, in your `charm/charmcraft.yaml` file, add the declaration for requiring
+the connectivity to a postgresql database charm.
 
 ```yaml
 requires:
@@ -499,13 +508,9 @@ After the update, we can repack and refresh the charm in the VM:
 ```bash
 ubuntu@charm-dev-vm:~/sample-flask$ cd charm/
 ubuntu@charm-dev-vm:~/sample-flask/charm$ charmcraft pack
-*EXPERIMENTAL* extension 'flask-framework' enabled
-*EXPERIMENTAL* extension 'flask-framework' enabled
-Created 'sample-flask_ubuntu-22.04-amd64.charm'.
-Charms packed:
-    sample-flask_ubuntu-22.04-amd64.charm
+Packed sample-flask_ubuntu-22.04-amd64.charm
 
-ubuntu@charm-dev-vm:~/sample-flask/charm$ juju refresh sample-flask --path=./sample-flask_ubuntu-22.04-amd64.charm --resource flask-app-image=localhost:32000/sample-flask:database --resource statsd-prometheus-exporter-image=prom/statsd-exporter:v0.24.0
+ubuntu@charm-dev-vm:~/sample-flask/charm$ juju refresh sample-flask --path=./sample-flask_ubuntu-22.04-amd64.charm --resource flask-app-image=localhost:32000/sample-flask:database
 Added local charm "sample-flask", revision 2, to the model
 adding endpoint "postgresql" to default space "alpha"
 no change to endpoints in space "alpha": grafana-dashboard, ingress, logging, metrics-endpoint, secret-storage
@@ -522,8 +527,12 @@ Unit               Workload  Agent  Address      Ports  Message
 sample-flask/0*    blocked   idle   10.1.30.210         Webserver configuration check failed, please review your charm configuration or database relation
 ```
 
-The next step is to deploy the [`postgresql-k8s`](https://charmhub.io/postgresql-k8s) charm in our model and integrate the `postgresql-k8s` charm with the `sample-flask` charm to provide a postgresql database to the Flask application.
-After two charms integrated, the error message should disappear and the `sample-flask` Flask application is up and providing the visitor statistic functionality.
+The next step is to deploy the
+[`postgresql-k8s`](https://charmhub.io/postgresql-k8s) charm in our model and
+integrate the `postgresql-k8s` charm with the `sample-flask` charm to provide a
+postgresql database to the Flask application. After two charms integrated, the
+error message should disappear and the `sample-flask` Flask application is up
+and providing the visitor statistic functionality.
 
 ```bash
 # Deploy the postgresql-k8s charm in 14/stable channel, --trust is needed because postgresql-k8s charm needs to update some kubernetes resources
