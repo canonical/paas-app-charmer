@@ -1,10 +1,13 @@
 # Write your first Kubernetes charm using the PaaS app charmer
 
-In this tutorial you will learn how to use the experimental PaaS app charmer to convert your existing Flask application to a Kubernetes charm for Juju.
+In this tutorial you will learn how to use the PaaS app charmer to convert your
+existing Flask application to a Kubernetes charm for Juju.
 
 What you’ll need:
 
-* A working station, e.g., a laptop, with amd64 architecture and which has sufficient resources to launch a virtual machine with 4 CPUs, 8 GB RAM, and 30 GB disk space
+* A work station, e.g., a laptop, with amd64 architecture and which has
+  sufficient resources to launch a virtual machine with 4 CPUs, 8 GB RAM, and 30
+  GB disk space
 * Familiarity with Linux
 * Familiarity with Juju
 
@@ -21,40 +24,63 @@ What you’ll do:
 
 ## Study your application
 
-In this tutorial we will be converting a small educational Flask application - `sample-flask` into a charm.
+In this tutorial we will be converting a small educational Flask application -
+`sample-flask` into a charm.
 
-You can check out the source code of the Flask application from the GitHub repository (`git clone https://github.com/canonical/sample-flask.git`).
+You can check out the source code of the Flask application from the GitHub
+repository (`git clone https://github.com/canonical/sample-flask.git`).
 
 ### Check that your flask application meets the PaaS app charmer prerequisites
 
-The sample Flask application has already satisfied the requirements of the PaaS app charmer for application built with Flask framework.
-But if you would like to apply this to other Flask applications after this tutorial, make sure your Flask application satisfied the following properties:
+The sample Flask application already satisfies the requirements of the PaaS app
+charmer. For future Flask applications, make sure your Flask application
+satisfies the following properties:
 
-* `requirements.txt` exists in your project root declaring all required Python dependencies
+* `requirements.txt` exists in your project root declaring all Python
+  dependencies
 * The WSGI path for your Flask framework application is `app:app`
 
 ## Set up your development environment automatically
 
-> See [Set up your development environment automatically](https://juju.is/docs/sdk/dev-setup#heading--set-up-your-development-environment-automatically) for instructions on how to set up your development environment so that it’s ready for you to test-deploy your charm. At the charm directory step, instead of creating a new directory, clone the example project (`git clone https://github.com/canonical/sample-flask.git`). At the cloud step, choose microk8s.
+> See
+  [Set up your development environment automatically](https://juju.is/docs/sdk/dev-setup#heading--set-up-your-development-environment-automatically)
+  for instructions on how to set up your development environment so that it’s
+  ready for you to test-deploy your charm. At the charm directory step, instead
+  of creating a new directory, clone the example project
+  (`git clone https://github.com/canonical/sample-flask.git`). At the cloud
+  step, choose microk8s. You will also need to install `rockcraft` using
+  `sudo snapp install rockcraft --channel latest/edge` and switch to the
+  `latest/edge` channel for `charmcraft` using
+  `sudo snap refresh charmcraft --channel latest/edge`.
 
 * Going forward:
 
-  * Use your host machine (on Linux, cd ~/sample-flask) to create and edit files in the Flask project directory. This will allow you to use your favorite local editor.
-  * Use the Multipass VM shell (on Linux, ubuntu@charm-dev-vm:~$ cd ~/sample-flask) to run Charmcraft, Rockcraft, and Juju commands.
+  * Use your host machine (on Linux, cd ~/sample-flask) to create and edit files
+    in the Flask project directory. This will allow you to use your favorite
+    local editor.
+  * Use the Multipass VM shell (on Linux,
+    `ubuntu@charm-dev-vm:~$ cd ~/sample-flask`) to run Charmcraft, Rockcraft,
+    and Juju commands.
 
 * At any point:
 
   * To exit the shell, press mod key + C or type exit.
-  * To stop the VM after exiting the VM shell, run multipass stop charm-dev-vm.
-  * To restart the VM and re-open a shell into it, type multipass shell charm-dev-vm.
+  * To stop the VM after exiting the VM shell, run
+    `multipass stop charm-dev-vm`.
+  * To restart the VM and re-open a shell into it, type
+    `multipass shell charm-dev-vm`.
 
 ## Enable `juju deploy sample-flask`
 
 The first step of charmify the Flask application is to create a rock.
-Rocks are Ubuntu LTS-based OCI compatible container images that are designed to meet cloud-native software’s security, stability, and reliability requirements.
-The charm we are building will use the rock to start the Flask application in the Kubernetes environment.
+Rocks are Ubuntu LTS-based OCI compatible container images that are designed to
+meet cloud-native software’s security, stability, and reliability requirements.
+The charm we are building will use the rock to start the Flask application in
+the Kubernetes environment.
 
-In your Multipass VM shell, enter your Flask project directory, run `rockcraft init --profile flask-framework` to initialise the rockcraft project file for your Flask application, and inspect the result. Sample session:
+In your Multipass VM shell, enter your Flask project directory, run
+`rockcraft init --profile flask-framework` to initialise the rockcraft project
+file for your Flask application, and inspect the result. Sample session:
 
 ```bash
 # Enter your charm directory:
@@ -68,7 +94,8 @@ ubuntu@charm-dev-vm:~/sample-flask$ ls rockcraft.yaml
 rockcraft.yaml
 ```
 
-In your local editor, open the `rockcraft.yaml` file and customise its contents as below (you only have to edit the title, summary, and description):
+In your local editor, open the `rockcraft.yaml` file and customise its contents
+as below (you only have to edit the title, summary, and description):
 
 ```yaml
 # (Required)
@@ -120,17 +147,16 @@ extensions:
 #       - flask/app/static
 ```
 
-> The `ROCKCRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS` environment is needed due to that the `flask-framework` rockcraft extension is still experimental.
-
-Next, in your Multipass VM shell, inside your project directory, set the environment `ROCKCRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS` to `true` and run `rockcraft pack` to pack the rock.
-It may take a few minutes the first time around but, when it’s done, your Flask project should contain a `.rock` file. Sample session:
+Next, in your Multipass VM shell, inside your project directory, run
+`rockcraft pack` to pack the rock. It may take a few minutes the first time
+around but, when it’s done, your Flask project should contain a `.rock` file.
+Sample session:
 
 ```bash
-# Set the environment and pack the Flask application into a '.rock' file:
-ubuntu@charm-dev-vm:~/sample-flask$ export ROCKCRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS=true
+# Pack the Flask application into a '.rock' file:
 ubuntu@charm-dev-vm:~/sample-flask$ rockcraft pack
-*EXPERIMENTAL* extension 'flask-framework' enabled
-*EXPERIMENTAL* extension 'flask-framework' enabled
+deleting current features configuration
+deleting current features configuration
 Packed sample-flask_0.1_amd64.rock
 
 # Inspect the results -- your Flask project directory should contain a .rock file:
@@ -138,8 +164,10 @@ ubuntu@charm-dev-vm:~/sample-flask$ ls
 LICENSE  app.py  requirements.txt  rockcraft.yaml  sample-flask_0.1_amd64.rock  templates
 ```
 
-After the rock is built, we need to push the rock image to a container registry so the rock image can be used in the Kubernetes environment.
-In your Multipass VM, the microk8s built-in container registry should already been enabled, and we will use that for this tutorial.
+After the rock is built, we need to push the rock image to a container registry
+so the rock image can be used in the Kubernetes environment. In your Multipass
+VM, the microk8s built-in container registry should already been enabled, and we
+will use that for this tutorial.
 
 ```bash
 # Use the skopeo, an container images utility tool, bundled with rockcraft to upload the rock image to microk8s built-in registry (localhost:32000)
@@ -155,17 +183,20 @@ Writing manifest to image destination
 Storing signatures
 ```
 
-Now it's the time to build the charm.
-We need to create a charm directory (`mkdir -p charm/`) inside the Flask project directory to hold the charm related files.
+Now it's the time to build the charm. We need to create a charm directory
+(`mkdir -p charm/`) inside the Flask project directory to hold the charm related
+files.
 
 ```bash
 # make the charm directory and change directory into the new charm directory
-ubuntu@charm-dev-vm:~/sample-flask$ mkdir -p charm/
-ubuntu@charm-dev-vm:~/sample-flask$ cd charm/
+ubuntu@charm-dev-vm:~/sample-flask$ mkdir charm
+ubuntu@charm-dev-vm:~/sample-flask$ cd charm
 ubuntu@charm-dev-vm:~/sample-flask/charm$
 ```
 
-In the same Multipass VM shell, inside the charm directory, run `charmcraft init --profile flask-framework` to initialise the file tree structure for the PaaS app charmer Flask charm, and inspect the result.
+In the same Multipass VM shell, inside the charm directory, run
+`charmcraft init --profile flask-framework` to initialise the file tree
+structure for the PaaS app charmer Flask charm, and inspect the result.
 
 ```bash
 # Initialise the charm tree structure:
@@ -180,8 +211,9 @@ src/charm.py
 README.md
 ```
 
-In your local editor, open the `charmcraft.yaml` file and customise its contents as below (you only have to edit the title, summary, and description):
-You can leave the commented part for now, we will revisit some of them later.
+In your local editor, open the `charmcraft.yaml` file and customise its contents
+as below (you only have to edit the title, summary, and description). You can
+leave the commented part for now, we will revisit some of them later:
 
 ```yaml
 # This file configures Charmcraft.
@@ -226,58 +258,51 @@ extensions:
 #     limit: 1
 ```
 
-[Charm libraries](https://juju.is/docs/sdk/find-and-use-a-charm-library) are Python files published by charm developers to easily share and reuse auxiliary logic related to charms.
-Now we need to download all the necessary charm libraries for the PaaS app charmer Flask charm.
-The PaaS app charmer Flask charm will use a few charm libraries as well, they are not included during the charmcraft initiation process requiring downloading separately.
+[Charm libraries](https://juju.is/docs/sdk/find-and-use-a-charm-library) are
+Python files published by charm developers to easily share and reuse auxiliary
+logic related to charms. Now we need to download all the necessary charm
+libraries for the PaaS app charmer Flask charm. The PaaS app charmer Flask charm
+will use a few charm libraries as well, they are not included during the
+charmcraft initiation process requiring downloading separately.
 
 ```bash
 ubuntu@charm-dev-vm:~/sample-flask/charm$ charmcraft fetch-lib charms.traefik_k8s.v2.ingress
-*EXPERIMENTAL* extension 'flask-framework' enabled
 Library charms.traefik_k8s.v2.ingress version 2.8 downloaded.
 
 ubuntu@charm-dev-vm:~/sample-flask/charm$ charmcraft fetch-lib charms.observability_libs.v0.juju_topology
-*EXPERIMENTAL* extension 'flask-framework' enabled
 Library charms.observability_libs.v0.juju_topology version 0.6 downloaded.
 
 ubuntu@charm-dev-vm:~/sample-flask/charm$ charmcraft fetch-lib charms.grafana_k8s.v0.grafana_dashboard
-*EXPERIMENTAL* extension 'flask-framework' enabled
 Library charms.grafana_k8s.v0.grafana_dashboard version 0.35 downloaded.
 
 ubuntu@charm-dev-vm:~/sample-flask/charm$ charmcraft fetch-lib charms.loki_k8s.v0.loki_push_api
-*EXPERIMENTAL* extension 'flask-framework' enabled
 Library charms.loki_k8s.v0.loki_push_api version 0.25 downloaded.
 
 ubuntu@charm-dev-vm:~/sample-flask/charm$ charmcraft fetch-lib charms.data_platform_libs.v0.data_interfaces
-*EXPERIMENTAL* extension 'flask-framework' enabled
 Library charms.data_platform_libs.v0.data_interfaces version 0.26 downloaded.
 
 ubuntu@charm-dev-vm:~/sample-flask/charm$ charmcraft fetch-lib charms.prometheus_k8s.v0.prometheus_scrape
-*EXPERIMENTAL* extension 'flask-framework' enabled
 Library charms.prometheus_k8s.v0.prometheus_scrape version 0.44 downloaded.
 
 ubuntu@charm-dev-vm:~/sample-flask/charm$ charmcraft fetch-lib charms.redis_k8s.v0.redis
-*EXPERIMENTAL* extension 'flask-framework' enabled
 Library charms.redis_k8s.v0.redis version 0.5 downloaded.
 ```
 
-
-Now we pack the charm. It may take a few minutes the first time around but, when it’s done, your charm project should contain a .charm file. Sample session:
+Now we pack the charm. It may take a few minutes the first time around but, when
+it’s done, your charm project should contain a .charm file. Sample session:
 
 ```bash
 # Set the environment variable to enable experimental extensions and pack the charm into a '.charm' file:
 ubuntu@charm-dev-vm:~/sample-flask/charm$ charmcraft pack
-*EXPERIMENTAL* extension 'flask-framework' enabled
-*EXPERIMENTAL* extension 'flask-framework' enabled
-Created 'sample-flask_ubuntu-22.04-amd64.charm'.
-Charms packed:
-    sample-flask_ubuntu-22.04-amd64.charm
+Packed sample-flask_ubuntu-22.04-amd64.charm
 
 # Inspect the results -- your charm directory should contain a .charm file:
 ubuntu@charm-dev-vm:~/sample-flask/charm$ ls
 charmcraft.yaml  lib  requirements.txt  sample-flask_ubuntu-22.04-amd64.charm  src
 ```
 
-Now, open a new shell into your Multipass VM and use it to configure the Juju log verbosity levels and to start a live debug session:
+Now, open a new shell into your Multipass VM and use it to configure the Juju
+log verbosity levels and to start a live debug session:
 
 ```bash
 # Set your logging verbosity level to `DEBUG`:
@@ -287,13 +312,14 @@ ubuntu@charm-dev-vm:~$  juju model-config logging-config="<root>=WARNING;unit=DE
 ubuntu@charm-dev-vm:~$  juju debug-log
 ```
 
-In your old VM shell, use Juju to deploy your charm. If all has gone well, you should see your App and be able to connect to the sample Flask web server:
+In your old VM shell, use Juju to deploy your charm. If all has gone well, you
+should see your App and be able to connect to the sample Flask web server:
 
 ```bash
 # Deploy the PaaS app charmer Flask charm for the sample-flask Flask application
 # We need to supply the resources to Juju, including the sample-flask rock we just created and pushed to the microk8s registry
 # and the image prom/statsd-exporter:v0.24.0 used for adding observability to the Flask application
-ubuntu@charm-dev-vm:~/sample-flask$ juju deploy ./charm/sample-flask_ubuntu-22.04-amd64.charm sample-flask --resource flask-app-image=localhost:32000/sample-flask:main --resource statsd-prometheus-exporter-image=prom/statsd-exporter:v0.24.0
+ubuntu@charm-dev-vm:~/sample-flask$ juju deploy ./charm/sample-flask_ubuntu-22.04-amd64.charm sample-flask --resource flask-app-image=localhost:32000/sample-flask:main
 Located local charm "sample-flask", revision 0
 Deploying "sample-flask" from local charm "sample-flask", revision 0 on ubuntu@22.04/stable
 
@@ -310,7 +336,8 @@ Unit             Workload  Agent  Address      Ports  Message
 sample-flask/0*  active    idle   10.1.30.206
 ```
 
-Finally, test that the service works by using curl to send a request to the Flask service:
+Finally, test that the service works by using curl to send a request to the
+Flask service:
 ```bash
 # Unit IP (10.1.30.206) can be learned from the juju status output
 ubuntu@charm-dev-vm:~/sample-flask$ curl 10.1.30.206:8000
