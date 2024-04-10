@@ -8,7 +8,7 @@ creators of Ubuntu.
 
 Have you ever created an application and then wanted to deploy it for your users
 only to either be forced to use a proprietary public cloud platform or manage
-the deployment and operations yourself? PAAS App Charmer will take your
+the deployment and operations yourself? PaaS App Charmer will take your
 application and create an OCI image using Rockcraft and operations code using
 Charmcraft for you. The full suite of tools is open source so you can see
 exactly how it works and even contribute! After creating the app charm and
