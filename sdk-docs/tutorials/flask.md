@@ -9,7 +9,8 @@ What you’ll need:
   sufficient resources to launch a virtual machine with 4 CPUs, 8 GB RAM, and 30
   GB disk space
 * Familiarity with Linux
-* Familiarity with Juju
+* Completed [Get started with Juju](https://juju.is/docs/juju/tutorial) or
+  familiarity with Juju
 
 What you’ll do:
 
@@ -49,7 +50,7 @@ satisfies the following properties:
   of creating a new directory, clone the example project
   (`git clone https://github.com/canonical/sample-flask.git`). At the cloud
   step, choose microk8s. You will also need to install `rockcraft` using
-  `sudo snapp install rockcraft --channel latest/edge` and switch to the
+  `sudo snap install rockcraft --channel latest/edge` and switch to the
   `latest/edge` channel for `charmcraft` using
   `sudo snap refresh charmcraft --channel latest/edge`.
 
