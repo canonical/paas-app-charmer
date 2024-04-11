@@ -95,58 +95,8 @@ ubuntu@charm-dev-vm:~/sample-flask$ ls rockcraft.yaml
 rockcraft.yaml
 ```
 
-In your local editor, open the `rockcraft.yaml` file and customise its contents
-as below (you only have to edit the title, summary, and description):
-
-```yaml
-# (Required)
-name: sample-flask
-
-# (Required)
-base: ubuntu@22.04 # the base environment for this Flask application
-
-version: '0.1' # just for humans. Semantic versioning is recommended
-
-# (Required)
-summary: A rock for the sample-flask Flask application
-
-description: |
-    A rock for the sample-flask Flask application, built with the PaaS app charmer rockcraft extension.
-
-    This rock will be used by a sample-flask charm also built with the PaaS app charmer to
-    deploy and manage the sample-flask Flask application in a Kubernetes environment.
-
-license: GPL-3.0 # your application's SPDX license
-
-# (Required)
-platforms: # The platforms this ROCK should be built on and run on
-    amd64:
-
-# To ensure the flask-framework extension works properly, your Flask application
-# should have an `app.py` file with an `app` object as the WSGI entrypoint.
-extensions:
-    - flask-framework
-
-# Uncomment the sections you need and adjust according to your requirements.
-# parts:
-#   flask-framework/dependencies:
-#     stage-packages:
-#       # list required packages or slices for your flask application below.
-#       - libpq-dev
-#
-#   flask-framework/install-app:
-#     prime:
-#       # By default, only the files in app/, templates/, static/, and app.py
-#       # are copied into the image. You can modify the list below to override
-#       # the default list and include or exclude specific files/directories
-#       # in your project.
-#       # Note: Prefix each entry with "flask/app/" followed by the local path.
-#       - flask/app/.env
-#       - flask/app/app.py
-#       - flask/app/webapp
-#       - flask/app/templates
-#       - flask/app/static
-```
+In your local editor, open the `rockcraft.yaml` file and customise the title,
+summary, and description.
 
 Next, in your Multipass VM shell, inside your project directory, run
 `rockcraft pack` to pack the rock. It may take a few minutes the first time
@@ -212,52 +162,9 @@ src/charm.py
 README.md
 ```
 
-In your local editor, open the `charmcraft.yaml` file and customise its contents
-as below (you only have to edit the title, summary, and description). You can
-leave the commented part for now, we will revisit some of them later:
-
-```yaml
-# This file configures Charmcraft.
-# See https://juju.is/docs/sdk/charmcraft-config for guidance.
-
-# (Required)
-name: sample-flask
-
-# (Required)
-type: charm
-
-# (Required for 'charm' type)
-bases:
-  - build-on:
-    - name: ubuntu
-      channel: "22.04"
-    run-on:
-    - name: ubuntu
-      channel: "22.04"
-
-# (Required)
-summary: The charm for the sample-flask Flask application.
-
-# (Required)
-description: |
-    The charm for the sample-flask Flask application, built with the PaaS app charmer charmcraft extension.
-
-    This charm will help you to manage your Flask application in Kubernetes environment with the Juju ecosystem.
-
-
-# (Required for enabling PaaS app charmer Flask framework support)
-extensions:
-  - flask-framework
-
-# Uncomment the integrations used by your application
-# requires:
-#   mysql:
-#     interface: mysql_client
-#     limit: 1
-#   postgresql:
-#     interface: postgresql_client
-#     limit: 1
-```
+In your local editor, open the `charmcraft.yaml` file and customise the title,
+summary, and description. You can leave the commented part for now, we will
+revisit some of them later.
 
 [Charm libraries](https://juju.is/docs/sdk/find-and-use-a-charm-library) are
 Python files published by charm developers to easily share and reuse auxiliary
@@ -265,6 +172,9 @@ logic related to charms. Now we need to download all the necessary charm
 libraries for the PaaS app charmer Flask charm. The PaaS app charmer Flask charm
 will use a few charm libraries as well, they are not included during the
 charmcraft initiation process requiring downloading separately.
+
+> We are working to simplify the library downloading which should be available
+  soon.
 
 ```bash
 ubuntu@charm-dev-vm:~/sample-flask/charm$ charmcraft fetch-lib charms.traefik_k8s.v2.ingress

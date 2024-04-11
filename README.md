@@ -1,10 +1,10 @@
 # PaaS App Charmer
 
-Easily deploy and operate your Flask or Django applications and associated infrastructure,
-such as databases and ingress, using open source tooling. This lets you focus on
-creating applications for your users backed with the confidence that your
-operations are taken care of by world class tooling developed by Canonical, the
-creators of Ubuntu.
+Easily deploy and operate your Flask or Django applications and associated
+infrastructure, such as databases and ingress, using open source tooling. This
+lets you focus on creating applications for your users backed with the
+confidence that your operations are taken care of by world class tooling
+developed by Canonical, the creators of Ubuntu.
 
 Have you ever created an application and then wanted to deploy it for your users
 only to either be forced to use a proprietary public cloud platform or manage
@@ -47,6 +47,9 @@ through below.
 1. Update the [tutorials](docs/tutorials) with the appropriate `fetch-lib`
   command
 1. Raise a pull request to this repository adding support for the integration.
+1. Add a commented entry for `requires` to all the relevant Charmcraft
+  [templates](https://github.com/canonical/charmcraft/tree/main/charmcraft/templates)
+  for the new integration
 
 ### Add a Framework
 
@@ -62,7 +65,7 @@ below.
     and run `rockcraft init --profile flask-framework` and run
     `rockcraft expand-extensions` and inspect the output.
   * Create an example `charmcraft.yaml` file and build a working charm. To see
-    an example for `flask`, install the `latest/edge` version of `charmcraft`
+    an example for `flask`, install the `latest/edge` version of Charmcraft
     and run `charmcraft init --profile flask-framework` and run
     `charmcraft expand-extensions` and inspect the output.
   * How the configuration options of the charm map to environment variables,
