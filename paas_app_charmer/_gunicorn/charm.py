@@ -130,7 +130,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             )
 
     def _on_config_changed(self, _event: ops.EventBase) -> None:
-        """Configure the flask pebble service layer.
+        """Configure the application pebble service layer.
 
         Args:
             _event: the config-changed event that triggers this callback function.
@@ -206,41 +206,41 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             self.restart()
 
     def _on_mysql_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle the mysql's database-created event."""
+        """Handle mysql's database-created event."""
         self.restart()
 
     def _on_mysql_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle the mysql's endpoints-changed event."""
+        """Handle mysql's endpoints-changed event."""
         self.restart()
 
     def _on_mysql_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
-        """Handle the mysql's relation-broken event."""
+        """Handle mysql's relation-broken event."""
         self.restart()
 
     def _on_postgresql_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle the postgresql's database-created event."""
+        """Handle postgresql's database-created event."""
         self.restart()
 
     def _on_postgresql_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle the mysql's endpoints-changed event."""
+        """Handle mysql's endpoints-changed event."""
         self.restart()
 
     def _on_postgresql_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
-        """Handle the postgresql's relation-broken event."""
+        """Handle postgresql's relation-broken event."""
         self.restart()
 
     def _on_mongodb_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle the mongodb's database-created event."""
+        """Handle mongodb's database-created event."""
         self.restart()
 
     def _on_mongodb_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle the mysql's endpoints-changed event."""
+        """Handle mysql's endpoints-changed event."""
         self.restart()
 
     def _on_mongodb_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
-        """Handle the postgresql's relation-broken event."""
+        """Handle postgresql's relation-broken event."""
         self.restart()
 
     def _on_redis_relation_updated(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle the redis's database-created event."""
+        """Handle redis's database-created event."""
         self.restart()
