@@ -23,9 +23,9 @@ external traffic in seconds.
 
 ## Contributing
 
-Is there something missing, for example, a framework that you would like to use?
-PaaS App Charmer welcomes contributions! This section covers how to add a new
-integration and a new framework.
+Is there something missing from the PaaS App Charmer framework? PaaS App Charmer
+welcomes contributions! This section covers how to add a new integration and a
+new framework.
 
 ### Add an Integration
 
@@ -33,9 +33,9 @@ There are a few recommended steps to add a new integration which we'll go
 through below.
 
 1. Please write a proposal on the
-  [charm](https://discourse.charmhub.io/c/charm/41) topic on discourse. This
+  [charm topic on discourse](https://discourse.charmhub.io/c/charm/41). This
   should cover things like:
-  * The integration you are intending to add
+  * The integration you intend add
   * For each of the frameworks that PaaS App Charmer supports:
     - The commonly used package(s) to make use of the integration
     - The environment variables, configuration etc. that would be made available
@@ -57,7 +57,7 @@ There are a few recommended steps to add a new framework which we'll go through
 below.
 
 1. Please write a proposal on the
-  [charm](https://discourse.charmhub.io/c/charm/41) topic on discourse. This
+  [charm topic on discourse](https://discourse.charmhub.io/c/charm/41). This
   should cover things like:
   * The programming language and framework you are thinking of
   * Create an example `rockcraft.yaml` file and build a working OCI image. To
@@ -69,21 +69,21 @@ below.
     and run `charmcraft init --profile flask-framework` and run
     `charmcraft expand-extensions` and inspect the output.
   * How the configuration options of the charm map to environment variables,
-    configurations and so on of the app
+    configurations or another method of passing the information to the app
   * The requirements and conventions for how users need to configure their app
     to work with PaaS App Charmer
   * Which web server to use
-1. Work on a pull request to [rockcraft](https://github.com/canonical/rockcraft)
+1. Raise a pull request to [rockcraft](https://github.com/canonical/rockcraft)
   adding a new extension and profile for the framework. This is the flask
   [profile](https://github.com/canonical/rockcraft/blob/fdd2dee18c81b12f25e6624a5a48f9f1ac9fdb90/rockcraft/commands/init.py#L79)
   and
   [extension](https://github.com/canonical/rockcraft/blob/fdd2dee18c81b12f25e6624a5a48f9f1ac9fdb90/rockcraft/extensions/gunicorn.py#L176).
   The OCI image should work standalone, not just with the charm for the
   framework.
-1. Work on a pull request to this repository adding a new parent class that can
-  be used by the app charms. [This](./paas_app_charmer/flask/charm.py) is the
-  example for flask.
-1. Work on a pull request to
+1. Raise a pull request to this repository adding a new parent class that can be
+  used by the app charms. The following is the
+  [example for flask](./paas_app_charmer/flask/charm.py).
+1. Raise a pull request to
   [charmcraft](https://github.com/canonical/charmcraft) adding a new extension
   and profile for the framework. This is the flask
   [profile](https://github.com/canonical/charmcraft/tree/main/charmcraft/templates/init-flask-framework)
