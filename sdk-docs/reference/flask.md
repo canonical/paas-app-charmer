@@ -53,3 +53,7 @@ available as one of the following environment variables:
 `MYSQL_DB_CONNECT_STRING`, `POSTGRESQL_DB_CONNECT_STRING`,
 `MONGODB_DB_CONNECT_STRING` or `REDIS_DB_CONNECT_STRING`.
 
+# Configurations
+
+The `flask-framework` Charmcraft extension adds a few configuration options.
+To see their documentation, run `charmcraft expand-extensions`.
