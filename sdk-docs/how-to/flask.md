@@ -7,16 +7,16 @@ configuration in `charmcraft.yaml`:
 ```yaml
 config:
   options:
-    TOKEN:
+    token:
       description: The token for the service.
       type: string
       required: true
 ```
 
 PaaS App Charmer will map this as the `FLASK_TOKEN` environment variable. In
-general, the environment variable name is `CHARM<config option name>`. The
-configuration can be set on the deployed charm using
-`juju config <app name> TOKEN=<token>`
+general, the environment variable name is `FLASK_<config option name>` where the
+config option name will be converted to upper case. The configuration can be set
+on the deployed charm using `juju config <app name> token=<token>`
 
 # Database migration
 
