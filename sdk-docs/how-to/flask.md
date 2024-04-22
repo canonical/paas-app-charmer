@@ -22,7 +22,7 @@ on the deployed charm using `juju config <app name> token=<token>`
 
 If your app depends on a database it is common to run a database migration
 script before app startup which, for example, creates or modifies tables. This
-can be done by incuding the `migrate.sh` script in the root of your project. It
+can be done by including the `migrate.sh` script in the root of your project. It
 will be executed with the same environment variables and context as the flask
 app.
 
