@@ -73,9 +73,6 @@ parts:
         - libpq-dev
 ```
 
-Note the `flask/app/` prefix that is required followed by the relative path to
-the project root.
-
 # Update the OCI image
 
 After making a change to your app;
