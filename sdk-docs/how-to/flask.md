@@ -48,13 +48,13 @@ To change this, the following snippet needs to be added to the `rockfile.yaml`:
 
 ```yaml
 parts:
-    flask-framework/install-app:
+  flask-framework/install-app:
     prime:
-        - flask/app/.env
-        - flask/app/app.py
-        - flask/app/webapp
-        - flask/app/templates
-        - flask/app/static
+      - flask/app/.env
+      - flask/app/app.py
+      - flask/app/webapp
+      - flask/app/templates
+      - flask/app/static
 ```
 
 Note the `flask/app/` prefix that is required followed by the relative path to
@@ -67,10 +67,10 @@ following snipped to the `rockfile.yaml`:
 
 ```yaml
 parts:
-    flask-framework/dependencies:
-      stage-packages:
-        # list required packages or slices for your flask application below.
-        - libpq-dev
+  flask-framework/dependencies:
+    stage-packages:
+      # list required packages or slices for your flask application below.
+      - libpq-dev
 ```
 
 # Update the OCI image
