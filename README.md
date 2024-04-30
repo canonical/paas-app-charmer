@@ -21,6 +21,41 @@ integrate a range of ingresses, such as
 [Traefik](https://charmhub.io/traefik-k8s), and expose your application to
 external traffic in seconds.
 
+## Getting Started
+
+There are 2 requirements for the flask application:
+
+* There is a `requirements.txt` file in the project root
+* The WSGI path is `app:app`
+
+Make sure that you have the `latest/edge` version of Charmcraft and Rockcraft
+installed:
+
+```bash
+sudo snap install charmcraft --channel latest/edge --classic
+sudo snap install rockcraft --channel latest/edge --classic
+```
+
+Both have the `flask-framework` profile to create the required files
+and include the `flask-framework` extension which will do all the hard
+operational work for you and you just need to fill in some metadata in the
+`rockcraft.yaml` and `charmcraft.yaml` files. To create the necessary files:
+
+```bash
+rockcraft init --profile flask-framework
+mkdir charm
+cd charm
+charmcraft init --profile flask-framework
+```
+
+After packing the rock and charm using `rockcraft pack` and `charmcraft pack`
+and uploading the rock to a k8s registry, you can juju deploy your flask
+application, integrate it with ingress and start serving traffic to your users!
+
+Read the
+[comprehensive getting started tutorial](https://juju.is/docs/sdk/write-your-first-kubernetes-charm-using-the-paas-app-charmer)
+for more!
+
 ## Contributing
 
 Is there something missing from the PaaS App Charmer framework? PaaS App Charmer
