@@ -61,10 +61,9 @@ async def test_flask_webserver_timeout(
         assert requests.get(
             f"http://{unit_ip}:8000/sleep?duration={timeout - 1}", timeout=safety_timeout
         ).ok
-        with pytest.raises(requests.ConnectionError):
-            requests.get(
-                f"http://{unit_ip}:8000/sleep?duration={timeout + 1}", timeout=safety_timeout
-            )
+        assert not requests.get(
+            f"http://{unit_ip}:8000/sleep?duration={timeout + 1}", timeout=safety_timeout
+        ).ok
 
 
 async def test_default_secret_key(
