@@ -117,7 +117,7 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
         if self._container.exists(app_dir / "migrate.sh"):
             migration_command = ["bash", "-eo", "pipefail", "migrate.sh"]
         if self._container.exists(app_dir / "migrate.py"):
-            migration_command = ["python", "migrate.py"]
+            migration_command = ["python3", "migrate.py"]
         if migration_command:
             self._database_migration.run(
                 command=migration_command,

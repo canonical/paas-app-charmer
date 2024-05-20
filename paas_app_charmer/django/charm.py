@@ -99,7 +99,7 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
         try:
             password = secrets.token_urlsafe(16)
             self._container.exec(
-                ["python", "manage.py", "createsuperuser", "--noinput"],
+                ["python3", "manage.py", "createsuperuser", "--noinput"],
                 environment={
                     "DJANGO_SUPERUSER_PASSWORD": password,
                     "DJANGO_SUPERUSER_USERNAME": event.params["username"],
