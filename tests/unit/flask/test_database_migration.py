@@ -83,7 +83,8 @@ def test_database_migration(harness: Harness):
     [
         pytest.param("migrate", ["/flask/app/migrate"], id="executable"),
         pytest.param("migrate.sh", ["bash", "-eo", "pipefail", "migrate.sh"], id="shell"),
-        pytest.param("migrate.py", ["python", "migrate.py"], id="python"),
+        pytest.param("migrate.py", ["python3", "migrate.py"], id="python"),
+        pytest.param("manage.py", ["python3", "manage.py", "migrate"], id="django"),
     ],
 )
 def test_database_migrate_command(harness: Harness, file: str, command: list[str]):

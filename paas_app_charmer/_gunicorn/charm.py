@@ -147,7 +147,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             event.fail("only leader unit can rotate secret key")
             return
         if not self._secret_storage.is_initialized:
-            event.fail("flask charm is still initializing")
+            event.fail("charm is still initializing")
             return
         self._secret_storage.reset_secret_key()
         event.set_results({"status": "success"})
@@ -190,10 +190,13 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         return True
 
     def restart(self) -> None:
-        """Restart or start the flask service if not started with the latest configuration."""
+        """Restart or start the service if not started with the latest configuration."""
         if not self.is_ready():
             return
         try:
+            self._update_app_and_unit_status(
+                ops.MaintenanceStatus("Preparing service for restart")
+            )
             self._wsgi_app.restart()
         except CharmConfigInvalidError as exc:
             self._update_app_and_unit_status(ops.BlockedStatus(exc.msg))

@@ -31,10 +31,9 @@ async def test_django_webserver_timeout(django_app, get_unit_ips, timeout):
         assert requests.get(
             f"http://{unit_ip}:8000/sleep?duration={timeout - 1}", timeout=safety_timeout
         ).ok
-        with pytest.raises(requests.ConnectionError):
-            requests.get(
-                f"http://{unit_ip}:8000/sleep?duration={timeout + 1}", timeout=safety_timeout
-            )
+        assert not requests.get(
+            f"http://{unit_ip}:8000/sleep?duration={timeout + 1}", timeout=safety_timeout
+        )
 
 
 async def test_django_database_migration(django_app, get_unit_ips):

@@ -1,2 +1,4 @@
 # ignore CVE introduced by python3-gunicorn
 CVE-2022-40897
+# CVE usr/bin/pebble (gobinary)
+CVE-2023-45288
