@@ -91,7 +91,11 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
         Returns:
             A dictionary representing the S3 environment variables.
         """
-        return {f"S3_{k.upper().replace('-', '_')}": v for k, v in s3_connection_info.items()}
+        return {
+            f"S3_{k.upper().replace('-', '_')}": v
+            for k, v in s3_connection_info.items()
+            if isinstance(v, str)
+        }
 
     def _wsgi_layer(self) -> ops.pebble.LayerDict:
         """Generate the pebble layer definition for WSGI application.

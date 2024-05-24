@@ -5,7 +5,6 @@
 """Integration tests for Flask charm database integration."""
 import asyncio
 import logging
-import time
 
 import juju
 import ops
