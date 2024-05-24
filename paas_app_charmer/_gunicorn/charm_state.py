@@ -54,6 +54,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         user: The UNIX user name for running the service.
         group: The UNIX group name for running the service.
         redis_uri: The redis uri provided by the redis charm.
+        s3_connection_info: S3 connection info.
     """
 
     statsd_host = "localhost:9125"
@@ -72,6 +73,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         wsgi_config: dict[str, int | str] | None = None,
         secret_key: str | None = None,
         redis_uri: str | None = None,
+        s3_connection_info: dict[str, str] | None = None,
     ):
         """Initialize a new instance of the CharmState class.
 
@@ -84,6 +86,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             secret_key: The secret storage manager associated with the charm.
             database_requirers: All declared database requirers.
             redis_uri: The redis uri provided by the redis charm.
+            s3_connection_info: S3 connection info provided by the redis charm.
         """
         self.framework = framework
         self.service_name = self.framework
@@ -100,6 +103,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         self._is_secret_storage_ready = is_secret_storage_ready
         self._secret_key = secret_key
         self._database_requirers = database_requirers if database_requirers else {}
+        self._s3_connection_info = s3_connection_info
 
     @classmethod
     def from_charm(  # pylint: disable=too-many-arguments
@@ -110,6 +114,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         secret_storage: GunicornSecretStorage,
         database_requirers: dict[str, DatabaseRequires],
         redis_uri: str | None = None,
+        s3_connection_info: dict[str, str] | None = None,
     ) -> "CharmState":
         """Initialize a new instance of the CharmState class from the associated charm.
 
@@ -120,6 +125,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             secret_storage: The secret storage manager associated with the charm.
             database_requirers: All database requirers object declared by the charm.
             redis_uri: The redis uri provided by the redis charm.
+            s3_connection_info: The S3 connection info.
 
         Return:
             The CharmState instance created by the provided charm.
@@ -141,6 +147,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             ),
             is_secret_storage_ready=secret_storage.is_initialized,
             redis_uri=redis_uri,
+            s3_connection_info=s3_connection_info,
         )
 
     @property
@@ -211,3 +218,8 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             A dictionary of database types and database URIs.
         """
         return get_uris(self._database_requirers)
+
+    @property
+    def s3_connection_info(self) -> dict[str, str] | None:
+        """TODO MAKE THIS MORE TYPE SAFE."""
+        return self._s3_connection_info

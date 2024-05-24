@@ -7,7 +7,9 @@
 # pylint: disable=protected-access
 
 import unittest.mock
+from secrets import token_hex
 
+import ops
 from ops.testing import Harness
 
 from paas_app_charmer._gunicorn.charm_state import CharmState
@@ -63,6 +65,39 @@ def test_flask_pebble_layer(harness: Harness) -> None:
         "after": ["statsd-exporter"],
         "user": "_daemon_",
     }
+
+
+def test_s3_integration(harness: Harness):
+    """TODO."""
+    # Unfortunately the s3 relation has to be created before the charm,
+    # this is a problem with ops.testing, as the charm __init__ only
+    # runs once on the beginning. For a similar reason, the
+    # charm_state has to be reconstructed :(
+    s3_relation_data = {
+        "access-key": token_hex(16),
+        "secret-key": token_hex(16),
+        "bucket": "flask-bucket",
+        "path": "/whatever",
+        "s3-uri-style": "path",
+        "endpoint": "https://s3.example.com",
+    }
+    harness.add_relation("s3", "s3-integrator", app_data=s3_relation_data)
+    harness.set_leader(True)
+    harness.begin_with_initial_hooks()
+
+    container = harness.charm.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+
+    new_charm_state = harness.charm._build_charm_state()
+    harness.charm._charm_state = new_charm_state
+    harness.charm._wsgi_app._charm_state = new_charm_state
+    harness.container_pebble_ready(FLASK_CONTAINER_NAME)
+    container = harness.charm.unit.get_container(FLASK_CONTAINER_NAME)
+
+    assert harness.model.unit.status == ops.ActiveStatus()
+    service_env = container.get_plan().services["flask"].environment
+    assert service_env["S3_BUCKET"] == "flask-bucket"
+    assert service_env["S3_ACCESS_KEY"] == s3_relation_data["access-key"]
 
 
 def test_rotate_secret_key_action(harness: Harness):

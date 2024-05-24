@@ -42,7 +42,7 @@ def test_django_config(harness: Harness, config: dict, env: dict) -> None:
     """
     arrange: none
     act: start the django charm and set django-app container to be ready.
-    assert: flask charm should submit the correct flaks pebble layer to pebble.
+    assert: django charm should submit the correct django pebble layer to pebble.
     """
     harness.begin()
     container = harness.charm.unit.get_container("django-app")

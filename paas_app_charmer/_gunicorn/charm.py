@@ -8,6 +8,11 @@ import logging
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
+from charms.data_platform_libs.v0.s3 import (
+    CredentialsChangedEvent,
+    CredentialsGoneEvent,
+    S3Requirer,
+)
 from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
 from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
@@ -55,13 +60,15 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             charm=self, key=f"{wsgi_framework}_secret_key"
         )
         self._database_requirers = make_database_requirers(self, self.app.name)
+        self._wsgi_framework = wsgi_framework
         try:
-            wsgi_config = self.get_wsgi_config()
+            _ = self.get_wsgi_config()
         except CharmConfigInvalidError as exc:
             self._update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return
 
         requires = load_requires()
+        # JAVI ask Weii why it is not using self.framework.meta
         if "redis" in requires and requires["redis"]["interface"] == "redis":
             self._store.set_default(redis_relation={})
             self._redis = RedisRequires(charm=self, _stored=self._store, relation_name="redis")
@@ -69,14 +76,15 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         else:
             self._redis = None
 
-        self._charm_state = CharmState.from_charm(
-            charm=self,
-            framework=wsgi_framework,
-            wsgi_config=wsgi_config,
-            secret_storage=self._secret_storage,
-            database_requirers=self._database_requirers,
-            redis_uri=self._redis.url if self._redis is not None else None,
-        )
+        requires = self.framework.meta.requires
+        if "s3" in requires and requires["s3"].interface_name == "s3":
+            self._s3 = S3Requirer(charm=self, relation_name="s3", bucket_name=self.app.name)
+            self.framework.observe(self._s3.on.credentials_changed, self._on_s3_credential_changed)
+            self.framework.observe(self._s3.on.credentials_gone, self._on_s3_credential_gone)
+        else:
+            self._s3 = None
+
+        self._charm_state = self._build_charm_state()
         self._database_migration = DatabaseMigration(
             container=self.unit.get_container(self._charm_state.container_name),
             state_dir=self._charm_state.state_dir,
@@ -128,6 +136,23 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
                 self.on[database_requirer.relation_name].relation_broken,
                 getattr(self, f"_on_{database}_database_relation_broken"),
             )
+
+    def _build_charm_state(self) -> CharmState:
+        """Build charm state.
+
+        Returns:
+            New CharmState
+        """
+        return CharmState.from_charm(
+            charm=self,
+            framework=self._wsgi_framework,
+            wsgi_config=self.get_wsgi_config(),
+            secret_storage=self._secret_storage,
+            database_requirers=self._database_requirers,
+            redis_uri=self._redis.url if self._redis is not None else None,
+            # JAVI make this more type safe
+            s3_connection_info=self._s3.get_s3_connection_info() if self._s3 is not None else None,
+        )
 
     def _on_config_changed(self, _event: ops.EventBase) -> None:
         """Configure the application pebble service layer.
@@ -246,4 +271,12 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
     def _on_redis_relation_updated(self, _event: DatabaseRequiresEvent) -> None:
         """Handle redis's database-created event."""
+        self.restart()
+
+    def _on_s3_credential_changed(self, _event: CredentialsChangedEvent) -> None:
+        """Handle s3 credentials-changed event."""
+        self.restart()
+
+    def _on_s3_credential_gone(self, _event: CredentialsGoneEvent) -> None:
+        """Handle s3 credentials-gone event."""
         self.restart()
