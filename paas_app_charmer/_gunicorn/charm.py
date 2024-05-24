@@ -25,7 +25,6 @@ from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
 from paas_app_charmer.databases import Databases, make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
-from paas_app_charmer.helpers import load_requires
 
 logger = logging.getLogger(__name__)
 
@@ -67,16 +66,15 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             self._update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return
 
-        requires = load_requires()
+        requires = self.framework.meta.requires
         # JAVI ask Weii why it is not using self.framework.meta
-        if "redis" in requires and requires["redis"]["interface"] == "redis":
+        if "redis" in requires and requires["redis"].interface_name == "redis":
             self._store.set_default(redis_relation={})
             self._redis = RedisRequires(charm=self, _stored=self._store, relation_name="redis")
             self.framework.observe(self.on.redis_relation_updated, self._on_redis_relation_updated)
         else:
             self._redis = None
 
-        requires = self.framework.meta.requires
         if "s3" in requires and requires["s3"].interface_name == "s3":
             self._s3 = S3Requirer(charm=self, relation_name="s3", bucket_name=self.app.name)
             self.framework.observe(self._s3.on.credentials_changed, self._on_s3_credential_changed)
