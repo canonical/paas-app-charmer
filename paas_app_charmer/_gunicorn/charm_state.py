@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """This module defines the CharmState class which represents the state of the charm."""
+import logging
 import os
 import pathlib
 import typing
@@ -10,11 +11,13 @@ import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 
 # pydantic is causing this no-name-in-module problem
-from pydantic import BaseModel, Field  # pylint: disable=no-name-in-module
+from pydantic import BaseModel, Field, ValidationError  # pylint: disable=no-name-in-module
 
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer._gunicorn.webserver import WebserverConfig
 from paas_app_charmer.databases import get_uris
+
+logger = logger = logging.getLogger(__name__)
 
 
 class ProxyConfig(BaseModel):  # pylint: disable=too-few-public-methods
@@ -54,7 +57,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         user: The UNIX user name for running the service.
         group: The UNIX group name for running the service.
         redis_uri: The redis uri provided by the redis charm.
-        s3_connection_info: S3 connection info.
+        s3_parameters: S3 parameters.
     """
 
     statsd_host = "localhost:9125"
@@ -86,7 +89,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             secret_key: The secret storage manager associated with the charm.
             database_requirers: All declared database requirers.
             redis_uri: The redis uri provided by the redis charm.
-            s3_connection_info: S3 connection info provided by the redis charm.
+            s3_connection_info: S3 connection info provided by the s3-integrator charm.
         """
         self.framework = framework
         self.service_name = self.framework
@@ -220,6 +223,76 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         return get_uris(self._database_requirers)
 
     @property
-    def s3_connection_info(self) -> dict[str, str] | None:
-        """TODO MAKE THIS MORE TYPE SAFE."""
-        return self._s3_connection_info
+    def s3_parameters(self) -> typing.Optional["S3Parameters"]:
+        """TODO."""
+        if not self._s3_connection_info:
+            return None
+
+        try:
+            s3_parameters = S3Parameters(**self._s3_connection_info)
+        except ValidationError:
+            logger.exception("Invalid/Missing S3 parameters.")
+            return None
+        return s3_parameters
+
+
+class S3Parameters(BaseModel):  # pylint: disable=no-member
+    """Configuration for accessing S3 bucket.
+
+    Attributes:
+        access_key: AWS access key.
+        secret_key: AWS secret key.
+        region: The region to connect to the object storage.
+        storage_class: Storage Class for objects uploaded to the object storage.
+        bucket: The bucket name.
+        endpoint: The endpoint used to connect to the object storage.
+        path: The path inside the bucket to store objects.
+        s3_api_version: S3 protocol specific API signature.
+        s3_uri_style: The S3 protocol specific bucket path lookup type. Can be "path" or "host".
+        tls_ca_chain: The complete CA chain, which can be used for HTTPS validation.
+        addressing_style: S3 protocol addressing style, can be "path" or "virtual".
+        attributes: The custom metadata (HTTP headers).
+    """
+
+    access_key: str = Field(alias="access-key")
+    secret_key: str = Field(alias="secret-key")
+    region: typing.Optional[str] = None
+    storage_class: typing.Optional[str] = Field(alias="storage-class", default=None)
+    bucket: str
+    endpoint: typing.Optional[str] = None
+    path: typing.Optional[str] = None
+    s3_api_version: typing.Optional[str] = Field(alias="s3-api-version", default=None)
+    s3_uri_style: typing.Optional[str] = Field(alias="s3-uri-style", default=None)
+    tls_ca_chain: typing.Optional[str] = Field(alias="tls-ca-chain", default=None)
+    attributes: typing.Optional[str] = None
+
+    @property
+    def addressing_style(self) -> typing.Optional[str]:
+        """Translates s3_uri_style to AWS addressing_style."""
+        if self.s3_uri_style == "host":
+            return "virtual"
+        # If None or "path", it does not change.
+        return self.s3_uri_style
+
+    def to_env(self) -> dict[str, str]:
+        """Convert to env variables.
+
+        Returns:
+           dict with environment variables for django storage.
+        """
+        # For S3 fields reference see:
+        # https://github.com/canonical/charm-relation-interfaces/tree/main/interfaces/s3/v0
+        storage_dict = {
+            "S3_ACCESS_KEY": self.access_key,
+            "S3_SECRET_KEY": self.secret_key,  # or S3_SECRET_KEY?
+            "S3_REGION": self.region,
+            "S3_STORAGE_CLASS": self.storage_class,
+            "S3_BUCKET": self.bucket,
+            "S3_ENDPOINT": self.endpoint,
+            "S3_PATH": self.path,
+            "S3_API_VERSION": self.s3_api_version,
+            "S3_URI_STYLE": self.s3_uri_style,
+            "S3_TLS_CA_CHAIN": self.tls_ca_chain,
+            "S3_ADDRESSING_STYLE": self.addressing_style,
+        }
+        return {k: v for k, v in storage_dict.items() if v is not None}

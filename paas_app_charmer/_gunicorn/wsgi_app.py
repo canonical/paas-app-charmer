@@ -78,24 +78,9 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
         env.update(self._charm_state.database_uris)
         if self._charm_state.redis_uri:
             env["REDIS_DB_CONNECT_STRING"] = self._charm_state.redis_uri
-        if self._charm_state.s3_connection_info:
-            env.update(self._gen_s3_connection_info(self._charm_state.s3_connection_info))
+        if self._charm_state.s3_parameters:
+            env.update(self._charm_state.s3_parameters.to_env())
         return env
-
-    def _gen_s3_connection_info(self, s3_connection_info: dict[str, str]) -> dict[str, str]:
-        """TODO TYPE SAFE, JUST A MAPPING. MAYBE FILTER FOR WANTED THINGS?.
-
-        Args:
-            s3_connection_info: s3_connection_info
-
-        Returns:
-            A dictionary representing the S3 environment variables.
-        """
-        return {
-            f"S3_{k.upper().replace('-', '_')}": v
-            for k, v in s3_connection_info.items()
-            if isinstance(v, str)
-        }
 
     def _wsgi_layer(self) -> ops.pebble.LayerDict:
         """Generate the pebble layer definition for WSGI application.
