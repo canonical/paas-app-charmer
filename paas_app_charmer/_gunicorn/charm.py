@@ -41,7 +41,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         """Return the directory with COS related files."""
 
     on = RedisRelationCharmEvents()
-    _store = ops.StoredState()
 
     def __init__(self, framework: ops.Framework, wsgi_framework: str) -> None:
         """Initialize the instance.
@@ -63,8 +62,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
         requires = load_requires()
         if "redis" in requires and requires["redis"]["interface"] == "redis":
-            self._store.set_default(redis_relation={})
-            self._redis = RedisRequires(charm=self, _stored=self._store, relation_name="redis")
+            self._redis = RedisRequires(charm=self, relation_name="redis")
             self.framework.observe(self.on.redis_relation_updated, self._on_redis_relation_updated)
         else:
             self._redis = None
