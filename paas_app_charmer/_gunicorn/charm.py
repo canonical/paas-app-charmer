@@ -131,11 +131,10 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             New CharmState
         """
         integrations: list[Integration] = []
-        for database, database_requirer in self._database_requirers.items():
+        for _, database_requirer in self._database_requirers.items():
             integrations.append(
                 DatabaseIntegration(
                     interface_name=database_requirer.relation_name,
-                    database_name=database,
                     database_requires=database_requirer,
                 )
             )

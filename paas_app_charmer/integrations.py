@@ -82,19 +82,15 @@ class DatabaseIntegration(Integration):
         name: Name of the integration.
     """
 
-    def __init__(
-        self, interface_name: str, database_name: str, database_requires: DatabaseRequires
-    ):
+    def __init__(self, interface_name: str, database_requires: DatabaseRequires):
         """TODO.
 
         Args:
             interface_name: TODO
-            database_name: TODO
             database_requires: TODO
         """
         self._interface_name = interface_name
         self._database_requires = database_requires
-        self._database_name = database_name
 
     @property
     def name(self) -> str:
