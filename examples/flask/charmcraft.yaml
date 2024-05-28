@@ -93,15 +93,19 @@ requires:
     interface: loki_push_api
   postgresql:
     interface: postgresql_client
+    optional: True
     limit: 1
   mysql:
     interface: mysql_client
+    optional: True
     limit: 1
   mongodb:
     interface: mongodb_client
+    optional: True
     limit: 1
   redis:
     interface: redis
+    optional: True
     limit: 1
 resources:
   flask-app-image:

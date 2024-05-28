@@ -5,6 +5,7 @@
 
 import logging
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class Integration(ABC):
-    """TODO.
+    """Generic integration information.
 
     Attributes:
         name: Name of the integration.
@@ -31,78 +32,82 @@ class Integration(ABC):
         """Return if the current state of the integration should block the charm.
 
         Returns:
-           TODO.
+           Whether to block the charm if the integration is not ready.
         """
         return False
 
 
-class GenericIntegration(Integration):
-    """TODO.
+class RedisIntegration(Integration):
+    """Integration for Redis.
 
     Attributes:
         name: Name of the integration.
     """
 
-    def __init__(self, name: str, blocks: bool, env_vars: dict[str, str]):
-        """TODO.
+    def __init__(self, name: str, redis_url: Optional[str], optional: bool):
+        """Initialize a new instance of the RedisIntegration class.
 
         Args:
-            name: name
-            blocks: blocks
-            env_vars: env_vars
+            name: Name of the integration.
+            redis_url: Redis url.
+            optional: If the integration is optional
         """
         self._name = name
-        self._blocks = blocks
-        self._env_vars = env_vars
+        self._optional = optional
+        self._redis_url = redis_url
 
     @property
     def name(self) -> str:
-        """TODO."""
+        """Return the name of the integration."""
         return self._name
 
     def gen_environment(self) -> dict[str, str]:
-        """TODO.
+        """Return the environment variables for the Redis integration.
 
-        Returns: TODO
+        Returns: Environment variables.
         """
-        return self._env_vars
+        if self._redis_url:
+            return {"REDIS_DB_CONNECT_STRING": self._redis_url}
+        return {}
 
     def block_charm(self) -> bool:
-        """TODO.
+        """Return if the current state of the integration should block the charm.
 
-        Returns: TODO
+        Returns:
+           Whether to block the charm if the integration is not ready.
         """
-        return self._blocks
+        return not self._optional and not self.gen_environment()
 
 
 class DatabaseIntegration(Integration):
-    """TODO.
+    """Integration for Database (postgresql, mysql and mongodb).
 
     Attributes:
         name: Name of the integration.
     """
 
-    def __init__(self, interface_name: str, database_requires: DatabaseRequires):
-        """TODO.
+    def __init__(self, name: str, database_requires: DatabaseRequires, optional: bool):
+        """Initialize a new instance of the DatabaseIntegration class.
 
         Args:
-            interface_name: TODO
-            database_requires: TODO
+            name: Name of the integration.
+            database_requires: DatabaseRequires object
+            optional: If the integration is optional
         """
-        self._interface_name = interface_name
+        self._name = name
         self._database_requires = database_requires
+        self._optional = optional
 
     @property
     def name(self) -> str:
-        """TODO."""
-        return self._interface_name
+        """Return the name of the integration."""
+        return self._name
 
     def gen_environment(self) -> dict[str, str]:
-        """TODO.
+        """Return the environment variables for the Database integration.
 
-        Returns: TODO
+        Returns: Environment variables.
         """
-        # remove databases.get_uris function
         relation_data = list(
             self._database_requires.fetch_relation_data(
                 fields=["uris", "endpoints", "username", "password", "database"]
@@ -115,7 +120,7 @@ class DatabaseIntegration(Integration):
         # with the same interface name. See: metadata.yaml
         data = relation_data[0]
 
-        env_name = f"{self._interface_name.upper()}_DB_CONNECT_STRING"
+        env_name = f"{self._name.upper()}_DB_CONNECT_STRING"
 
         if "uris" in data:
             return {env_name: data["uris"]}
@@ -130,8 +135,16 @@ class DatabaseIntegration(Integration):
         endpoint = data["endpoints"].split(",")[0]
         return {
             env_name: (
-                f"{self._interface_name}://"
+                f"{self._name}://"
                 f"{data['username']}:{data['password']}"
                 f"@{endpoint}/{database_name}"
             )
         }
+
+    def block_charm(self) -> bool:
+        """Return if the current state of the integration should block the charm.
+
+        Returns:
+           Whether to block the charm if the integration is not ready.
+        """
+        return not self._optional and not self.gen_environment()

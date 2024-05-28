@@ -79,9 +79,6 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
         for integration in self._charm_state.integrations:
             env.update(integration.gen_environment())
 
-        env.update(self._charm_state.database_uris)
-        if self._charm_state.redis_uri:
-            env["REDIS_DB_CONNECT_STRING"] = self._charm_state.redis_uri
         return env
 
     def _wsgi_layer(self) -> ops.pebble.LayerDict:

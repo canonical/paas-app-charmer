@@ -20,7 +20,7 @@ from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
 from paas_app_charmer.databases import Databases, make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
-from paas_app_charmer.integrations import DatabaseIntegration, GenericIntegration, Integration
+from paas_app_charmer.integrations import DatabaseIntegration, Integration, RedisIntegration
 
 logger = logging.getLogger(__name__)
 
@@ -130,21 +130,23 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         Returns:
             New CharmState
         """
+        requires = self.framework.meta.requires
         integrations: list[Integration] = []
-        for _, database_requirer in self._database_requirers.items():
+        for name, database_requirer in self._database_requirers.items():
             integrations.append(
                 DatabaseIntegration(
-                    interface_name=database_requirer.relation_name,
+                    name=database_requirer.relation_name,
                     database_requires=database_requirer,
+                    optional=requires[name].optional,
                 )
             )
 
         if self._redis:
             integrations.append(
-                GenericIntegration(
+                RedisIntegration(
                     name="redis",
-                    blocks=False,
-                    env_vars={"REDIS_DB_CONNECT_STRING": self._redis.url},
+                    redis_url=self._redis.url,
+                    optional=requires["redis"].optional,
                 )
             )
 
@@ -154,8 +156,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             wsgi_config=self.get_wsgi_config(),
             secret_storage=self._secret_storage,
             integrations=integrations,
-            database_requirers=self._database_requirers,
-            redis_uri=self._redis.url if self._redis is not None else None,
         )
 
     def _on_config_changed(self, _event: ops.EventBase) -> None:
@@ -220,7 +220,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         for integration in self._charm_state.integrations:
             if integration.block_charm():
                 self._update_app_and_unit_status(
-                    ops.BlockedStatus(f"Missing of invalid integration {integration.name}.")
+                    ops.BlockedStatus(f"Missing or invalid integration: {integration.name}.")
                 )
                 return False
 

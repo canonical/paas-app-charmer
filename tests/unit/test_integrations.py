@@ -7,28 +7,45 @@ import unittest.mock
 
 import pytest
 
-from paas_app_charmer.integrations import DatabaseIntegration, GenericIntegration
+from paas_app_charmer.integrations import DatabaseIntegration, RedisIntegration
 
 
 @pytest.mark.parametrize(
-    "name, blocks, env_vars",
+    "name, redis_uri, optional, expected_env_vars, expect_blocks",
     [
-        pytest.param("name1", True, {}),
-        pytest.param("name2", False, {"var1": "val1"}),
+        pytest.param("redis", None, False, {}, True),
+        pytest.param("redis", None, True, {}, False),
+        pytest.param("redis", "", False, {}, True),
+        pytest.param(
+            "redis",
+            "redis://10.1.88.132:6379",
+            False,
+            {"REDIS_DB_CONNECT_STRING": "redis://10.1.88.132:6379"},
+            False,
+        ),
+        pytest.param(
+            "redis",
+            "redis://10.1.88.132:6379",
+            True,
+            {"REDIS_DB_CONNECT_STRING": "redis://10.1.88.132:6379"},
+            False,
+        ),
     ],
 )
-def test_generic_integration(name, blocks, env_vars):
+def test_redis_integration(name, redis_uri, optional, expected_env_vars, expect_blocks):
     """
-    TODO. JUST CHECK WHAT GETS IN, GETS OUT
+    arrange:
+    act: Create the Redis Integration
+    assert: Check the desired environment variables and if the charm should be blocked.
     """
-    integration = GenericIntegration(name, blocks, env_vars)
-    assert name == integration.name
-    assert blocks == integration.block_charm()
-    assert env_vars == integration.gen_environment()
+    integration = RedisIntegration(name, redis_uri, optional)
+    assert integration.name == name
+    assert integration.block_charm() == expect_blocks
+    assert integration.gen_environment() == expected_env_vars
 
 
 @pytest.mark.parametrize(
-    "interface_name, data, expected_env_vars",
+    "name, data, optional, expected_env_vars, expected_blocks",
     [
         pytest.param(
             "mysql",
@@ -37,9 +54,11 @@ def test_generic_integration(name, blocks, env_vars):
                 "password": "test-password",
                 "username": "test-username",
             },
+            False,
             {
                 "MYSQL_DB_CONNECT_STRING": "mysql://test-username:test-password@test-mysql:3306/flask-app"
             },
+            False,
         ),
         pytest.param(
             "postgresql",
@@ -49,29 +68,49 @@ def test_generic_integration(name, blocks, env_vars):
                 "password": "test-password",
                 "username": "test-username",
             },
+            False,
             {
                 "POSTGRESQL_DB_CONNECT_STRING": "postgresql://test-username:test-password"
                 "@test-postgresql:5432/test-database"
             },
+            False,
         ),
         pytest.param(
             "mongodb",
             {"uris": "mongodb://foobar/"},
+            True,
             {"MONGODB_DB_CONNECT_STRING": "mongodb://foobar/"},
+            False,
+        ),
+        pytest.param(
+            "mongodb",
+            {},
+            True,
+            {},
+            False,
+        ),
+        pytest.param(
+            "mongodb",
+            {},
+            False,
+            {},
+            True,
         ),
     ],
 )
-def test_database_integration(interface_name, data, expected_env_vars):
+def test_database_integration(name, data, optional, expected_env_vars, expected_blocks):
     """
-    TODO.
+    arrange: For each reasonable case.
+    act: Create the Database Integration.
+    assert: Check the desired environment variables and if the charm should be blocked.
     """
     # Create the databases mock with the relation data
     database_require = unittest.mock.MagicMock()
     database_require.fetch_relation_data = unittest.mock.MagicMock(return_value={"data": data})
     database_require.database = data.get("database", "flask-app")
 
-    integration = DatabaseIntegration(interface_name, database_require)
-    assert integration.name == interface_name
+    integration = DatabaseIntegration(name, database_require, optional)
+    assert integration.name == name
     # Until it is implemented
-    assert integration.block_charm() == False
+    assert integration.block_charm() == expected_blocks
     assert integration.gen_environment() == expected_env_vars

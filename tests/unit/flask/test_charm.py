@@ -38,7 +38,6 @@ def test_flask_pebble_layer(harness: Harness) -> None:
         charm=harness.charm,
         framework="flask",
         secret_storage=secret_storage,
-        database_requirers={},
     )
     webserver = GunicornWebserver(
         charm_state=charm_state,
@@ -66,11 +65,14 @@ def test_flask_pebble_layer(harness: Harness) -> None:
     }
 
 
-def test_redis_integration(harness: Harness):
+def test_working_integrations(harness: Harness):
     """
-    TODO
+    arrange: Prepare a Redis and a database integration.
+    act: Start the flask charm and set flask-app container to be ready.
+    assert: The flask service should have the Redis and the
+        database environment variables in its plan.
     """
-    # The s3 relation has to be created before the charm, as
+    # The relations have to be created before the charm, as
     # this is a problem with ops.testing, as the charm __init__ only
     # runs once on the beginning.
     redis_relation_data = {
@@ -78,6 +80,15 @@ def test_redis_integration(harness: Harness):
         "port": "6379",
     }
     harness.add_relation("redis", "redis-k8s", unit_data=redis_relation_data)
+
+    postgresql_relation_data = {
+        "database": "test-database",
+        "endpoints": "test-postgresql:5432,test-postgresql-2:5432",
+        "password": "test-password",
+        "username": "test-username",
+    }
+    harness.add_relation("postgresql", "postgresql-k8s", app_data=postgresql_relation_data)
+
     harness.set_leader(True)
     harness.begin_with_initial_hooks()
 
@@ -85,7 +96,7 @@ def test_redis_integration(harness: Harness):
     container.add_layer("a_layer", DEFAULT_LAYER)
 
     # The charm_state has to be reconstructed here because at this point
-    # the s3 connection data can be different as it was in charm.__init__
+    # the data in the relations can be different than what was in charm.__init__
     # when the charm was initialised.
     new_charm_state = harness.charm._build_charm_state()
     harness.charm._charm_state = new_charm_state
@@ -96,6 +107,40 @@ def test_redis_integration(harness: Harness):
     assert harness.model.unit.status == ops.ActiveStatus()
     service_env = container.get_plan().services["flask"].environment
     assert service_env["REDIS_DB_CONNECT_STRING"] == "redis://10.1.88.132:6379"
+    assert (
+        service_env["POSTGRESQL_DB_CONNECT_STRING"]
+        == "postgresql://test-username:test-password@test-postgresql:5432/test-database"
+    )
+
+
+def test_optional_integration_blocks_charm(harness: Harness):
+    """
+    arrange: Set the Redis integration as not optional.
+    act: Start the flask charm and set flask-app container to be ready.
+    assert: The flask service should be blocked, as it does
+        not have an integration with Redis.
+    """
+
+    harness.framework.meta.requires["redis"].optional = False
+    harness.set_leader(True)
+    harness.begin_with_initial_hooks()
+
+    container = harness.charm.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+
+    # The charm_state has to be reconstructed here because at this point
+    # the connection data can be different as it was in charm.__init__
+    # when the charm was initialised the first time. In particular in this
+    # case, the peer relation is not ready.
+    new_charm_state = harness.charm._build_charm_state()
+    harness.charm._charm_state = new_charm_state
+    harness.charm._wsgi_app._charm_state = new_charm_state
+
+    harness.container_pebble_ready(FLASK_CONTAINER_NAME)
+    container = harness.charm.unit.get_container(FLASK_CONTAINER_NAME)
+
+    assert isinstance(harness.model.unit.status, ops.BlockedStatus)
+    assert "redis" in str(harness.model.unit.status.message)
 
 
 def test_rotate_secret_key_action(harness: Harness):

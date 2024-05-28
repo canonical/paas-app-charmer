@@ -57,7 +57,6 @@ def test_django_config(harness: Harness, config: dict, env: dict) -> None:
         wsgi_config=harness.charm.get_wsgi_config(),
         charm=harness.charm,
         secret_storage=secret_storage,
-        database_requirers={},
     )
     webserver = GunicornWebserver(
         charm_state=charm_state,

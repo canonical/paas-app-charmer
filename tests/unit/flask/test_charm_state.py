@@ -53,7 +53,6 @@ def test_charm_state_flask_config(charm_config: dict, flask_config: dict) -> Non
         wsgi_config=Charm.get_wsgi_config(charm),
         secret_storage=SECRET_STORAGE_MOCK,
         charm=charm,
-        database_requirers={},
     )
     assert charm_state.wsgi_config == flask_config
 

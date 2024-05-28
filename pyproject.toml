@@ -2,7 +2,9 @@
 # See LICENSE file for licensing details.
 [project]
 name = "paas-app-charmer"
-version = "1.0.1"
+# TODO this change (block on optional integration) is
+# not backward compatible. Updated to 2.0.0 for now.
+version = "2.0.0"
 description = "Companion library for PaaS app charmer."
 readme = "README.md"
 authors = [
