@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field  # pylint: disable=no-name-in-module
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer._gunicorn.webserver import WebserverConfig
 from paas_app_charmer.databases import get_uris
+from paas_app_charmer.integrations import Integration
 
 
 class ProxyConfig(BaseModel):  # pylint: disable=too-few-public-methods
@@ -68,9 +69,10 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         webserver_config: WebserverConfig,
         is_secret_storage_ready: bool,
         app_config: dict[str, int | str | bool] | None = None,
-        database_requirers: dict[str, DatabaseRequires] | None = None,
         wsgi_config: dict[str, int | str] | None = None,
         secret_key: str | None = None,
+        integrations: list[Integration] | None = None,
+        database_requirers: dict[str, DatabaseRequires] | None = None,
         redis_uri: str | None = None,
     ):
         """Initialize a new instance of the CharmState class.
@@ -82,6 +84,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             app_config: User-defined configuration values for the WSGI application configuration.
             wsgi_config: The value of the WSGI application specific charm configuration.
             secret_key: The secret storage manager associated with the charm.
+            integrations: Integrations.
             database_requirers: All declared database requirers.
             redis_uri: The redis uri provided by the redis charm.
         """
@@ -94,12 +97,13 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         self.application_log_file = pathlib.Path(f"/var/log/{self.framework}/access.log")
         self.application_error_log_file = pathlib.Path(f"/var/log/{self.framework}/error.log")
         self.webserver_config = webserver_config
-        self.redis_uri = redis_uri
         self._wsgi_config = wsgi_config if wsgi_config is not None else {}
         self._app_config = app_config if app_config is not None else {}
         self._is_secret_storage_ready = is_secret_storage_ready
         self._secret_key = secret_key
+        self.integrations = integrations if integrations else []
         self._database_requirers = database_requirers if database_requirers else {}
+        self.redis_uri = redis_uri
 
     @classmethod
     def from_charm(  # pylint: disable=too-many-arguments
@@ -109,6 +113,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         wsgi_config: BaseModel,
         secret_storage: GunicornSecretStorage,
         database_requirers: dict[str, DatabaseRequires],
+        integrations: list[Integration] | None = None,
         redis_uri: str | None = None,
     ) -> "CharmState":
         """Initialize a new instance of the CharmState class from the associated charm.
@@ -118,6 +123,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             framework: The WSGI framework name.
             wsgi_config: The WSGI framework specific configurations.
             secret_storage: The secret storage manager associated with the charm.
+            integrations: Integrations.
             database_requirers: All database requirers object declared by the charm.
             redis_uri: The redis uri provided by the redis charm.
 
@@ -134,12 +140,13 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             framework=framework,
             wsgi_config=wsgi_config.dict(exclude_unset=True, exclude_none=True),
             app_config=typing.cast(dict[str, str | int | bool], app_config),
-            database_requirers=database_requirers,
             webserver_config=WebserverConfig.from_charm(charm),
             secret_key=(
                 secret_storage.get_secret_key() if secret_storage.is_initialized else None
             ),
             is_secret_storage_ready=secret_storage.is_initialized,
+            integrations=integrations,
+            database_requirers=database_requirers,
             redis_uri=redis_uri,
         )
 

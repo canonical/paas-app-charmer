@@ -75,6 +75,10 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
             if proxy_value:
                 env[proxy_variable] = str(proxy_value)
                 env[proxy_variable.upper()] = str(proxy_value)
+
+        for integration in self._charm_state.integrations:
+            env.update(integration.gen_environment())
+
         env.update(self._charm_state.database_uris)
         if self._charm_state.redis_uri:
             env["REDIS_DB_CONNECT_STRING"] = self._charm_state.redis_uri

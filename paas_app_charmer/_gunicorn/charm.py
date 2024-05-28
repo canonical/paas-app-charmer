@@ -20,6 +20,7 @@ from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
 from paas_app_charmer.databases import Databases, make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
+from paas_app_charmer.integrations import DatabaseIntegration, GenericIntegration, Integration
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         )
         self._database_requirers = make_database_requirers(self, self.app.name)
         try:
-            wsgi_config = self.get_wsgi_config()
+            _ = self.get_wsgi_config()
         except CharmConfigInvalidError as exc:
             self._update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return
@@ -68,14 +69,9 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         else:
             self._redis = None
 
-        self._charm_state = CharmState.from_charm(
-            charm=self,
-            framework=wsgi_framework,
-            wsgi_config=wsgi_config,
-            secret_storage=self._secret_storage,
-            database_requirers=self._database_requirers,
-            redis_uri=self._redis.url if self._redis is not None else None,
-        )
+        self._wsgi_framework = wsgi_framework
+        self._charm_state = self._build_charm_state()
+
         self._database_migration = DatabaseMigration(
             container=self.unit.get_container(self._charm_state.container_name),
             state_dir=self._charm_state.state_dir,
@@ -127,6 +123,41 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
                 self.on[database_requirer.relation_name].relation_broken,
                 getattr(self, f"_on_{database}_database_relation_broken"),
             )
+
+    def _build_charm_state(self) -> CharmState:
+        """Build charm state.
+
+        Returns:
+            New CharmState
+        """
+        integrations: list[Integration] = []
+        for database, database_requirer in self._database_requirers.items():
+            integrations.append(
+                DatabaseIntegration(
+                    interface_name=database_requirer.relation_name,
+                    database_name=database,
+                    database_requires=database_requirer,
+                )
+            )
+
+        if self._redis:
+            integrations.append(
+                GenericIntegration(
+                    name="redis",
+                    blocks=False,
+                    env_vars={"REDIS_DB_CONNECT_STRING": self._redis.url},
+                )
+            )
+
+        return CharmState.from_charm(
+            charm=self,
+            framework=self._wsgi_framework,
+            wsgi_config=self.get_wsgi_config(),
+            secret_storage=self._secret_storage,
+            integrations=integrations,
+            database_requirers=self._database_requirers,
+            redis_uri=self._redis.url if self._redis is not None else None,
+        )
 
     def _on_config_changed(self, _event: ops.EventBase) -> None:
         """Configure the application pebble service layer.
@@ -186,6 +217,14 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             logger.info("secret storage is not initialized")
             self._update_app_and_unit_status(ops.WaitingStatus("Waiting for peer integration"))
             return False
+
+        for integration in self._charm_state.integrations:
+            if integration.block_charm():
+                self._update_app_and_unit_status(
+                    ops.BlockedStatus(f"Missing of invalid integration {integration.name}.")
+                )
+                return False
+
         return True
 
     def restart(self) -> None:
