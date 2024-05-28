@@ -9,8 +9,6 @@ import typing
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 
-from paas_app_charmer.helpers import load_requires
-
 SUPPORTED_DB_INTERFACES = {
     "mysql_client": "mysql",
     "postgresql_client": "postgresql",
@@ -40,9 +38,9 @@ def make_database_requirers(
         value is the corresponding database requirer object.
     """
     db_interfaces = (
-        SUPPORTED_DB_INTERFACES[require["interface"]]
-        for require in load_requires().values()
-        if require["interface"] in SUPPORTED_DB_INTERFACES
+        SUPPORTED_DB_INTERFACES[require.interface_name]
+        for require in charm.framework.meta.requires.values()
+        if require.interface_name in SUPPORTED_DB_INTERFACES
     )
     # automatically create database relation requirers to manage database relations
     # one database relation requirer is required for each of the database relations
