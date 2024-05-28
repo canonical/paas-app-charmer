@@ -67,7 +67,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             return
 
         requires = self.framework.meta.requires
-        # JAVI ask Weii why it is not using self.framework.meta
         if "redis" in requires and requires["redis"].interface_name == "redis":
             self._store.set_default(redis_relation={})
             self._redis = RedisRequires(charm=self, _stored=self._store, relation_name="redis")
@@ -148,7 +147,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             secret_storage=self._secret_storage,
             database_requirers=self._database_requirers,
             redis_uri=self._redis.url if self._redis is not None else None,
-            # JAVI make this more type safe
             s3_connection_info=self._s3.get_s3_connection_info() if self._s3 is not None else None,
         )
 

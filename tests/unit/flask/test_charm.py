@@ -68,11 +68,15 @@ def test_flask_pebble_layer(harness: Harness) -> None:
 
 
 def test_s3_integration(harness: Harness):
-    """TODO."""
-    # Unfortunately the s3 relation has to be created before the charm,
+    """
+    arrange: s3-integrator integrated the flask charm
+    act: start the flask with all hooks and set the container ready
+    assert: flask pebble layer in the container should contain the
+        relevant s3 env variables.
+    """
+    # The s3 relation has to be created before the charm, as
     # this is a problem with ops.testing, as the charm __init__ only
-    # runs once on the beginning. For a similar reason, the
-    # charm_state has to be reconstructed :(
+    # runs once on the beginning.
     s3_relation_data = {
         "access-key": token_hex(16),
         "secret-key": token_hex(16),
@@ -88,6 +92,9 @@ def test_s3_integration(harness: Harness):
     container = harness.charm.unit.get_container(FLASK_CONTAINER_NAME)
     container.add_layer("a_layer", DEFAULT_LAYER)
 
+    # The charm_state has to be reconstructed here because at this point
+    # the s3 connection data can be different as it was in charm.__init__
+    # when the charm was initialised.
     new_charm_state = harness.charm._build_charm_state()
     harness.charm._charm_state = new_charm_state
     harness.charm._wsgi_app._charm_state = new_charm_state

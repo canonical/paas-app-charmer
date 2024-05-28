@@ -224,7 +224,11 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
 
     @property
     def s3_parameters(self) -> typing.Optional["S3Parameters"]:
-        """TODO."""
+        """Returns S3Parameters or None if they do not exist or are invalid.
+
+        Returns:
+            S3Parameters or None.
+        """
         if not self._s3_connection_info:
             return None
 

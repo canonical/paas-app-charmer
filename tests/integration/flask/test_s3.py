@@ -21,7 +21,10 @@ async def test_s3_integration(
     get_unit_ips,
 ):
     """
-    TODO.
+    arrange: build and deploy the flask charm.
+    act: Integrate the charm with the s3-integrator.
+    assert: the flask application should return in the endpoint
+       with the env variables the correce S3 env variables.
     """
     s3_config = {
         "endpoint": f"http://s3.example.com",
@@ -65,5 +68,4 @@ async def test_s3_integration(
             assert env["S3_ENDPOINT"] == s3_config["endpoint"]
             assert env["S3_PATH"] == s3_config["path"]
             assert env["S3_REGION"] == s3_config["region"]
-            # JAVI THIS IS NOT NICE S3_S3
-            assert env["S3_S3_URI_STYLE"] == s3_config["s3-uri-style"]
+            assert env["S3_URI_STYLE"] == s3_config["s3-uri-style"]
