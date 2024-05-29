@@ -46,6 +46,13 @@ log_cli_level = "INFO"
 [tool.black]
 line-length = 99
 target-version = ["py38"]
+extend-exclude = '''
+
+(
+  examples/flask/lib/.*
+  |   examples/django/charm/lib/.*
+)
+'''
 
 [tool.isort]
 line_length = 99
