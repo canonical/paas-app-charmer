@@ -91,7 +91,6 @@ def test_working_integrations(harness: Harness):
 
     harness.set_leader(True)
     harness.begin_with_initial_hooks()
-
     container = harness.charm.unit.get_container(FLASK_CONTAINER_NAME)
     container.add_layer("a_layer", DEFAULT_LAYER)
 
@@ -102,7 +101,6 @@ def test_working_integrations(harness: Harness):
     harness.charm._charm_state = new_charm_state
     harness.charm._wsgi_app._charm_state = new_charm_state
     harness.container_pebble_ready(FLASK_CONTAINER_NAME)
-    container = harness.charm.unit.get_container(FLASK_CONTAINER_NAME)
 
     assert harness.model.unit.status == ops.ActiveStatus()
     service_env = container.get_plan().services["flask"].environment
@@ -122,6 +120,7 @@ def test_optional_integration_blocks_charm(harness: Harness):
     """
 
     harness.framework.meta.requires["redis"].optional = False
+
     harness.set_leader(True)
     harness.begin_with_initial_hooks()
 
@@ -135,9 +134,7 @@ def test_optional_integration_blocks_charm(harness: Harness):
     new_charm_state = harness.charm._build_charm_state()
     harness.charm._charm_state = new_charm_state
     harness.charm._wsgi_app._charm_state = new_charm_state
-
     harness.container_pebble_ready(FLASK_CONTAINER_NAME)
-    container = harness.charm.unit.get_container(FLASK_CONTAINER_NAME)
 
     assert isinstance(harness.model.unit.status, ops.BlockedStatus)
     assert "redis" in str(harness.model.unit.status.message)

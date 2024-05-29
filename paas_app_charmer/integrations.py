@@ -1,7 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Classes that provide the required integrations functionality."""
+"""Provide the Integration interface and the implementation of integrations."""
 
 import logging
 from abc import ABC, abstractmethod
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class Integration(ABC):
-    """Generic integration information.
+    """Interface for integrations.
 
     Attributes:
         name: Name of the integration.
@@ -28,13 +28,9 @@ class Integration(ABC):
     def name(self) -> str:
         """Return the name of the integration."""
 
+    @abstractmethod
     def block_charm(self) -> bool:
-        """Return if the current state of the integration should block the charm.
-
-        Returns:
-           Whether to block the charm if the integration is not ready.
-        """
-        return False
+        """Return if the current state of the integration should block the charm."""
 
 
 class RedisIntegration(Integration):

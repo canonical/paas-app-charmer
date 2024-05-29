@@ -78,7 +78,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             app_config: User-defined configuration values for the WSGI application configuration.
             wsgi_config: The value of the WSGI application specific charm configuration.
             secret_key: The secret storage manager associated with the charm.
-            integrations: Integrations.
+            integrations: List of integrations.
         """
         self.framework = framework
         self.service_name = self.framework
@@ -111,7 +111,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             framework: The WSGI framework name.
             wsgi_config: The WSGI framework specific configurations.
             secret_storage: The secret storage manager associated with the charm.
-            integrations: Integrations.
+            integrations: List of integrations.
 
         Return:
             The CharmState instance created by the provided charm.

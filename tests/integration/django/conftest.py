@@ -74,7 +74,7 @@ async def django_postgresql_integration_fixture(django_app: Application, model: 
     postgresql_app = await model.deploy("postgresql-k8s", channel="14/stable", trust=True)
     await model.relate(django_app.name, "postgresql-k8s")
     await model.wait_for_idle(apps=[django_app.name, postgresql_app.name], status="active")
-    # module scope, so no need to remove integration.
+    # module scoped, so no need to remove the integration.
 
 
 @pytest_asyncio.fixture
