@@ -32,7 +32,7 @@ async def test_django_blocked_for_postgresql(django_app: Application, model: Mod
     ],
     indirect=["update_config"],
 )
-# Django postgresl integration only needed in the first test using it, as it is scoped module.
+# Django postgresql integration only needed in the first test using it, as it is scoped module.
 @pytest.mark.usefixtures("django_postgresql_integration")
 @pytest.mark.usefixtures("update_config")
 async def test_django_webserver_timeout(django_app, get_unit_ips, timeout):
