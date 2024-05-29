@@ -111,6 +111,5 @@ def test_database_integration(name, data, optional, expected_env_vars, expected_
 
     integration = DatabaseIntegration(name, database_require, optional)
     assert integration.name == name
-    # Until it is implemented
     assert integration.block_charm() == expected_blocks
     assert integration.gen_environment() == expected_env_vars

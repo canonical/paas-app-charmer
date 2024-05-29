@@ -74,7 +74,7 @@ def test_working_integrations(harness: Harness):
     """
     # The relations have to be created before the charm, as
     # this is a problem with ops.testing, as the charm __init__ only
-    # runs once on the beginning.
+    # runs once in the beginning.
     redis_relation_data = {
         "hostname": "10.1.88.132",
         "port": "6379",
