@@ -80,8 +80,9 @@ requires:
     interface: loki_push_api
   postgresql:
     interface: postgresql_client
-    optional: True
+    optional: false
     limit: 1
+
 resources:
   django-app-image:
     description: django application image.

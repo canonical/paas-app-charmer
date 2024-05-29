@@ -7,7 +7,20 @@ import typing
 
 import pytest
 import requests
+from juju.application import Application
 from juju.model import Model
+
+
+async def test_django_blocked_for_postgresql(django_app: Application, model: Model):
+    """
+    arrange: build and deploy the django charm, that is not integrated with postgresql.
+    act: -
+    assert: the django charm is blocked waiting for postgresql integration.
+    """
+    await model.wait_for_idle(apps=[django_app.name], status="blocked")
+    unit = model.applications[django_app.name].units[0]
+    assert unit.workload_status == "blocked"
+    assert "postgresql" in unit.workload_status_message
 
 
 @pytest.mark.parametrize(
@@ -19,6 +32,8 @@ from juju.model import Model
     ],
     indirect=["update_config"],
 )
+# Django postgresl integration only needed in the first test using it, as it is scoped module.
+@pytest.mark.usefixtures("django_postgresql_integration")
 @pytest.mark.usefixtures("update_config")
 async def test_django_webserver_timeout(django_app, get_unit_ips, timeout):
     """

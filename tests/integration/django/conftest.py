@@ -56,19 +56,25 @@ async def django_app_fixture(charm_file: str, model: Model, django_app_image: st
     resources = {
         "django-app-image": django_app_image,
     }
-    apps = await asyncio.gather(
-        model.deploy(
-            charm_file,
-            application_name=app_name,
-            config={"django-allowed-hosts": "*"},
-            resources=resources,
-            series="jammy",
-        ),
-        model.deploy("postgresql-k8s", channel="14/stable", trust=True),
+    django_app = await model.deploy(
+        charm_file,
+        application_name=app_name,
+        config={"django-allowed-hosts": "*"},
+        resources=resources,
+        series="jammy",
     )
-    await model.relate(app_name, "postgresql-k8s")
-    await model.wait_for_idle(status="active")
-    return apps[0]
+    # blocked because there is no postgresql integration.
+    await model.wait_for_idle(apps=[django_app.name], status="blocked")
+    return django_app
+
+
+@pytest_asyncio.fixture(scope="module", name="django_postgresql_integration")
+async def django_postgresql_integration_fixture(django_app: Application, model: Model):
+    """Deploy postgresql and integrate with the django charm."""
+    postgresql_app = await model.deploy("postgresql-k8s", channel="14/stable", trust=True)
+    await model.relate(django_app.name, "postgresql-k8s")
+    await model.wait_for_idle(apps=[django_app.name, postgresql_app.name], status="active")
+    # module scope, so no need to remove integration.
 
 
 @pytest_asyncio.fixture
