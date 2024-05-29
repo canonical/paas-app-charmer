@@ -107,6 +107,10 @@ requires:
     interface: redis
     optional: true
     limit: 1
+  s3:
+    interface: s3
+    optional: true
+    limit: 1
 resources:
   flask-app-image:
     description: flask application image.

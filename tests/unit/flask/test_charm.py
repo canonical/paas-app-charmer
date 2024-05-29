@@ -7,6 +7,7 @@
 # pylint: disable=protected-access
 
 import unittest.mock
+from secrets import token_hex
 
 import ops
 from ops.testing import Harness
@@ -65,12 +66,12 @@ def test_flask_pebble_layer(harness: Harness) -> None:
     }
 
 
-def test_working_integrations(harness: Harness):
+def test_integrations_wiring(harness: Harness):
     """
-    arrange: Prepare a Redis and a database integration.
+    arrange: Prepare a Redis, database and S3 integrations.
     act: Start the flask charm and set flask-app container to be ready.
-    assert: The flask service should have the Redis and the
-        database environment variables in its plan.
+    assert: The flask service should have environment variables in its plan
+        for each of the integrations.
     """
     # The relations have to be created before the charm, as
     # this is a problem with ops.testing, as the charm __init__ only
@@ -80,7 +81,6 @@ def test_working_integrations(harness: Harness):
         "port": "6379",
     }
     harness.add_relation("redis", "redis-k8s", unit_data=redis_relation_data)
-
     postgresql_relation_data = {
         "database": "test-database",
         "endpoints": "test-postgresql:5432,test-postgresql-2:5432",
@@ -88,6 +88,12 @@ def test_working_integrations(harness: Harness):
         "username": "test-username",
     }
     harness.add_relation("postgresql", "postgresql-k8s", app_data=postgresql_relation_data)
+    s3_relation_data = {
+        "access-key": token_hex(16),
+        "secret-key": token_hex(16),
+        "bucket": "flask-bucket",
+    }
+    harness.add_relation("s3", "s3-integration", app_data=s3_relation_data)
 
     harness.set_leader(True)
     harness.begin_with_initial_hooks()
@@ -109,6 +115,7 @@ def test_working_integrations(harness: Harness):
         service_env["POSTGRESQL_DB_CONNECT_STRING"]
         == "postgresql://test-username:test-password@test-postgresql:5432/test-database"
     )
+    assert service_env["S3_BUCKET"] == "flask-bucket"
 
 
 def test_optional_integration_blocks_charm(harness: Harness):

@@ -8,6 +8,11 @@ import logging
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
+from charms.data_platform_libs.v0.s3 import (
+    CredentialsChangedEvent,
+    CredentialsGoneEvent,
+    S3Requirer,
+)
 from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
 from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
@@ -20,7 +25,12 @@ from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
 from paas_app_charmer.databases import Databases, make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
-from paas_app_charmer.integrations import DatabaseIntegration, Integration, RedisIntegration
+from paas_app_charmer.integrations import (
+    DatabaseIntegration,
+    Integration,
+    RedisIntegration,
+    S3Integration,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +76,13 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             self.framework.observe(self.on.redis_relation_updated, self._on_redis_relation_updated)
         else:
             self._redis = None
+
+        if "s3" in requires and requires["s3"].interface_name == "s3":
+            self._s3 = S3Requirer(charm=self, relation_name="s3", bucket_name=self.app.name)
+            self.framework.observe(self._s3.on.credentials_changed, self._on_s3_credential_changed)
+            self.framework.observe(self._s3.on.credentials_gone, self._on_s3_credential_gone)
+        else:
+            self._s3 = None
 
         self._wsgi_framework = wsgi_framework
         self._charm_state = self._build_charm_state()
@@ -145,6 +162,15 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
                     name="redis",
                     redis_url=self._redis.url,
                     optional=requires["redis"].optional,
+                )
+            )
+
+        if self._s3:
+            integrations.append(
+                S3Integration(
+                    name="s3",
+                    s3_connection_info=self._s3.get_s3_connection_info(),
+                    optional=requires["s3"].optional,
                 )
             )
 
@@ -281,4 +307,12 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
     def _on_redis_relation_updated(self, _event: DatabaseRequiresEvent) -> None:
         """Handle redis's database-created event."""
+        self.restart()
+
+    def _on_s3_credential_changed(self, _event: CredentialsChangedEvent) -> None:
+        """Handle s3 credentials-changed event."""
+        self.restart()
+
+    def _on_s3_credential_gone(self, _event: CredentialsGoneEvent) -> None:
+        """Handle s3 credentials-gone event."""
         self.restart()
