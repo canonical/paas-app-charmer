@@ -13,6 +13,8 @@ from ops.testing import Harness
 
 from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver
+from paas_app_charmer._gunicorn.webserver import WebserverConfig
+from paas_app_charmer._gunicorn.workload_state import WorkloadState
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.flask import Charm
 
@@ -40,13 +42,17 @@ def test_flask_pebble_layer(harness: Harness) -> None:
         secret_storage=secret_storage,
         database_requirers={},
     )
+    webserver_config = WebserverConfig.from_charm(harness.charm)
+    workload_state = WorkloadState(framework="flask",)
     webserver = GunicornWebserver(
-        charm_state=charm_state,
+        webserver_config=webserver_config,
+        workload_state=workload_state,
         container=container,
     )
     flask_app = WsgiApp(
         container=container,
         charm_state=charm_state,
+        workload_state=workload_state,
         webserver=webserver,
         database_migration=harness.charm._database_migration,
     )
@@ -113,9 +119,9 @@ def test_integrations_wiring(harness: Harness):
     # The charm_state has to be reconstructed here because at this point
     # the data in the relations can be different than what was in charm.__init__
     # when the charm was initialised.
+
     new_charm_state = harness.charm._build_charm_state()
     harness.charm._charm_state = new_charm_state
-    harness.charm._wsgi_app._charm_state = new_charm_state
     harness.container_pebble_ready(FLASK_CONTAINER_NAME)
 
     assert harness.model.unit.status == ops.ActiveStatus()

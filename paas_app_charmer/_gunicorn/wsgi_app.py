@@ -9,6 +9,7 @@ import logging
 import ops
 
 from paas_app_charmer._gunicorn.charm_state import CharmState, IntegrationsState
+from paas_app_charmer._gunicorn.workload_state import WorkloadState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver
 from paas_app_charmer.database_migration import DatabaseMigration
 
@@ -22,6 +23,7 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
         self,
         container: ops.Container,
         charm_state: CharmState,
+        workload_state: WorkloadState,
         webserver: GunicornWebserver,
         database_migration: DatabaseMigration,
     ):
@@ -34,6 +36,7 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
             database_migration: The database migration manager object.
         """
         self._charm_state = charm_state
+        self._workload_state = workload_state
         self._container = container
         self._webserver = webserver
         self._database_migration = database_migration
@@ -65,7 +68,7 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
         """
         config = self._charm_state.app_config
         config.update(self._charm_state.wsgi_config)
-        prefix = f"{self._charm_state.framework.upper()}_"
+        prefix = f"{self._workload_state.framework.upper()}_"
         env = {f"{prefix}{k.upper()}": self._encode_env(v) for k, v in config.items()}
         secret_key_env = f"{prefix}SECRET_KEY"
         if secret_key_env not in env:
@@ -86,7 +89,7 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
         Returns:
             The pebble layer definition for WSGI application.
         """
-        original_services_file = self._charm_state.state_dir / "original-services.json"
+        original_services_file = self._workload_state.state_dir / "original-services.json"
         if self._container.exists(original_services_file):
             services = json.loads(self._container.pull(original_services_file).read())
         else:
@@ -94,24 +97,24 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
             services = {k: v.to_dict() for k, v in plan.services.items()}
             self._container.push(original_services_file, json.dumps(services), make_dirs=True)
 
-        services[self._charm_state.service_name]["override"] = "replace"
-        services[self._charm_state.service_name]["environment"] = self.gen_environment()
+        services[self._workload_state.service_name]["override"] = "replace"
+        services[self._workload_state.service_name]["environment"] = self.gen_environment()
 
         return ops.pebble.LayerDict(services=services)
 
     def restart(self) -> None:
         """Restart or start the WSGI service if not started with the latest configuration."""
         self._container.add_layer("charm", self._wsgi_layer(), combine=True)
-        service_name = self._charm_state.service_name
+        service_name = self._workload_state.service_name
         is_webserver_running = self._container.get_service(service_name).is_running()
-        command = self._wsgi_layer()["services"][self._charm_state.framework]["command"]
+        command = self._wsgi_layer()["services"][self._workload_state.framework]["command"]
         self._webserver.update_config(
             environment=self.gen_environment(),
             is_webserver_running=is_webserver_running,
             command=command,
         )
         migration_command = None
-        app_dir = self._charm_state.app_dir
+        app_dir = self._workload_state.app_dir
         if self._container.exists(app_dir / "migrate"):
             migration_command = [str((app_dir / "migrate").absolute())]
         if self._container.exists(app_dir / "migrate.sh"):
@@ -126,8 +129,8 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
                 command=migration_command,
                 environment=self.gen_environment(),
                 working_dir=app_dir,
-                user=self._charm_state.user,
-                group=self._charm_state.group,
+                user=self._workload_state.user,
+                group=self._workload_state.group,
             )
         self._container.replan()
 

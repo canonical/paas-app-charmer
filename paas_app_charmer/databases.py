@@ -97,29 +97,3 @@ def get_uri(database_requires: DatabaseRequires) -> str | None:
         f"@{endpoint}/{database_name}"
     )
 
-
-# We need to derive from ops.framework.Object to subscribe to callbacks
-# from ops.framework. See: https://github.com/canonical/operator/blob/main/ops/framework.py#L782
-class Databases(ops.Object):  # pylint: disable=too-few-public-methods
-    """A class handling databases relations and state.
-
-    Attrs:
-        _charm: The main charm. Used for events callbacks
-        _databases: A dict of DatabaseRequires to store relations
-    """
-
-    def __init__(
-        self,
-        charm: ops.CharmBase,
-        database_requirers: typing.Dict[str, DatabaseRequires],
-    ):
-        """Initialize a new instance of the Databases class.
-
-        Args:
-            charm: The main charm. Used for events callbacks.
-            database_requirers: Database requirers created by make_database_requirers.
-        """
-        # The following is necessary to be able to subscribe to callbacks from ops.framework
-        super().__init__(charm, "databases")
-        self._charm = charm
-        self._databases = database_requirers

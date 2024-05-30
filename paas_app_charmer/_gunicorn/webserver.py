@@ -15,6 +15,8 @@ from ops.pebble import ExecError, PathError
 
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 
+from paas_app_charmer._gunicorn.workload_state import WorkloadState
+
 if typing.TYPE_CHECKING:
     from paas_app_charmer._gunicorn.charm_state import CharmState
 
@@ -81,7 +83,8 @@ class GunicornWebserver:  # pylint: disable=too-few-public-methods
 
     def __init__(
         self,
-        charm_state: "CharmState",
+        webserver_config: WebserverConfig,
+        workload_state: WorkloadState,
         container: ops.Container,
     ):
         """Initialize a new instance of the GunicornWebserver class.
@@ -90,7 +93,8 @@ class GunicornWebserver:  # pylint: disable=too-few-public-methods
             charm_state: The state of the charm that the GunicornWebserver instance belongs to.
             container: The WSGI application container in this charm unit.
         """
-        self._charm_state = charm_state
+        self._webserver_config = webserver_config
+        self._workload_state = workload_state
         self._container = container
         self._reload_signal = signal.SIGHUP
 
@@ -102,7 +106,7 @@ class GunicornWebserver:  # pylint: disable=too-few-public-methods
             The content of the Gunicorn configuration file.
         """
         config_entries = []
-        for setting, setting_value in self._charm_state.webserver_config.items():
+        for setting, setting_value in self._webserver_config.items():
             setting_value = typing.cast(None | int | datetime.timedelta, setting_value)
             if setting_value is None:
                 continue
@@ -114,11 +118,11 @@ class GunicornWebserver:  # pylint: disable=too-few-public-methods
             config_entries.append(f"{setting} = {setting_value}")
         new_line = "\n"
         config = f"""\
-bind = ['0.0.0.0:{self._charm_state.port}']
-chdir = {repr(str(self._charm_state.app_dir))}
-accesslog = {repr(str(self._charm_state.application_log_file.absolute()))}
-errorlog = {repr(str(self._charm_state.application_error_log_file.absolute()))}
-statsd_host = {repr(self._charm_state.statsd_host)}
+bind = ['0.0.0.0:{self._workload_state.port}']
+chdir = {repr(str(self._workload_state.app_dir))}
+accesslog = {repr(str(self._workload_state.application_log_file.absolute()))}
+errorlog = {repr(str(self._workload_state.application_error_log_file.absolute()))}
+statsd_host = {repr(self._workload_state.statsd_host)}
 {new_line.join(config_entries)}"""
         return config
 
@@ -129,7 +133,7 @@ statsd_host = {repr(self._charm_state.statsd_host)}
         Returns:
             The path to the web server configuration file.
         """
-        return self._charm_state.base_dir / "gunicorn.conf.py"
+        return self._workload_state.base_dir / "gunicorn.conf.py"
 
     def update_config(
         self, environment: dict[str, str], is_webserver_running: bool, command: str
@@ -158,9 +162,9 @@ statsd_host = {repr(self._charm_state.statsd_host)}
         exec_process = self._container.exec(
             check_config_command,
             environment=environment,
-            user=self._charm_state.user,
-            group=self._charm_state.group,
-            working_dir=str(self._charm_state.app_dir),
+            user=self._workload_state.user,
+            group=self._workload_state.group,
+            working_dir=str(self._workload_state.app_dir),
         )
         try:
             exec_process.wait_output()
@@ -176,20 +180,20 @@ statsd_host = {repr(self._charm_state.statsd_host)}
             ) from exc
         if is_webserver_running:
             logger.info("gunicorn config changed, reloading")
-            self._container.send_signal(self._reload_signal, self._charm_state.service_name)
+            self._container.send_signal(self._reload_signal, self._workload_state.service_name)
 
     def _prepare_log_dir(self) -> None:
         """Prepare access and error log directory for the application."""
         container = self._container
         for log in (
-            self._charm_state.application_log_file,
-            self._charm_state.application_error_log_file,
+            self._workload_state.application_log_file,
+            self._workload_state.application_error_log_file,
         ):
             log_dir = str(log.parent.absolute())
             if not container.exists(log_dir):
                 container.make_dir(
                     log_dir,
                     make_parents=True,
-                    user=self._charm_state.user,
-                    group=self._charm_state.group,
+                    user=self._workload_state.user,
+                    group=self._workload_state.group,
                 )

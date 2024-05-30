@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
@@ -16,9 +15,12 @@ from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.observability import Observability
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver
+from paas_app_charmer._gunicorn.webserver import WebserverConfig
+from paas_app_charmer._gunicorn.workload_state import WorkloadState
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
+
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
-from paas_app_charmer.databases import Databases, make_database_requirers
+from paas_app_charmer.databases import make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 
 logger = logging.getLogger(__name__)
@@ -56,7 +58,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         )
         self._database_requirers = make_database_requirers(self, self.app.name)
         try:
-            _ = self.get_wsgi_config()
+            wsgi_config = self.get_wsgi_config()
         except CharmConfigInvalidError as exc:
             self._update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return
@@ -68,44 +70,32 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         else:
             self._redis = None
 
-        self._charm_state = self._build_charm_state()
+        # JAVI maybe the framework hardcoded? maybe better in webserver config?
+        self._workload_state = WorkloadState(self._wsgi_framework)
 
         self._database_migration = DatabaseMigration(
-            container=self.unit.get_container(self._charm_state.container_name),
-            state_dir=self._charm_state.state_dir,
+            container=self.unit.get_container(self._workload_state.container_name),
+            state_dir=self._workload_state.state_dir,
         )
-        webserver = GunicornWebserver(
-            charm_state=self._charm_state,
-            container=self.unit.get_container(self._charm_state.container_name),
-        )
-        self._container = self.unit.get_container(f"{self._charm_state.framework}-app")
-        self._wsgi_app = WsgiApp(
-            container=self._container,
-            charm_state=self._charm_state,
-            webserver=webserver,
-            database_migration=self._database_migration,
-        )
-        self._databases = Databases(
-            # JAVI PROBLEM, charm and _wsi_app._charm_state
-            charm=self,
-            database_requirers=self._database_requirers,
-        )
+
+        self._webserver_config = WebserverConfig.from_charm(self)
+        
+        self._container = self.unit.get_container(f"{self._workload_state.framework}-app")
+
         self._ingress = IngressPerAppRequirer(
-            # JAVI PROBLEM, charm and charm_state.port
             self,
-            port=self._charm_state.port,
+            port=self._workload_state.port,
             strip_prefix=True,
         )
+
+        
         self._observability = Observability(
             self,
-            # charm_state=self._charm_state,
-            log_files=[
-                self._charm_state.application_log_file,
-                self._charm_state.application_error_log_file,
-            ],
-            container_name=self._charm_state.container_name,
+            log_files=self._workload_state.log_files,
+            container_name=self._workload_state.container_name,
             cos_dir=self.get_cos_dir(),
         )
+
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.rotate_secret_key_action, self._on_rotate_secret_key_action)
         self.framework.observe(
@@ -190,13 +180,14 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         Returns:
             True if the charm is ready to start the workload application.
         """
+        charm_state = self._build_charm_state()
         if not self._container.can_connect():
             logger.info(
-                "pebble client in the %s container is not ready", self._charm_state.framework
+                "pebble client in the %s container is not ready", self._workload_state.framework
             )
             self._update_app_and_unit_status(ops.WaitingStatus("Waiting for pebble ready"))
             return False
-        if not self._charm_state.is_secret_storage_ready:
+        if not charm_state.is_secret_storage_ready:
             logger.info("secret storage is not initialized")
             self._update_app_and_unit_status(ops.WaitingStatus("Waiting for peer integration"))
             return False
@@ -204,13 +195,33 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
     def restart(self) -> None:
         """Restart or start the service if not started with the latest configuration."""
+        charm_state = self._build_charm_state()
+
+        webserver = GunicornWebserver(
+            webserver_config=self._webserver_config,
+            workload_state=self._workload_state,
+            container=self.unit.get_container(self._workload_state.container_name),
+        )
+
+        print(" is_ready JAVI Container name", self._container.name)
+        print(" is_ready JAVI Container plan", self._container.get_plan())
+        print(" is_ready JAVI Container can connect:", self._container.can_connect())
+
+        wsgi_app = WsgiApp(
+            container=self._container,
+            charm_state=charm_state,
+            workload_state=self._workload_state,
+            webserver=webserver,
+            database_migration=self._database_migration,
+        )
+
         if not self.is_ready():
             return
         try:
             self._update_app_and_unit_status(
                 ops.MaintenanceStatus("Preparing service for restart")
             )
-            self._wsgi_app.restart()
+            wsgi_app.restart()
         except CharmConfigInvalidError as exc:
             self._update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return
@@ -235,15 +246,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
     def _on_postgresql_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
         """Handle postgresql's database-created event."""
-        # JAVI REFRESH THE CHARM STATE HERE!!
-        # JAVI TRICK TO CHECK INTEG TESTS. REMOVE THIS PLEASE!
-        # pylint: disable=import-outside-toplevel
-        from paas_app_charmer._gunicorn.charm_state import IntegrationsState
-
-        self._charm_state.integrations = IntegrationsState.build(
-            redis_uri=self._redis.url if self._redis is not None else None,
-            database_requirers=self._database_requirers,
-        )
         self.restart()
 
     def _on_postgresql_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:

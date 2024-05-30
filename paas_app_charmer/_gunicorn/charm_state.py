@@ -14,7 +14,6 @@ from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from pydantic import BaseModel, Field  # pylint: disable=no-name-in-module
 
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
-from paas_app_charmer._gunicorn.webserver import WebserverConfig
 from paas_app_charmer.databases import get_uri
 
 
@@ -37,7 +36,6 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
     """Represents the state of the Gunicorn based charm.
 
     Attrs:
-        webserver_config: the web server configuration file content for the charm.
         wsgi_config: the value of the WSGI specific charm configuration.
         app_config: user-defined configurations for the WSGI application.
         port: the port number to use for the WSGI server.
@@ -48,23 +46,16 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         is_secret_storage_ready: whether the secret storage system is ready.
         proxy: proxy information.
         service_name: The WSGI application pebble service name.
-        container_name: The name of the WSGI application container.
         base_dir: The project base directory in the WSGI application container.
         app_dir: The WSGI application directory in the WSGI application container.
         user: The UNIX user name for running the service.
         group: The UNIX group name for running the service.
     """
 
-    statsd_host = "localhost:9125"
-    port = 8000
-    user = "_daemon_"
-    group = "_daemon_"
-
     def __init__(  # pylint: disable=too-many-arguments
         self,
         *,
         framework: str,
-        webserver_config: WebserverConfig,
         is_secret_storage_ready: bool,
         app_config: dict[str, int | str | bool] | None = None,
         wsgi_config: dict[str, int | str] | None = None,
@@ -75,7 +66,6 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
 
         Args:
             framework: the framework name.
-            webserver_config: the Gunicorn webserver configuration.
             is_secret_storage_ready: whether the secret storage system is ready.
             app_config: User-defined configuration values for the WSGI application configuration.
             wsgi_config: The value of the WSGI application specific charm configuration.
@@ -83,14 +73,6 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             integrations: Information about the integrations.
         """
         self.framework = framework
-        self.service_name = self.framework
-        self.container_name = f"{self.framework}-app"
-        self.base_dir = pathlib.Path(f"/{framework}")
-        self.app_dir = self.base_dir / "app"
-        self.state_dir = self.base_dir / "state"
-        self.application_log_file = pathlib.Path(f"/var/log/{self.framework}/access.log")
-        self.application_error_log_file = pathlib.Path(f"/var/log/{self.framework}/error.log")
-        self.webserver_config = webserver_config
         self._wsgi_config = wsgi_config if wsgi_config is not None else {}
         self._app_config = app_config if app_config is not None else {}
         self._is_secret_storage_ready = is_secret_storage_ready
@@ -135,7 +117,6 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             framework=framework,
             wsgi_config=wsgi_config.dict(exclude_unset=True, exclude_none=True),
             app_config=typing.cast(dict[str, str | int | bool], app_config),
-            webserver_config=WebserverConfig.from_charm(charm),
             secret_key=(
                 secret_storage.get_secret_key() if secret_storage.is_initialized else None
             ),

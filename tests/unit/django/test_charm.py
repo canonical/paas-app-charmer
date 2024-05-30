@@ -13,6 +13,8 @@ from ops.testing import Harness
 
 from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver
+from paas_app_charmer._gunicorn.webserver import WebserverConfig
+from paas_app_charmer._gunicorn.workload_state import WorkloadState
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 
 from .constants import DEFAULT_LAYER
@@ -53,19 +55,23 @@ def test_django_config(harness: Harness, config: dict, env: dict) -> None:
     secret_storage.get_secret_key.return_value = "test"
     harness.update_config(config)
     charm_state = CharmState.from_charm(
+        charm=harness.charm,
         framework="django",
         wsgi_config=harness.charm.get_wsgi_config(),
-        charm=harness.charm,
         secret_storage=secret_storage,
         database_requirers={},
     )
+    webserver_config = WebserverConfig.from_charm(harness.charm)
+    workload_state = WorkloadState(framework="django")
     webserver = GunicornWebserver(
-        charm_state=charm_state,
+        webserver_config=webserver_config,
+        workload_state=workload_state,
         container=container,
     )
     django_app = WsgiApp(
         container=harness.charm.unit.get_container("django-app"),
         charm_state=charm_state,
+        workload_state=workload_state,
         webserver=webserver,
         database_migration=harness.charm._database_migration,
     )
