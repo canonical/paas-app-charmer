@@ -96,6 +96,7 @@ def test_database_uri_mocked(
     for relation in relations:
         interface = relation["interface"]
         database_require = unittest.mock.MagicMock()
+        database_require.relation_name = interface
         database_require.fetch_relation_data = unittest.mock.MagicMock(
             return_value={"data": relation["data"]}
         )
