@@ -130,8 +130,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         integrations = IntegrationsState(
             redis_uri=redis_uri,
             databases_uris={
-                interface_name: get_uri(uri)
-                for interface_name, uri in database_requirers.items()
+                interface_name: get_uri(uri) for interface_name, uri in database_requirers.items()
             },
         )
         return cls(
