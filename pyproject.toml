@@ -33,7 +33,7 @@ paas_app_charmer = ["**/cos/**", "**/cos/**/.**"]
 branch = true
 
 [tool.coverage.report]
-fail_under = 85
+fail_under = 90
 show_missing = true
 
 [tool.pytest.ini_options]
