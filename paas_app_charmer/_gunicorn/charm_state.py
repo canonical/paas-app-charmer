@@ -5,6 +5,7 @@
 import os
 import pathlib
 import typing
+from dataclasses import dataclass, field
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
@@ -14,7 +15,7 @@ from pydantic import BaseModel, Field  # pylint: disable=no-name-in-module
 
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer._gunicorn.webserver import WebserverConfig
-from paas_app_charmer.databases import get_uris
+from paas_app_charmer.databases import get_uri
 
 
 class ProxyConfig(BaseModel):  # pylint: disable=too-few-public-methods
@@ -39,7 +40,6 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         webserver_config: the web server configuration file content for the charm.
         wsgi_config: the value of the WSGI specific charm configuration.
         app_config: user-defined configurations for the WSGI application.
-        database_uris: a mapping of available database environment variable to database uris.
         port: the port number to use for the WSGI server.
         application_log_file: the file path for the WSGI application access log.
         application_error_log_file: the file path for the WSGI application error log.
@@ -53,7 +53,6 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         app_dir: The WSGI application directory in the WSGI application container.
         user: The UNIX user name for running the service.
         group: The UNIX group name for running the service.
-        redis_uri: The redis uri provided by the redis charm.
     """
 
     statsd_host = "localhost:9125"
@@ -68,10 +67,9 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         webserver_config: WebserverConfig,
         is_secret_storage_ready: bool,
         app_config: dict[str, int | str | bool] | None = None,
-        database_requirers: dict[str, DatabaseRequires] | None = None,
         wsgi_config: dict[str, int | str] | None = None,
         secret_key: str | None = None,
-        redis_uri: str | None = None,
+        integrations: "IntegrationsState | None" = None,
     ):
         """Initialize a new instance of the CharmState class.
 
@@ -82,8 +80,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             app_config: User-defined configuration values for the WSGI application configuration.
             wsgi_config: The value of the WSGI application specific charm configuration.
             secret_key: The secret storage manager associated with the charm.
-            database_requirers: All declared database requirers.
-            redis_uri: The redis uri provided by the redis charm.
+            integrations: Information about the integrations.
         """
         self.framework = framework
         self.service_name = self.framework
@@ -94,12 +91,11 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         self.application_log_file = pathlib.Path(f"/var/log/{self.framework}/access.log")
         self.application_error_log_file = pathlib.Path(f"/var/log/{self.framework}/error.log")
         self.webserver_config = webserver_config
-        self.redis_uri = redis_uri
         self._wsgi_config = wsgi_config if wsgi_config is not None else {}
         self._app_config = app_config if app_config is not None else {}
         self._is_secret_storage_ready = is_secret_storage_ready
         self._secret_key = secret_key
-        self._database_requirers = database_requirers if database_requirers else {}
+        self.integrations = integrations
 
     @classmethod
     def from_charm(  # pylint: disable=too-many-arguments
@@ -130,17 +126,24 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             if not any(k.startswith(prefix) for prefix in (f"{framework}-", "webserver-"))
         }
         app_config = {k: v for k, v in app_config.items() if k not in wsgi_config.dict().keys()}
+
+        integrations = IntegrationsState(
+            redis_uri=redis_uri,
+            databases_uris={
+                interface_name: str(get_uri(uri))
+                for interface_name, uri in database_requirers.items()
+            },
+        )
         return cls(
             framework=framework,
             wsgi_config=wsgi_config.dict(exclude_unset=True, exclude_none=True),
             app_config=typing.cast(dict[str, str | int | bool], app_config),
-            database_requirers=database_requirers,
             webserver_config=WebserverConfig.from_charm(charm),
             secret_key=(
                 secret_storage.get_secret_key() if secret_storage.is_initialized else None
             ),
             is_secret_storage_ready=secret_storage.is_initialized,
-            redis_uri=redis_uri,
+            integrations=integrations,
         )
 
     @property
@@ -203,11 +206,17 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         """
         return self._is_secret_storage_ready
 
-    @property
-    def database_uris(self) -> dict[str, str]:
-        """Return currently attached database URIs.
 
-        Returns:
-            A dictionary of database types and database URIs.
-        """
-        return get_uris(self._database_requirers)
+@dataclass
+class IntegrationsState:
+    """State of the integrations.
+
+    This state is related to all the relations that can be optional, like databases, redis...
+
+    Attrs:
+        redis_uri: The redis uri provided by the redis charm.
+        databases_uris: Map from interface_name to the database uri.
+    """
+
+    redis_uri: str | None = None
+    databases_uris: dict[str, str | None] = field(default_factory=dict)

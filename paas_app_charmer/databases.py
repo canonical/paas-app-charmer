@@ -58,26 +58,6 @@ def make_database_requirers(
     return databases
 
 
-def get_uris(database_requirers: typing.Dict[str, DatabaseRequires]) -> typing.Dict[str, str]:
-    """Compute DatabaseURI and return it.
-
-    Args:
-        database_requirers: Database requirers created by make_database_requirers.
-
-    Returns:
-        DatabaseURI containing details about the data provider integration
-    """
-    db_uris: typing.Dict[str, str] = {}
-    for interface_name, db_requires in database_requirers.items():
-        uri = get_uri(db_requires)
-        if not uri:
-            continue
-
-        env_name = f"{interface_name.upper()}_DB_CONNECT_STRING"
-        db_uris[env_name] = uri
-    return db_uris
-
-
 def get_uri(database_requires: DatabaseRequires) -> str | None:
     """Compute a URI for DatabaseRequires and return it.
 

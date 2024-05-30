@@ -8,7 +8,7 @@ import logging
 
 import ops
 
-from paas_app_charmer._gunicorn.charm_state import CharmState
+from paas_app_charmer._gunicorn.charm_state import CharmState, IntegrationsState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver
 from paas_app_charmer.database_migration import DatabaseMigration
 
@@ -75,9 +75,9 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
             if proxy_value:
                 env[proxy_variable] = str(proxy_value)
                 env[proxy_variable.upper()] = str(proxy_value)
-        env.update(self._charm_state.database_uris)
-        if self._charm_state.redis_uri:
-            env["REDIS_DB_CONNECT_STRING"] = self._charm_state.redis_uri
+
+        if self._charm_state.integrations:
+            env.update(map_integrations_to_env(self._charm_state.integrations))
         return env
 
     def _wsgi_layer(self) -> ops.pebble.LayerDict:
@@ -130,3 +130,23 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
                 group=self._charm_state.group,
             )
         self._container.replan()
+
+
+def map_integrations_to_env(integrations: IntegrationsState) -> dict[str, str]:
+    """Generate environment variables for the IntegrationState.
+
+    Args:
+       integrations: The IntegrationsState information.
+
+    Returns:
+       A dictionary representing the environment variables for the IntegrationState.
+    """
+    env = {}
+    if integrations.redis_uri:
+        env["REDIS_DB_CONNECT_STRING"] = integrations.redis_uri
+    for interface_name, uri in integrations.databases_uris.items():
+        if uri is None:
+            continue
+        env_name = f"{interface_name.upper()}_DB_CONNECT_STRING"
+        env[env_name] = uri
+    return env
