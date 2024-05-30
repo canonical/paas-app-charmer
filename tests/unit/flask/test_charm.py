@@ -120,6 +120,7 @@ def test_integrations_wiring(harness: Harness):
 
     assert harness.model.unit.status == ops.ActiveStatus()
     service_env = container.get_plan().services["flask"].environment
+    assert "MYSQL_DB_CONNECT_STRING" not in service_env
     assert service_env["REDIS_DB_CONNECT_STRING"] == "redis://10.1.88.132:6379"
     assert (
         service_env["POSTGRESQL_DB_CONNECT_STRING"]
