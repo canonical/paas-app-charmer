@@ -127,11 +127,9 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         }
         app_config = {k: v for k, v in app_config.items() if k not in wsgi_config.dict().keys()}
 
-        integrations = IntegrationsState(
+        integrations = IntegrationsState.build(
             redis_uri=redis_uri,
-            databases_uris={
-                interface_name: get_uri(uri) for interface_name, uri in database_requirers.items()
-            },
+            database_requirers=database_requirers,
         )
         return cls(
             framework=framework,
@@ -219,3 +217,25 @@ class IntegrationsState:
 
     redis_uri: str | None = None
     databases_uris: dict[str, str | None] = field(default_factory=dict)
+
+    @classmethod
+    def build(
+        cls,
+        redis_uri: str | None,
+        database_requirers: dict[str, DatabaseRequires],
+    ) -> "IntegrationsState":
+        """Initialize a new instance of the IntegrationsState class.
+
+        Args:
+            redis_uri: The redis uri provided by the redis charm.
+            database_requirers: All database requirers object declared by the charm.
+
+        Return:
+            The IntegrationsState instance created.
+        """
+        return cls(
+            redis_uri=redis_uri,
+            databases_uris={
+                interface_name: get_uri(uri) for interface_name, uri in database_requirers.items()
+            },
+        )

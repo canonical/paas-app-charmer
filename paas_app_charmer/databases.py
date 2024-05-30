@@ -111,18 +111,15 @@ class Databases(ops.Object):  # pylint: disable=too-few-public-methods
     def __init__(
         self,
         charm: ops.CharmBase,
-        application: Application,
         database_requirers: typing.Dict[str, DatabaseRequires],
     ):
         """Initialize a new instance of the Databases class.
 
         Args:
             charm: The main charm. Used for events callbacks.
-            application: The application manager object.
             database_requirers: Database requirers created by make_database_requirers.
         """
         # The following is necessary to be able to subscribe to callbacks from ops.framework
         super().__init__(charm, "databases")
         self._charm = charm
-        self._application = application
         self._databases = database_requirers

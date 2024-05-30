@@ -49,6 +49,8 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             wsgi_framework: WSGI framework name.
         """
         super().__init__(framework)
+        self._wsgi_framework = wsgi_framework
+
         self._secret_storage = GunicornSecretStorage(
             charm=self, key=f"{wsgi_framework}_secret_key"
         )
@@ -66,7 +68,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         else:
             self._redis = None
 
-        self._wsgi_framework = wsgi_framework
         self._charm_state = self._build_charm_state()
 
         self._database_migration = DatabaseMigration(
@@ -85,18 +86,23 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             database_migration=self._database_migration,
         )
         self._databases = Databases(
+            # JAVI PROBLEM, charm and _wsi_app._charm_state
             charm=self,
-            application=self._wsgi_app,
             database_requirers=self._database_requirers,
         )
         self._ingress = IngressPerAppRequirer(
+            # JAVI PROBLEM, charm and charm_state.port
             self,
             port=self._charm_state.port,
             strip_prefix=True,
         )
         self._observability = Observability(
             self,
-            charm_state=self._charm_state,
+            # charm_state=self._charm_state,
+            log_files=[
+                self._charm_state.application_log_file,
+                self._charm_state.application_error_log_file,
+            ],
             container_name=self._charm_state.container_name,
             cos_dir=self.get_cos_dir(),
         )
@@ -229,6 +235,15 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
     def _on_postgresql_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
         """Handle postgresql's database-created event."""
+        # JAVI REFRESH THE CHARM STATE HERE!!
+        # JAVI TRICK TO CHECK INTEG TESTS. REMOVE THIS PLEASE!
+        # pylint: disable=import-outside-toplevel
+        from paas_app_charmer._gunicorn.charm_state import IntegrationsState
+
+        self._charm_state.integrations = IntegrationsState.build(
+            redis_uri=self._redis.url if self._redis is not None else None,
+            database_requirers=self._database_requirers,
+        )
         self.restart()
 
     def _on_postgresql_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
