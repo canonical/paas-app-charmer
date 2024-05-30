@@ -72,8 +72,10 @@ def test_gunicorn_config(
         secret_key="",
         is_secret_storage_ready=True,
     )
-    workload_state = WorkloadState(framework="flask",)
-    webserver_config=WebserverConfig(**charm_state_params)
+    workload_state = WorkloadState(
+        framework="flask",
+    )
+    webserver_config = WebserverConfig(**charm_state_params)
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
         workload_state=workload_state,
@@ -114,8 +116,10 @@ def test_webserver_reload(monkeypatch, harness: Harness, is_running, database_mi
         secret_key="",
         is_secret_storage_ready=True,
     )
-    webserver_config=WebserverConfig()
-    workload_state = WorkloadState(framework="flask",)
+    webserver_config = WebserverConfig()
+    workload_state = WorkloadState(
+        framework="flask",
+    )
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
         workload_state=workload_state,

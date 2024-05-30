@@ -3,7 +3,6 @@
 
 """This module defines the CharmState class which represents the state of the charm."""
 import os
-import pathlib
 import typing
 from dataclasses import dataclass, field
 
@@ -39,17 +38,11 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         wsgi_config: the value of the WSGI specific charm configuration.
         app_config: user-defined configurations for the WSGI application.
         port: the port number to use for the WSGI server.
-        application_log_file: the file path for the WSGI application access log.
-        application_error_log_file: the file path for the WSGI application error log.
         statsd_host: the statsd server host for WSGI application metrics.
         secret_key: the charm managed WSGI application secret key.
         is_secret_storage_ready: whether the secret storage system is ready.
         proxy: proxy information.
         service_name: The WSGI application pebble service name.
-        base_dir: The project base directory in the WSGI application container.
-        app_dir: The WSGI application directory in the WSGI application container.
-        user: The UNIX user name for running the service.
-        group: The UNIX group name for running the service.
     """
 
     def __init__(  # pylint: disable=too-many-arguments

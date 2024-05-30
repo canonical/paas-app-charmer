@@ -12,8 +12,7 @@ import ops
 from ops.testing import Harness
 
 from paas_app_charmer._gunicorn.charm_state import CharmState
-from paas_app_charmer._gunicorn.webserver import GunicornWebserver
-from paas_app_charmer._gunicorn.webserver import WebserverConfig
+from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
 from paas_app_charmer._gunicorn.workload_state import WorkloadState
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.flask import Charm
@@ -43,7 +42,9 @@ def test_flask_pebble_layer(harness: Harness) -> None:
         database_requirers={},
     )
     webserver_config = WebserverConfig.from_charm(harness.charm)
-    workload_state = WorkloadState(framework="flask",)
+    workload_state = WorkloadState(
+        framework="flask",
+    )
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
         workload_state=workload_state,
@@ -79,6 +80,8 @@ def test_rotate_secret_key_action(harness: Harness):
     assert: the action should change the secret key value in the relation data and restart the
         flask application with the new secret key.
     """
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
     harness.begin_with_initial_hooks()
     action_event = unittest.mock.MagicMock()
     secret_key = harness.get_relation_data(0, harness.charm.app)["flask_secret_key"]
@@ -112,9 +115,10 @@ def test_integrations_wiring(harness: Harness):
     harness.add_relation("postgresql", "postgresql-k8s", app_data=postgresql_relation_data)
 
     harness.set_leader(True)
-    harness.begin_with_initial_hooks()
-    container = harness.charm.unit.get_container(FLASK_CONTAINER_NAME)
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
     container.add_layer("a_layer", DEFAULT_LAYER)
+
+    harness.begin_with_initial_hooks()
 
     # The charm_state has to be reconstructed here because at this point
     # the data in the relations can be different than what was in charm.__init__

@@ -96,4 +96,3 @@ def get_uri(database_requires: DatabaseRequires) -> str | None:
         f"{data['username']}:{data['password']}"
         f"@{endpoint}/{database_name}"
     )
-

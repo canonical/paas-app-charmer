@@ -13,9 +13,8 @@ import typing
 import ops
 from ops.pebble import ExecError, PathError
 
-from paas_app_charmer.exceptions import CharmConfigInvalidError
-
 from paas_app_charmer._gunicorn.workload_state import WorkloadState
+from paas_app_charmer.exceptions import CharmConfigInvalidError
 
 if typing.TYPE_CHECKING:
     from paas_app_charmer._gunicorn.charm_state import CharmState

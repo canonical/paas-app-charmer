@@ -14,11 +14,9 @@ from pydantic import BaseModel  # pylint: disable=no-name-in-module
 from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.observability import Observability
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
-from paas_app_charmer._gunicorn.webserver import GunicornWebserver
-from paas_app_charmer._gunicorn.webserver import WebserverConfig
+from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
 from paas_app_charmer._gunicorn.workload_state import WorkloadState
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
-
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
 from paas_app_charmer.databases import make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
@@ -58,7 +56,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         )
         self._database_requirers = make_database_requirers(self, self.app.name)
         try:
-            wsgi_config = self.get_wsgi_config()
+            _ = self.get_wsgi_config()
         except CharmConfigInvalidError as exc:
             self._update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return
@@ -79,7 +77,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         )
 
         self._webserver_config = WebserverConfig.from_charm(self)
-        
+
         self._container = self.unit.get_container(f"{self._workload_state.framework}-app")
 
         self._ingress = IngressPerAppRequirer(
@@ -88,7 +86,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             strip_prefix=True,
         )
 
-        
         self._observability = Observability(
             self,
             log_files=self._workload_state.log_files,
@@ -181,6 +178,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             True if the charm is ready to start the workload application.
         """
         charm_state = self._build_charm_state()
+
         if not self._container.can_connect():
             logger.info(
                 "pebble client in the %s container is not ready", self._workload_state.framework
@@ -202,10 +200,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             workload_state=self._workload_state,
             container=self.unit.get_container(self._workload_state.container_name),
         )
-
-        print(" is_ready JAVI Container name", self._container.name)
-        print(" is_ready JAVI Container plan", self._container.get_plan())
-        print(" is_ready JAVI Container can connect:", self._container.can_connect())
 
         wsgi_app = WsgiApp(
             container=self._container,
