@@ -229,14 +229,13 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             container=self.unit.get_container(self._workload_config.container_name),
         )
 
-        wsgi_app = WsgiApp(
+        return WsgiApp(
             container=self._container,
             charm_state=charm_state,
             workload_config=self._workload_config,
             webserver=webserver,
             database_migration=self._database_migration,
         )
-        return wsgi_app
 
     def _on_update_status(self, _: ops.HookEvent) -> None:
         """Handle the update-status event."""
