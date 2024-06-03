@@ -104,10 +104,10 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
                     "DJANGO_SUPERUSER_PASSWORD": password,
                     "DJANGO_SUPERUSER_USERNAME": event.params["username"],
                     "DJANGO_SUPERUSER_EMAIL": event.params["email"],
-                    **self._wsgi_app.gen_environment(),
+                    **self._gen_environment(),
                 },
                 combine_stderr=True,
-                working_dir=str(self._charm_state.app_dir),
+                working_dir=str(self._workload_state.app_dir),
             ).wait_output()
             event.set_results({"password": password})
         except ops.pebble.ExecError as e:

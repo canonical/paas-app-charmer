@@ -191,6 +191,31 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             return False
         return True
 
+    def _gen_environment(self) -> dict[str, str]:
+        """Generate the environment dictionary used for the App.
+
+        This method is useful to run actions against the workload container.
+
+        Returns:
+            A dictionary representing the application environment variables.
+        """
+        charm_state = self._build_charm_state()
+
+        webserver = GunicornWebserver(
+            webserver_config=self._webserver_config,
+            workload_state=self._workload_state,
+            container=self.unit.get_container(self._workload_state.container_name),
+        )
+
+        wsgi_app = WsgiApp(
+            container=self._container,
+            charm_state=charm_state,
+            workload_state=self._workload_state,
+            webserver=webserver,
+            database_migration=self._database_migration,
+        )
+        return wsgi_app.gen_environment()
+
     def restart(self) -> None:
         """Restart or start the service if not started with the latest configuration."""
         charm_state = self._build_charm_state()
