@@ -53,7 +53,7 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
         """Return Django framework related configurations.
 
         Returns:
-             Flask framework related configurations.
+             Django framework related configurations.
 
         Raises:
             CharmConfigInvalidError: if charm config is not valid.

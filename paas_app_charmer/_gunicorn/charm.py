@@ -12,6 +12,7 @@ from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 from paas_app_charmer._gunicorn.charm_state import CharmState
+from paas_app_charmer._gunicorn.charm_utils import block_if_invalid_config
 from paas_app_charmer._gunicorn.observability import Observability
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
@@ -55,11 +56,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             charm=self, key=f"{wsgi_framework}_secret_key"
         )
         self._database_requirers = make_database_requirers(self, self.app.name)
-        try:
-            _ = self.get_wsgi_config()
-        except CharmConfigInvalidError as exc:
-            self._update_app_and_unit_status(ops.BlockedStatus(exc.msg))
-            return
 
         requires = self.framework.meta.requires
         if "redis" in requires and requires["redis"].interface_name == "redis":
@@ -237,47 +233,58 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             database_migration=self._database_migration,
         )
 
+    @block_if_invalid_config
     def _on_update_status(self, _: ops.HookEvent) -> None:
         """Handle the update-status event."""
         if self._database_migration.get_status() == DatabaseMigrationStatus.FAILED:
             self.restart()
 
+    @block_if_invalid_config
     def _on_mysql_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
         """Handle mysql's database-created event."""
         self.restart()
 
+    @block_if_invalid_config
     def _on_mysql_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
         """Handle mysql's endpoints-changed event."""
         self.restart()
 
+    @block_if_invalid_config
     def _on_mysql_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
         """Handle mysql's relation-broken event."""
         self.restart()
 
+    @block_if_invalid_config
     def _on_postgresql_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
         """Handle postgresql's database-created event."""
         self.restart()
 
+    @block_if_invalid_config
     def _on_postgresql_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
         """Handle mysql's endpoints-changed event."""
         self.restart()
 
+    @block_if_invalid_config
     def _on_postgresql_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
         """Handle postgresql's relation-broken event."""
         self.restart()
 
+    @block_if_invalid_config
     def _on_mongodb_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
         """Handle mongodb's database-created event."""
         self.restart()
 
+    @block_if_invalid_config
     def _on_mongodb_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
         """Handle mysql's endpoints-changed event."""
         self.restart()
 
+    @block_if_invalid_config
     def _on_mongodb_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
         """Handle postgresql's relation-broken event."""
         self.restart()
 
+    @block_if_invalid_config
     def _on_redis_relation_updated(self, _event: DatabaseRequiresEvent) -> None:
         """Handle redis's database-created event."""
         self.restart()
