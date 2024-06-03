@@ -124,3 +124,14 @@ def test_integrations_wiring(harness: Harness):
         service_env["POSTGRESQL_DB_CONNECT_STRING"]
         == "postgresql://test-username:test-password@test-postgresql:5432/test-database"
     )
+
+
+def test_invalid_config(harness: Harness):
+    """
+    arrange: Prepare the harness. Instantiate the charm.
+    act: update the config to an invalid env variables (must be more than 1 chars).
+    assert: The flask service be blocked with invalid configuration.
+    """
+    harness.begin()
+    harness.update_config({"flask-env": ""})
+    assert harness.model.unit.status == ops.BlockedStatus("invalid configuration: flask-env")

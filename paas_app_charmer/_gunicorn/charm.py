@@ -109,6 +109,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
                 getattr(self, f"_on_{database}_database_relation_broken"),
             )
 
+    @block_if_invalid_config
     def _on_config_changed(self, _event: ops.EventBase) -> None:
         """Configure the application pebble service layer.
 
@@ -117,6 +118,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         """
         self.restart()
 
+    @block_if_invalid_config
     def _on_rotate_secret_key_action(self, event: ops.ActionEvent) -> None:
         """Handle the rotate-secret-key action.
 
@@ -133,6 +135,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         event.set_results({"status": "success"})
         self.restart()
 
+    @block_if_invalid_config
     def _on_secret_storage_relation_changed(self, _event: ops.RelationEvent) -> None:
         """Handle the secret-storage-relation-changed event.
 
