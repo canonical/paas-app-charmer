@@ -193,7 +193,8 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
     def _gen_environment(self) -> dict[str, str]:
         """Generate the environment dictionary used for the App.
 
-        This method is useful to run actions against the workload container.
+        This method is useful to generate the environment variables to
+        run actions against the workload container for subclasses.
 
         Returns:
             A dictionary representing the application environment variables.
