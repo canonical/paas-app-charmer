@@ -20,7 +20,7 @@ class GunicornBaseProtocol(typing.Protocol):  # pylint: disable=too-few-public-m
     def get_wsgi_config(self) -> BaseModel:
         """Return the framework related configurations."""
 
-    def _update_app_and_unit_status(self, status: ops.StatusBase) -> None:
+    def update_app_and_unit_status(self, status: ops.StatusBase) -> None:
         """Update the application and unit status.
 
         Args:
@@ -55,13 +55,12 @@ def block_if_invalid_config(
         Returns:
             The value returned from the original function. That is, None.
         """
-        # pylint: disable=protected-access
         try:
             instance.get_wsgi_config()
             return method(instance, event)
         except CharmConfigInvalidError as exc:
             logger.exception("Wrong Charm Configuration")
-            instance._update_app_and_unit_status(ops.BlockedStatus(exc.msg))
+            instance.update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return None
 
     return wrapper

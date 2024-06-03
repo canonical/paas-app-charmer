@@ -144,7 +144,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         """
         self.restart()
 
-    def _update_app_and_unit_status(self, status: ops.StatusBase) -> None:
+    def update_app_and_unit_status(self, status: ops.StatusBase) -> None:
         """Update the application and unit status.
 
         Args:
@@ -166,11 +166,11 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             logger.info(
                 "pebble client in the %s container is not ready", self._workload_config.framework
             )
-            self._update_app_and_unit_status(ops.WaitingStatus("Waiting for pebble ready"))
+            self.update_app_and_unit_status(ops.WaitingStatus("Waiting for pebble ready"))
             return False
         if not charm_state.is_secret_storage_ready:
             logger.info("secret storage is not initialized")
-            self._update_app_and_unit_status(ops.WaitingStatus("Waiting for peer integration"))
+            self.update_app_and_unit_status(ops.WaitingStatus("Waiting for peer integration"))
             return False
         return True
 
@@ -179,14 +179,12 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         if not self.is_ready():
             return
         try:
-            self._update_app_and_unit_status(
-                ops.MaintenanceStatus("Preparing service for restart")
-            )
+            self.update_app_and_unit_status(ops.MaintenanceStatus("Preparing service for restart"))
             self._build_wsgi_app().restart()
         except CharmConfigInvalidError as exc:
-            self._update_app_and_unit_status(ops.BlockedStatus(exc.msg))
+            self.update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return
-        self._update_app_and_unit_status(ops.ActiveStatus())
+        self.update_app_and_unit_status(ops.ActiveStatus())
 
     def _gen_environment(self) -> dict[str, str]:
         """Generate the environment dictionary used for the App.
