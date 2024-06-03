@@ -98,9 +98,6 @@ def test_integrations_wiring(harness: Harness):
     assert: The flask service should have environment variables in its plan
         for each of the integrations.
     """
-    # The relations have to be created before the charm, as
-    # this is a problem with ops.testing, as the charm __init__ only
-    # runs once in the beginning.
     redis_relation_data = {
         "hostname": "10.1.88.132",
         "port": "6379",
@@ -119,15 +116,6 @@ def test_integrations_wiring(harness: Harness):
     container.add_layer("a_layer", DEFAULT_LAYER)
 
     harness.begin_with_initial_hooks()
-
-    # The charm_state has to be reconstructed here because at this point
-    # the data in the relations can be different than what was in charm.__init__
-    # when the charm was initialised.
-
-    new_charm_state = harness.charm._build_charm_state()
-    harness.charm._charm_state = new_charm_state
-    harness.container_pebble_ready(FLASK_CONTAINER_NAME)
-
     assert harness.model.unit.status == ops.ActiveStatus()
     service_env = container.get_plan().services["flask"].environment
     assert "MYSQL_DB_CONNECT_STRING" not in service_env
