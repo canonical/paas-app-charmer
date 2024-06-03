@@ -113,21 +113,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
                 getattr(self, f"_on_{database}_database_relation_broken"),
             )
 
-    def _build_charm_state(self) -> CharmState:
-        """Build charm state.
-
-        Returns:
-            New CharmState
-        """
-        return CharmState.from_charm(
-            charm=self,
-            framework=self._wsgi_framework,
-            wsgi_config=self.get_wsgi_config(),
-            secret_storage=self._secret_storage,
-            database_requirers=self._database_requirers,
-            redis_uri=self._redis.url if self._redis is not None else None,
-        )
-
     def _on_config_changed(self, _event: ops.EventBase) -> None:
         """Configure the application pebble service layer.
 
@@ -190,6 +175,20 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             return False
         return True
 
+    def restart(self) -> None:
+        """Restart or start the service if not started with the latest configuration."""
+        if not self.is_ready():
+            return
+        try:
+            self._update_app_and_unit_status(
+                ops.MaintenanceStatus("Preparing service for restart")
+            )
+            self._build_wsgi_app().restart()
+        except CharmConfigInvalidError as exc:
+            self._update_app_and_unit_status(ops.BlockedStatus(exc.msg))
+            return
+        self._update_app_and_unit_status(ops.ActiveStatus())
+
     def _gen_environment(self) -> dict[str, str]:
         """Generate the environment dictionary used for the App.
 
@@ -198,6 +197,29 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
         Returns:
             A dictionary representing the application environment variables.
+        """
+        return self._build_wsgi_app().gen_environment()
+
+    def _build_charm_state(self) -> CharmState:
+        """Build charm state.
+
+        Returns:
+            New CharmState
+        """
+        return CharmState.from_charm(
+            charm=self,
+            framework=self._wsgi_framework,
+            wsgi_config=self.get_wsgi_config(),
+            secret_storage=self._secret_storage,
+            database_requirers=self._database_requirers,
+            redis_uri=self._redis.url if self._redis is not None else None,
+        )
+
+    def _build_wsgi_app(self) -> WsgiApp:
+        """Build a WsgiApp instance.
+
+        Returns:
+            A new WsgiApp instance.
         """
         charm_state = self._build_charm_state()
 
@@ -214,37 +236,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             webserver=webserver,
             database_migration=self._database_migration,
         )
-        return wsgi_app.gen_environment()
-
-    def restart(self) -> None:
-        """Restart or start the service if not started with the latest configuration."""
-        charm_state = self._build_charm_state()
-
-        webserver = GunicornWebserver(
-            webserver_config=self._webserver_config,
-            workload_config=self._workload_config,
-            container=self.unit.get_container(self._workload_config.container_name),
-        )
-
-        wsgi_app = WsgiApp(
-            container=self._container,
-            charm_state=charm_state,
-            workload_config=self._workload_config,
-            webserver=webserver,
-            database_migration=self._database_migration,
-        )
-
-        if not self.is_ready():
-            return
-        try:
-            self._update_app_and_unit_status(
-                ops.MaintenanceStatus("Preparing service for restart")
-            )
-            wsgi_app.restart()
-        except CharmConfigInvalidError as exc:
-            self._update_app_and_unit_status(ops.BlockedStatus(exc.msg))
-            return
-        self._update_app_and_unit_status(ops.ActiveStatus())
+        return wsgi_app
 
     def _on_update_status(self, _: ops.HookEvent) -> None:
         """Handle the update-status event."""
