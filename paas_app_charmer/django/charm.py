@@ -107,7 +107,7 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
                     **self._gen_environment(),
                 },
                 combine_stderr=True,
-                working_dir=str(self._workload_state.app_dir),
+                working_dir=str(self._workload_config.app_dir),
             ).wait_output()
             event.set_results({"password": password})
         except ops.pebble.ExecError as e:

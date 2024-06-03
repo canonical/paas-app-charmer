@@ -37,12 +37,9 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
     Attrs:
         wsgi_config: the value of the WSGI specific charm configuration.
         app_config: user-defined configurations for the WSGI application.
-        port: the port number to use for the WSGI server.
-        statsd_host: the statsd server host for WSGI application metrics.
         secret_key: the charm managed WSGI application secret key.
         is_secret_storage_ready: whether the secret storage system is ready.
         proxy: proxy information.
-        service_name: The WSGI application pebble service name.
     """
 
     def __init__(  # pylint: disable=too-many-arguments

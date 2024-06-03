@@ -15,7 +15,7 @@ from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.observability import Observability
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
-from paas_app_charmer._gunicorn.workload_state import WorkloadState
+from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
 from paas_app_charmer.databases import make_database_requirers
@@ -68,28 +68,27 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         else:
             self._redis = None
 
-        # JAVI maybe the framework hardcoded? maybe better in webserver config?
-        self._workload_state = WorkloadState(self._wsgi_framework)
+        self._workload_config = WorkloadConfig(self._wsgi_framework)
 
         self._database_migration = DatabaseMigration(
-            container=self.unit.get_container(self._workload_state.container_name),
-            state_dir=self._workload_state.state_dir,
+            container=self.unit.get_container(self._workload_config.container_name),
+            state_dir=self._workload_config.state_dir,
         )
 
         self._webserver_config = WebserverConfig.from_charm(self)
 
-        self._container = self.unit.get_container(f"{self._workload_state.framework}-app")
+        self._container = self.unit.get_container(f"{self._workload_config.framework}-app")
 
         self._ingress = IngressPerAppRequirer(
             self,
-            port=self._workload_state.port,
+            port=self._workload_config.port,
             strip_prefix=True,
         )
 
         self._observability = Observability(
             self,
-            log_files=self._workload_state.log_files,
-            container_name=self._workload_state.container_name,
+            log_files=self._workload_config.log_files,
+            container_name=self._workload_config.container_name,
             cos_dir=self.get_cos_dir(),
         )
 
@@ -181,7 +180,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
         if not self._container.can_connect():
             logger.info(
-                "pebble client in the %s container is not ready", self._workload_state.framework
+                "pebble client in the %s container is not ready", self._workload_config.framework
             )
             self._update_app_and_unit_status(ops.WaitingStatus("Waiting for pebble ready"))
             return False
@@ -203,14 +202,14 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
         webserver = GunicornWebserver(
             webserver_config=self._webserver_config,
-            workload_state=self._workload_state,
-            container=self.unit.get_container(self._workload_state.container_name),
+            workload_config=self._workload_config,
+            container=self.unit.get_container(self._workload_config.container_name),
         )
 
         wsgi_app = WsgiApp(
             container=self._container,
             charm_state=charm_state,
-            workload_state=self._workload_state,
+            workload_config=self._workload_config,
             webserver=webserver,
             database_migration=self._database_migration,
         )
@@ -222,14 +221,14 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
         webserver = GunicornWebserver(
             webserver_config=self._webserver_config,
-            workload_state=self._workload_state,
-            container=self.unit.get_container(self._workload_state.container_name),
+            workload_config=self._workload_config,
+            container=self.unit.get_container(self._workload_config.container_name),
         )
 
         wsgi_app = WsgiApp(
             container=self._container,
             charm_state=charm_state,
-            workload_state=self._workload_state,
+            workload_config=self._workload_config,
             webserver=webserver,
             database_migration=self._database_migration,
         )

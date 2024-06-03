@@ -13,7 +13,7 @@ from ops.testing import ExecArgs, ExecResult, Harness
 
 from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
-from paas_app_charmer._gunicorn.workload_state import WorkloadState
+from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 
 from .constants import DEFAULT_LAYER
@@ -61,16 +61,16 @@ def test_django_config(harness: Harness, config: dict, env: dict) -> None:
         database_requirers={},
     )
     webserver_config = WebserverConfig.from_charm(harness.charm)
-    workload_state = WorkloadState(framework="django")
+    workload_config = WorkloadConfig(framework="django")
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
-        workload_state=workload_state,
+        workload_config=workload_config,
         container=container,
     )
     django_app = WsgiApp(
         container=harness.charm.unit.get_container("django-app"),
         charm_state=charm_state,
-        workload_state=workload_state,
+        workload_config=workload_config,
         webserver=webserver,
         database_migration=harness.charm._database_migration,
     )
@@ -98,21 +98,19 @@ def test_django_create_super_user(harness: Harness) -> None:
     container.add_layer("a_layer", DEFAULT_LAYER)
     harness.begin_with_initial_hooks()
 
-
     password = None
+
     def handler(args: ExecArgs) -> None | ExecResult:
         nonlocal password
-        assert args.command == ['python3', 'manage.py', 'createsuperuser', '--noinput']
+        assert args.command == ["python3", "manage.py", "createsuperuser", "--noinput"]
         assert args.environment["DJANGO_SUPERUSER_USERNAME"] == "admin"
         assert args.environment["DJANGO_SUPERUSER_EMAIL"] == "admin@example.com"
         assert "DJANGO_SECRET_KEY" in args.environment
         password = args.environment["DJANGO_SUPERUSER_PASSWORD"]
         return ExecResult(stdout="OK")
-    
+
     harness.handle_exec(
-        container,
-        ["python3", "manage.py", "createsuperuser", "--noinput"],
-        handler=handler
+        container, ["python3", "manage.py", "createsuperuser", "--noinput"], handler=handler
     )
 
     output = harness.run_action(
