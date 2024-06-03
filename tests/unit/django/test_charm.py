@@ -9,7 +9,7 @@
 import unittest.mock
 
 import pytest
-from ops.testing import Harness
+from ops.testing import ExecArgs, ExecResult, Harness
 
 from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
@@ -89,19 +89,34 @@ def test_django_config(harness: Harness, config: dict, env: dict) -> None:
 
 def test_django_create_super_user(harness: Harness) -> None:
     """
-    arrange: start the Django charm. Mock the Django command (pebble exec) to create a superuser.
+    arrange: Start the Django charm. Mock the Django command (pebble exec) to create a superuser.
     act: Run action create superuser.
-    assert: The action should success, returning a password for the user.
+    assert: The action is called with the right argumente, returning a password for the user.
     """
     harness.set_leader(True)
     container = harness.model.unit.get_container("django-app")
     container.add_layer("a_layer", DEFAULT_LAYER)
     harness.begin_with_initial_hooks()
+
+
+    password = None
+    def handler(args: ExecArgs) -> None | ExecResult:
+        nonlocal password
+        assert args.command == ['python3', 'manage.py', 'createsuperuser', '--noinput']
+        assert args.environment["DJANGO_SUPERUSER_USERNAME"] == "admin"
+        assert args.environment["DJANGO_SUPERUSER_EMAIL"] == "admin@example.com"
+        assert "DJANGO_SECRET_KEY" in args.environment
+        password = args.environment["DJANGO_SUPERUSER_PASSWORD"]
+        return ExecResult(stdout="OK")
+    
     harness.handle_exec(
-        container, ["python3", "manage.py", "createsuperuser", "--noinput"], result="OK"
+        container,
+        ["python3", "manage.py", "createsuperuser", "--noinput"],
+        handler=handler
     )
 
     output = harness.run_action(
         "create-superuser", params={"username": "admin", "email": "admin@example.com"}
     )
     assert "password" in output.results
+    assert output.results["password"] == password
