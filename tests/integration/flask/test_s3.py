@@ -19,28 +19,23 @@ async def test_s3_integration(
     flask_app: Application,
     model: juju.model.Model,
     get_unit_ips,
+    s3_configuration,
+    s3_credentials,
+    boto_s3_client,
 ):
     """
-    arrange: build and deploy the flask charm.
+    arrange: build and deploy the flask charm. Create the s3 bucket.
     act: Integrate the charm with the s3-integrator.
     assert: the flask application should return in the endpoint /env
        the correct S3 env variables.
     """
-    s3_config = {
-        "endpoint": f"http://s3.example.com",
-        "bucket": "mybucket",
-        "path": "/flask",
-        "region": "us-east-1",
-        "s3-uri-style": "path",
-    }
-    s3_credentials = {
-        "access-key": token_hex(16),
-        "secret-key": token_hex(16),
-    }
+    bucket_name = s3_configuration["bucket"]
+    boto_s3_client.create_bucket(Bucket=bucket_name)
+
     s3_integrator_app = await model.deploy(
         "s3-integrator",
         channel="latest/edge",
-        config=s3_config,
+        config=s3_configuration,
     )
     await model.wait_for_idle(apps=[s3_integrator_app.name], idle_period=5, status="blocked")
     action_sync_s3_credentials: Action = await s3_integrator_app.units[0].run_action(
@@ -63,8 +58,14 @@ async def test_s3_integration(
         env = response.json()
         assert env["S3_ACCESS_KEY"] == s3_credentials["access-key"]
         assert env["S3_SECRET_KEY"] == s3_credentials["secret-key"]
-        assert env["S3_BUCKET"] == s3_config["bucket"]
-        assert env["S3_ENDPOINT"] == s3_config["endpoint"]
-        assert env["S3_PATH"] == s3_config["path"]
-        assert env["S3_REGION"] == s3_config["region"]
-        assert env["S3_URI_STYLE"] == s3_config["s3-uri-style"]
+        assert env["S3_BUCKET"] == s3_configuration["bucket"]
+        assert env["S3_ENDPOINT"] == s3_configuration["endpoint"]
+        assert env["S3_PATH"] == s3_configuration["path"]
+        assert env["S3_REGION"] == s3_configuration["region"]
+        assert env["S3_URI_STYLE"] == s3_configuration["s3-uri-style"]
+
+        # Check that it list_objects in the bucket. If the connection
+        # is unsuccessful of the bucket does not exist, the code raises.
+        response = requests.get(f"http://{unit_ip}:8000/s3/status", timeout=5)
+        assert response.status_code == 200
+        assert "SUCCESS" == response.text

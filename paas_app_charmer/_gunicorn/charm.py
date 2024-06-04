@@ -7,11 +7,6 @@ import logging
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
-from charms.data_platform_libs.v0.s3 import (
-    CredentialsChangedEvent,
-    CredentialsGoneEvent,
-    S3Requirer,
-)
 from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
 from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
@@ -28,6 +23,20 @@ from paas_app_charmer.databases import make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 
 logger = logging.getLogger(__name__)
+
+# Until charmcraft fetch-libs is implemented, the charm will not fail
+# if new optional libs are not fetched, as it will not be backwards compatible.
+try:
+    # pylint: disable=ungrouped-imports
+    from charms.data_platform_libs.v0.s3 import (
+        CredentialsChangedEvent,
+        CredentialsGoneEvent,
+        S3Requirer,
+    )
+except ImportError:
+    logger.exception(
+        "Missing charm library, please run `charmcraft fetch-lib charms.data_platform_libs.v0.s3`"
+    )
 
 
 class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-attributes

@@ -8,6 +8,8 @@ jobs:
     uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
     with:
+      extra-arguments: -x --localstack-address 172.17.0.1
+      pre-run-script: localstack-installation.sh
       charmcraft-repository: weiiwang01/charmcraft
       charmcraft-ref: update-12f
       modules: '["test_charm", "test_proxy", "test_cos", "test_database", "test_s3", "test_db_migration", "test_django"]'

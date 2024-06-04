@@ -6,6 +6,8 @@ import time
 import urllib.parse
 from urllib.parse import urlparse
 
+import boto3
+import botocore.config
 import psycopg
 import pymongo
 import pymongo.database
@@ -71,6 +73,31 @@ def get_redis_database() -> redis.Redis | None:
     return g.redis_db
 
 
+def get_boto3_client():
+    if "boto3_client" not in g:
+        if "S3_ACCESS_KEY" in os.environ:
+            s3_client_config = botocore.config.Config(
+                s3={
+                    "addressing_style": os.environ["S3_ADDRESSING_STYLE"],
+                },
+                # no_proxy env variable is not read by boto3, so
+                # this is needed for the tests to avoid hitting the proxy.
+                proxies={},
+            )
+            g.boto3_client = boto3.client(
+                "s3",
+                os.environ["S3_REGION"],
+                aws_access_key_id=os.environ["S3_ACCESS_KEY"],
+                aws_secret_access_key=os.environ["S3_SECRET_KEY"],
+                endpoint_url=os.environ["S3_ENDPOINT"],
+                use_ssl=False,
+                config=s3_client_config,
+            )
+        else:
+            return None
+    return g.boto3_client
+
+
 @app.teardown_appcontext
 def teardown_database(_):
     """Tear down databases connections."""
@@ -83,6 +110,9 @@ def teardown_database(_):
     mongodb_db = g.pop("mongodb_db", None)
     if mongodb_db is not None:
         mongodb_db.client.close()
+    boto3_client = g.pop("boto3_client", None)
+    if boto3_client is not None:
+        boto3_client.close()
 
 
 @app.route("/")
@@ -111,6 +141,16 @@ def mysql_status():
             cursor.execute(sql)
             cursor.fetchone()
             return "SUCCESS"
+    return "FAIL"
+
+
+@app.route("/s3/status")
+def s3_status():
+    """S3 status endpoint."""
+    if client := get_boto3_client():
+        bucket_name = os.environ["S3_BUCKET"]
+        objectsresponse = client.list_objects(Bucket=bucket_name)
+        return "SUCCESS"
     return "FAIL"
 
 
