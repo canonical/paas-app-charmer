@@ -2,36 +2,14 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-# Disabling pylint import checks due to wrapping imports with try except
-# pylint: disable=wrong-import-order,ungrouped-imports
-
 """The base Gunicorn charm class for all WSGI application charms."""
 import abc
 import logging
 
 import ops
-
-from paas_app_charmer import exceptions
-
-try:
-    from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
-except ImportError as import_error:
-    raise exceptions.MissingCharmLibraryError(
-        "Missing charm library, please run "
-        "`charmcraft fetch-lib charms.data_platform_libs.v0.data_interfaces`"
-    ) from import_error
-try:
-    from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
-except ImportError as import_error:
-    raise exceptions.MissingCharmLibraryError(
-        "Missing charm library, please run `charmcraft fetch-lib charms.redis_k8s.v0.redis`"
-    ) from import_error
-try:
-    from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
-except ImportError as import_error:
-    raise exceptions.MissingCharmLibraryError(
-        "Missing charm library, please run `charmcraft fetch-lib charms.traefik_k8s.v2.ingress`"
-    ) from import_error
+from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
+from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
+from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 from paas_app_charmer._gunicorn.charm_state import CharmState

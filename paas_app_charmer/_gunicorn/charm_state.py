@@ -10,16 +10,7 @@ import pathlib
 import typing
 
 import ops
-
-from paas_app_charmer import exceptions
-
-try:
-    from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
-except ImportError as import_error:
-    raise exceptions.MissingCharmLibraryError(
-        "Missing charm library, please run "
-        "`charmcraft fetch-lib charms.data_platform_libs.v0.data_interfaces`"
-    ) from import_error
+from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 
 # pydantic is causing this no-name-in-module problem
 from pydantic import BaseModel, Field  # pylint: disable=no-name-in-module
