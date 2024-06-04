@@ -8,10 +8,12 @@
 
 import unittest.mock
 
+import ops
 from ops.testing import Harness
 
 from paas_app_charmer._gunicorn.charm_state import CharmState
-from paas_app_charmer._gunicorn.webserver import GunicornWebserver
+from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
+from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.flask import Charm
 
@@ -39,13 +41,19 @@ def test_flask_pebble_layer(harness: Harness) -> None:
         secret_storage=secret_storage,
         database_requirers={},
     )
+    webserver_config = WebserverConfig.from_charm(harness.charm)
+    workload_config = WorkloadConfig(
+        framework="flask",
+    )
     webserver = GunicornWebserver(
-        charm_state=charm_state,
+        webserver_config=webserver_config,
+        workload_config=workload_config,
         container=container,
     )
     flask_app = WsgiApp(
         container=container,
         charm_state=charm_state,
+        workload_config=workload_config,
         webserver=webserver,
         database_migration=harness.charm._database_migration,
     )
@@ -72,6 +80,8 @@ def test_rotate_secret_key_action(harness: Harness):
     assert: the action should change the secret key value in the relation data and restart the
         flask application with the new secret key.
     """
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
     harness.begin_with_initial_hooks()
     action_event = unittest.mock.MagicMock()
     secret_key = harness.get_relation_data(0, harness.charm.app)["flask_secret_key"]
@@ -79,3 +89,49 @@ def test_rotate_secret_key_action(harness: Harness):
     harness.charm._on_rotate_secret_key_action(action_event)
     new_secret_key = harness.get_relation_data(0, harness.charm.app)["flask_secret_key"]
     assert secret_key != new_secret_key
+
+
+def test_integrations_wiring(harness: Harness):
+    """
+    arrange: Prepare a Redis and a database integration
+    act: Start the flask charm and set flask-app container to be ready.
+    assert: The flask service should have environment variables in its plan
+        for each of the integrations.
+    """
+    redis_relation_data = {
+        "hostname": "10.1.88.132",
+        "port": "6379",
+    }
+    harness.add_relation("redis", "redis-k8s", unit_data=redis_relation_data)
+    postgresql_relation_data = {
+        "database": "test-database",
+        "endpoints": "test-postgresql:5432,test-postgresql-2:5432",
+        "password": "test-password",
+        "username": "test-username",
+    }
+    harness.add_relation("postgresql", "postgresql-k8s", app_data=postgresql_relation_data)
+
+    harness.set_leader(True)
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+
+    harness.begin_with_initial_hooks()
+    assert harness.model.unit.status == ops.ActiveStatus()
+    service_env = container.get_plan().services["flask"].environment
+    assert "MYSQL_DB_CONNECT_STRING" not in service_env
+    assert service_env["REDIS_DB_CONNECT_STRING"] == "redis://10.1.88.132:6379"
+    assert (
+        service_env["POSTGRESQL_DB_CONNECT_STRING"]
+        == "postgresql://test-username:test-password@test-postgresql:5432/test-database"
+    )
+
+
+def test_invalid_config(harness: Harness):
+    """
+    arrange: Prepare the harness. Instantiate the charm.
+    act: update the config to an invalid env variables (must be more than 1 chars).
+    assert: The flask service be blocked with invalid configuration.
+    """
+    harness.begin()
+    harness.update_config({"flask-env": ""})
+    assert harness.model.unit.status == ops.BlockedStatus("invalid configuration: flask-env")

@@ -10,6 +10,7 @@ from ops.testing import Harness
 
 from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
+from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
 from paas_app_charmer.exceptions import CharmConfigInvalidError
@@ -31,12 +32,16 @@ def test_database_migration(harness: Harness):
     harness.set_can_connect(container, True)
     charm_state = CharmState(
         framework="flask",
-        webserver_config=WebserverConfig(),
         is_secret_storage_ready=True,
         secret_key="",
     )
+    workload_config = WorkloadConfig(
+        framework="flask",
+    )
+    webserver_config = WebserverConfig()
     webserver = GunicornWebserver(
-        charm_state=charm_state,
+        webserver_config=webserver_config,
+        workload_config=workload_config,
         container=container,
     )
     database_migration = DatabaseMigration(
@@ -45,6 +50,7 @@ def test_database_migration(harness: Harness):
     flask_app = WsgiApp(
         container=container,
         charm_state=charm_state,
+        workload_config=workload_config,
         webserver=webserver,
         database_migration=database_migration,
     )
@@ -101,12 +107,16 @@ def test_database_migrate_command(harness: Harness, file: str, command: list[str
     harness.set_can_connect(container, True)
     charm_state = CharmState(
         framework="flask",
-        webserver_config=WebserverConfig(),
         is_secret_storage_ready=True,
         secret_key="",
     )
+    webserver_config = WebserverConfig()
+    workload_config = WorkloadConfig(
+        framework="flask",
+    )
     webserver = GunicornWebserver(
-        charm_state=charm_state,
+        webserver_config=webserver_config,
+        workload_config=workload_config,
         container=container,
     )
     database_migration = DatabaseMigration(
@@ -115,6 +125,7 @@ def test_database_migrate_command(harness: Harness, file: str, command: list[str
     flask_app = WsgiApp(
         container=container,
         charm_state=charm_state,
+        workload_config=workload_config,
         webserver=webserver,
         database_migration=database_migration,
     )

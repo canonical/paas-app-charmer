@@ -12,9 +12,10 @@ import unittest.mock
 
 import pytest
 
-from paas_app_charmer._gunicorn.charm_state import CharmState
+from paas_app_charmer._gunicorn.charm_state import CharmState, IntegrationsState
 from paas_app_charmer._gunicorn.webserver import WebserverConfig
-from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
+from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
+from paas_app_charmer._gunicorn.wsgi_app import WsgiApp, map_integrations_to_env
 
 
 @pytest.mark.parametrize(
@@ -34,15 +35,18 @@ def test_flask_env(flask_config: dict, app_config: dict, database_migration_mock
     """
     charm_state = CharmState(
         framework="flask",
-        webserver_config=WebserverConfig(),
         secret_key="foobar",
         is_secret_storage_ready=True,
         wsgi_config=flask_config,
         app_config=app_config,
     )
+    workload_config = WorkloadConfig(
+        framework="flask",
+    )
     flask_app = WsgiApp(
         container=unittest.mock.MagicMock(),
         charm_state=charm_state,
+        workload_config=workload_config,
         webserver=unittest.mock.MagicMock(),
         database_migration=database_migration_mock,
     )
@@ -98,13 +102,16 @@ def test_http_proxy(
         monkeypatch.setenv(set_env_name, set_env_value)
     charm_state = CharmState(
         framework="flask",
-        webserver_config=WebserverConfig(),
         secret_key="foobar",
         is_secret_storage_ready=True,
+    )
+    workload_config = WorkloadConfig(
+        framework="flask",
     )
     flask_app = WsgiApp(
         container=unittest.mock.MagicMock(),
         charm_state=charm_state,
+        workload_config=workload_config,
         webserver=unittest.mock.MagicMock(),
         database_migration=database_migration_mock,
     )
@@ -117,3 +124,99 @@ def test_http_proxy(
     expected_env.update(expected)
     for env_name, env_value in expected_env.items():
         assert env.get(env_name) == env.get(env_name.upper()) == env_value
+
+
+@pytest.mark.parametrize(
+    "integrations, expected_vars",
+    [
+        pytest.param(
+            None,
+            {},
+            id="integrations is None",
+        ),
+        pytest.param(
+            IntegrationsState(redis_uri="http://redisuri"),
+            {
+                "REDIS_DB_CONNECT_STRING": "http://redisuri",
+            },
+            id="integrations exists",
+        ),
+    ],
+)
+def test_integrations_env(
+    monkeypatch,
+    database_migration_mock,
+    integrations,
+    expected_vars,
+):
+    """
+    arrange: prepare charmstate with integrations state.
+    act: generate a flask environment.
+    assert: flask_environment generated should contain the expected env vars.
+    """
+    charm_state = CharmState(
+        framework="flask",
+        secret_key="foobar",
+        is_secret_storage_ready=True,
+        integrations=integrations,
+    )
+    workload_config = WorkloadConfig(
+        framework="flask",
+    )
+    flask_app = WsgiApp(
+        container=unittest.mock.MagicMock(),
+        charm_state=charm_state,
+        workload_config=workload_config,
+        webserver=unittest.mock.MagicMock(),
+        database_migration=database_migration_mock,
+    )
+    env = flask_app.gen_environment()
+    for expected_var_name, expected_env_value in expected_vars.items():
+        assert expected_var_name in env
+        assert env[expected_var_name] == expected_env_value
+
+
+@pytest.mark.parametrize(
+    "integrations, expected_env",
+    [
+        pytest.param(
+            IntegrationsState(),
+            {},
+            id="no new env vars",
+        ),
+        pytest.param(
+            IntegrationsState(redis_uri="http://redisuri"),
+            {
+                "REDIS_DB_CONNECT_STRING": "http://redisuri",
+            },
+            id="With Redis uri",
+        ),
+        pytest.param(
+            IntegrationsState(
+                databases_uris={
+                    "postgresql": "postgresql://test-username:test-password@test-postgresql:5432/test-database",
+                    "mysql": "mysql://test-username:test-password@test-mysql:3306/flask-app",
+                    "mongodb": None,
+                    "futuredb": "futuredb://foobar/",
+                },
+            ),
+            {
+                "POSTGRESQL_DB_CONNECT_STRING": "postgresql://test-username:test-password@test-postgresql:5432/test-database",
+                "MYSQL_DB_CONNECT_STRING": "mysql://test-username:test-password@test-mysql:3306/flask-app",
+                "FUTUREDB_DB_CONNECT_STRING": "futuredb://foobar/",
+            },
+            id="With several databases, one of them None.",
+        ),
+    ],
+)
+def test_map_integrations_to_env(
+    integrations,
+    expected_env,
+):
+    """
+    arrange: prepare integrations state.
+    act: call to generate mappings to env variables.
+    assert: the variables generated should be the expected ones.
+    """
+    env = map_integrations_to_env(integrations)
+    assert env == expected_env
