@@ -7,9 +7,28 @@ import abc
 import logging
 
 import ops
-from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
-from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
-from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
+
+from paas_app_charmer import exceptions
+
+try:
+    from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
+except ImportError as exc:
+    raise exceptions.MissingCharmLibraryError(
+        "Missing charm library, please run "
+        "`charmcraft fetch-lib charms.data_platform_libs.v0.data_interfaces`"
+    ) from exc
+try:
+    from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
+except ImportError as exc:
+    raise exceptions.MissingCharmLibraryError(
+        "Missing charm library, please run `charmcraft fetch-lib charms.redis_k8s.v0.redis`"
+    ) from exc
+try:
+    from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
+except ImportError as exc:
+    raise exceptions.MissingCharmLibraryError(
+        "Missing charm library, please run `charmcraft fetch-lib charms.traefik_k8s.v2.ingress`"
+    ) from exc
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
 from paas_app_charmer._gunicorn.charm_state import CharmState

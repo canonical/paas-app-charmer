@@ -7,7 +7,16 @@ import logging
 import typing
 
 import ops
-from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
+
+from paas_app_charmer import exceptions
+
+try:
+    from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
+except ImportError as exc:
+    raise exceptions.MissingCharmLibraryError(
+        "Missing charm library, please run "
+        "`charmcraft fetch-lib charms.data_platform_libs.v0.data_interfaces`"
+    ) from exc
 
 SUPPORTED_DB_INTERFACES = {
     "mysql_client": "mysql",
