@@ -90,22 +90,63 @@ def test_charm_state_invalid_flask_config(charm_config: dict) -> None:
         assert config_key in exc.value.msg
 
 
-def test_s3_integration():
+@pytest.mark.parametrize(
+    "s3_connection_info, expected_s3_parameters",
+    [
+        pytest.param(None, None, id="empty"),
+        pytest.param(
+            (
+                relation_data := {
+                    "access-key": "access-key",
+                    "secret-key": "secret-key",
+                    "bucket": "bucket",
+                }
+            ),
+            S3Parameters(**relation_data),
+            id="with data",
+        ),
+    ],
+)
+def test_s3_integration(s3_connection_info, expected_s3_parameters):
     """
-    arrange: For each reasonable case.
-    act: Create the S3 Integration.
-    assert: Check the desired environment variables and if the charm should be blocked.
+    arrange: Prepare charm and charm config.
+    act: Create the CharmState with s3 information.
+    assert: Check the S3Parameters generated are the expected ones.
     """
-    raise NotImplementedError
+    config = copy.copy(DEFAULT_CHARM_CONFIG)
+    config.update(config)
+    charm = unittest.mock.MagicMock(config=config)
+    charm_state = CharmState.from_charm(
+        charm=charm,
+        wsgi_config=Charm.get_wsgi_config(charm),
+        framework="flask",
+        secret_storage=SECRET_STORAGE_MOCK,
+        database_requirers={},
+        s3_connection_info=s3_connection_info,
+    )
+    assert charm_state.integrations
+    assert charm_state.integrations.s3_parameters == expected_s3_parameters
 
 
-def test_s3_integration_invalid():
+def test_s3_integration_raises():
     """
-    arrange:
-    act:
-    assert:
+    arrange: Prepare charm and charm config.
+    act: Create the CharmState with s3 information that is invalid.
+    assert: Check that CharmConfigInvalidError is raised.
     """
-    raise NotImplementedError
+    config = copy.copy(DEFAULT_CHARM_CONFIG)
+    config.update(config)
+    charm = unittest.mock.MagicMock(config=config)
+    with pytest.raises(CharmConfigInvalidError) as exc:
+        charm_state = CharmState.from_charm(
+            charm=charm,
+            wsgi_config=Charm.get_wsgi_config(charm),
+            framework="flask",
+            secret_storage=SECRET_STORAGE_MOCK,
+            database_requirers={},
+            s3_connection_info={"bucket": "bucket"},
+        )
+    assert "S3" in str(exc)
 
 
 @pytest.mark.parametrize(
