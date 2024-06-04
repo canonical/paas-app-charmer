@@ -28,11 +28,7 @@ logger = logging.getLogger(__name__)
 # if new optional libs are not fetched, as it will not be backwards compatible.
 try:
     # pylint: disable=ungrouped-imports
-    from charms.data_platform_libs.v0.s3 import (
-        CredentialsChangedEvent,
-        CredentialsGoneEvent,
-        S3Requirer,
-    )
+    from charms.data_platform_libs.v0.s3 import S3Requirer
 except ImportError:
     logger.exception(
         "Missing charm library, please run `charmcraft fetch-lib charms.data_platform_libs.v0.s3`"
@@ -315,11 +311,11 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         self.restart()
 
     @block_if_invalid_config
-    def _on_s3_credential_changed(self, _event: CredentialsChangedEvent) -> None:
+    def _on_s3_credential_changed(self, _event: ops.HookEvent) -> None:
         """Handle s3 credentials-changed event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_s3_credential_gone(self, _event: CredentialsGoneEvent) -> None:
+    def _on_s3_credential_gone(self, _event: ops.HookEvent) -> None:
         """Handle s3 credentials-gone event."""
         self.restart()
