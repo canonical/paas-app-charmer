@@ -1,9 +1,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-# Disabling pylint import checks due to wrapping imports with try except
-# pylint: disable=wrong-import-order,ungrouped-imports
-
 """This module defines the CharmState class which represents the state of the charm."""
 import os
 import pathlib
