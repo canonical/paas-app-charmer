@@ -1,6 +1,9 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+# Disabling pylint import checks due to wrapping imports with try except
+# pylint: disable=wrong-import-order,ungrouped-imports
+
 """This module defines the CharmState class which represents the state of the charm."""
 import os
 import pathlib
@@ -12,11 +15,11 @@ from paas_app_charmer import exceptions
 
 try:
     from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
-except ImportError as exc:
+except ImportError as import_error:
     raise exceptions.MissingCharmLibraryError(
         "Missing charm library, please run "
         "`charmcraft fetch-lib charms.data_platform_libs.v0.data_interfaces`"
-    ) from exc
+    ) from import_error
 
 # pydantic is causing this no-name-in-module problem
 from pydantic import BaseModel, Field  # pylint: disable=no-name-in-module

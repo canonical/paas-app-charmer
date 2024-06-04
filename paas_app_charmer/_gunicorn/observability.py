@@ -12,25 +12,25 @@ from paas_app_charmer import exceptions
 
 try:
     from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
-except ImportError as exc:
+except ImportError as import_error:
     raise exceptions.MissingCharmLibraryError(
         "Missing charm library, please run "
         "`charmcraft fetch-lib charms.grafana_k8s.v0.grafana_dashboard`"
-    ) from exc
+    ) from import_error
 try:
     from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
-except ImportError as exc:
+except ImportError as import_error:
     raise exceptions.MissingCharmLibraryError(
         "Missing charm library, please run "
         "`charmcraft fetch-lib charms.loki_k8s.v0.loki_push_api`"
-    ) from exc
+    ) from import_error
 try:
     from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
-except ImportError as exc:
+except ImportError as import_error:
     raise exceptions.MissingCharmLibraryError(
         "Missing charm library, please run "
         "`charmcraft fetch-lib charms.prometheus_k8s.v0.prometheus_scrape`"
-    ) from exc
+    ) from import_error
 
 
 class ObservabilityCharmState(typing.Protocol):
