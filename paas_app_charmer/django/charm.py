@@ -16,6 +16,7 @@ import ops
 from pydantic import BaseModel, Extra, Field, ValidationError  # pylint: disable=no-name-in-module
 
 from paas_app_charmer._gunicorn.charm import GunicornBase
+from paas_app_charmer._gunicorn.charm_utils import block_if_invalid_config
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,7 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
         """
         return str((pathlib.Path(__file__).parent / "cos").absolute())
 
+    @block_if_invalid_config
     def _on_django_app_pebble_ready(self, _: ops.PebbleReadyEvent) -> None:
         """Handle the pebble-ready event."""
         self.restart()

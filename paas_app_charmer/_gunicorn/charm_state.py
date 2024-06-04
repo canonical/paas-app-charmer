@@ -5,15 +5,15 @@
 import os
 import typing
 from dataclasses import dataclass, field
+from typing import Optional
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
-
-# pydantic is causing this no-name-in-module problem
-from pydantic import BaseModel, Field  # pylint: disable=no-name-in-module
+from pydantic import BaseModel, Field, ValidationError
 
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer.databases import get_uri
+from paas_app_charmer.exceptions import CharmConfigInvalidError
 
 
 class ProxyConfig(BaseModel):  # pylint: disable=too-few-public-methods
@@ -78,6 +78,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         secret_storage: GunicornSecretStorage,
         database_requirers: dict[str, DatabaseRequires],
         redis_uri: str | None = None,
+        s3_connection_info: dict[str, str] | None = None,
     ) -> "CharmState":
         """Initialize a new instance of the CharmState class from the associated charm.
 
@@ -88,6 +89,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             secret_storage: The secret storage manager associated with the charm.
             database_requirers: All database requirers object declared by the charm.
             redis_uri: The redis uri provided by the redis charm.
+            s3_connection_info: Connection info from S3 lib.
 
         Return:
             The CharmState instance created by the provided charm.
@@ -102,6 +104,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         integrations = IntegrationsState.build(
             redis_uri=redis_uri,
             database_requirers=database_requirers,
+            s3_connection_info=s3_connection_info,
         )
         return cls(
             framework=framework,
@@ -184,29 +187,90 @@ class IntegrationsState:
     Attrs:
         redis_uri: The redis uri provided by the redis charm.
         databases_uris: Map from interface_name to the database uri.
+        s3_parameters: S3 parameters.
     """
 
     redis_uri: str | None = None
     databases_uris: dict[str, str | None] = field(default_factory=dict)
+    s3_parameters: "S3Parameters | None" = None
 
     @classmethod
     def build(
         cls,
         redis_uri: str | None,
         database_requirers: dict[str, DatabaseRequires],
+        s3_connection_info: dict[str, str] | None,
     ) -> "IntegrationsState":
         """Initialize a new instance of the IntegrationsState class.
+
+        This functions will raise in the configuration is invalid.
 
         Args:
             redis_uri: The redis uri provided by the redis charm.
             database_requirers: All database requirers object declared by the charm.
+            s3_connection_info: S3 connection info from S3 lib.
 
         Return:
             The IntegrationsState instance created.
+
+        Raises:
+            CharmConfigInvalidError: If some parameter in invalid.
         """
+        if s3_connection_info:
+            try:
+                # s3_connection_info is not really a Dict[str, str] as stated in
+                # charms.data_platform_libs.v0.s3. It is really a
+                # Dict[str, str | list[str]].
+                # Ignoring as mypy does not work correctly with that information.
+                s3_parameters = S3Parameters(**s3_connection_info)  # type: ignore[arg-type]
+            except ValidationError as exc:
+                raise CharmConfigInvalidError(f"Invalid S3 Configuration: {str(exc)}") from exc
+        else:
+            s3_parameters = None
+
         return cls(
             redis_uri=redis_uri,
             databases_uris={
                 interface_name: get_uri(uri) for interface_name, uri in database_requirers.items()
             },
+            s3_parameters=s3_parameters,
         )
+
+
+class S3Parameters(BaseModel):
+    """Configuration for accessing S3 bucket.
+
+    Attributes:
+        access_key: AWS access key.
+        secret_key: AWS secret key.
+        region: The region to connect to the object storage.
+        storage_class: Storage Class for objects uploaded to the object storage.
+        bucket: The bucket name.
+        endpoint: The endpoint used to connect to the object storage.
+        path: The path inside the bucket to store objects.
+        s3_api_version: S3 protocol specific API signature.
+        s3_uri_style: The S3 protocol specific bucket path lookup type. Can be "path" or "host".
+        addressing_style: S3 protocol addressing style, can be "path" or "virtual".
+        attributes: The custom metadata (HTTP headers).
+        tls_ca_chain: The complete CA chain, which can be used for HTTPS validation.
+    """
+
+    access_key: str = Field(alias="access-key")
+    secret_key: str = Field(alias="secret-key")
+    region: Optional[str] = None
+    storage_class: Optional[str] = Field(alias="storage-class", default=None)
+    bucket: str
+    endpoint: Optional[str] = None
+    path: Optional[str] = None
+    s3_api_version: Optional[str] = Field(alias="s3-api-version", default=None)
+    s3_uri_style: Optional[str] = Field(alias="s3-uri-style", default=None)
+    tls_ca_chain: Optional[list[str]] = Field(alias="tls-ca-chain", default=None)
+    attributes: Optional[list[str]] = None
+
+    @property
+    def addressing_style(self) -> Optional[str]:
+        """Translates s3_uri_style to AWS addressing_style."""
+        if self.s3_uri_style == "host":
+            return "virtual"
+        # If None or "path", it does not change.
+        return self.s3_uri_style

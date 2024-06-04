@@ -4,10 +4,11 @@
 """Flask charm state unit tests."""
 import copy
 import unittest.mock
+from secrets import token_hex
 
 import pytest
 
-from paas_app_charmer._gunicorn.charm_state import CharmState
+from paas_app_charmer._gunicorn.charm_state import CharmState, S3Parameters
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.flask.charm import Charm, FlaskConfig
 
@@ -87,3 +88,42 @@ def test_charm_state_invalid_flask_config(charm_config: dict) -> None:
         )
     for config_key in charm_config:
         assert config_key in exc.value.msg
+
+
+def test_s3_integration():
+    """
+    arrange: For each reasonable case.
+    act: Create the S3 Integration.
+    assert: Check the desired environment variables and if the charm should be blocked.
+    """
+    raise NotImplementedError
+
+
+def test_s3_integration_invalid():
+    """
+    arrange:
+    act:
+    assert:
+    """
+    raise NotImplementedError
+
+
+@pytest.mark.parametrize(
+    "s3_uri_style, addressing_style",
+    [("host", "virtual"), ("path", "path"), (None, None)],
+)
+def test_s3_addressing_style(s3_uri_style, addressing_style) -> None:
+    """
+    arrange: Create s3 relation data with different s3_uri_styles.
+    act: Create S3Parameters pydantic BaseModel from relation data.
+    assert: Check that s3_uri_style is a valid addressing style.
+    """
+    s3_relation_data = {
+        "access-key": token_hex(16),
+        "secret-key": token_hex(16),
+        "bucket": "backup-bucket",
+        "region": "us-west-2",
+        "s3-uri-style": s3_uri_style,
+    }
+    s3_parameters = S3Parameters(**s3_relation_data)
+    assert s3_parameters.addressing_style == addressing_style

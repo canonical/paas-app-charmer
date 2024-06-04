@@ -10,7 +10,7 @@ jobs:
     with:
       charmcraft-repository: weiiwang01/charmcraft
       charmcraft-ref: update-12f
-      modules: '["test_charm", "test_proxy", "test_cos", "test_database", "test_db_migration", "test_django"]'
+      modules: '["test_charm", "test_proxy", "test_cos", "test_database", "test_s3", "test_db_migration", "test_django"]'
       rockcraft-repository: canonical/rockcraft
       rockcraft-ref: feature/12f
       juju-channel: 3.1/stable
