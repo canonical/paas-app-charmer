@@ -23,8 +23,8 @@ async def test_s3_integration(
     """
     arrange: build and deploy the flask charm.
     act: Integrate the charm with the s3-integrator.
-    assert: the flask application should return in the endpoint
-       with the env variables the correce S3 env variables.
+    assert: the flask application should return in the endpoint /env
+       the correct S3 env variables.
     """
     s3_config = {
         "endpoint": f"http://s3.example.com",
