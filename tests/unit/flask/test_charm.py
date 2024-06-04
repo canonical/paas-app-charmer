@@ -137,7 +137,7 @@ def test_invalid_config(harness: Harness):
     """
     arrange: Prepare the harness. Instantiate the charm.
     act: update the config to an invalid env variables (must be more than 1 chars).
-    assert: The flask service be blocked with invalid configuration.
+    assert: The flask service is blocked with invalid configuration.
     """
     harness.begin()
     harness.update_config({"flask-env": ""})
@@ -148,7 +148,7 @@ def test_invalid_integration(harness: Harness):
     """
     arrange: Prepare the harness. Instantiate the charm.
     act: Integrate with an invalid integration.
-    assert: The flask service be blocked with invalid configuration.
+    assert: The flask service is blocked because the integration data is wrong.
     """
     s3_relation_data = {
         # Missing required access-key and secret-key.
