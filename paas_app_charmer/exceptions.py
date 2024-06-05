@@ -22,3 +22,7 @@ class CharmConfigInvalidError(Exception):
 
 class PebbleNotReadyError(Exception):
     """Exception raised when accessing pebble while it isn't ready."""
+
+
+class MissingCharmLibraryError(Exception):
+    """Raised when a required charm library is missing."""
