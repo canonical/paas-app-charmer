@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """This module defines the CharmState class which represents the state of the charm."""
+import logging
 import os
 import typing
 from dataclasses import dataclass, field
@@ -14,6 +15,18 @@ from pydantic import BaseModel, Field, ValidationError
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer.databases import get_uri
 from paas_app_charmer.exceptions import CharmConfigInvalidError
+
+logger = logging.getLogger(__name__)
+
+# Until charmcraft fetch-libs is implemented, the charm will not fail
+# if new optional libs are not fetched, as it will not be backwards compatible.
+try:
+    # pylint: disable=ungrouped-imports
+    from charms.saml_integrator.v0.saml import SamlRelationData
+except ImportError:
+    logger.exception(
+        "Missing charm library, please run `charmcraft fetch-lib charms.saml_integrator.v0.saml`"
+    )
 
 
 class ProxyConfig(BaseModel):  # pylint: disable=too-few-public-methods
@@ -79,6 +92,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         database_requirers: dict[str, DatabaseRequires],
         redis_uri: str | None = None,
         s3_connection_info: dict[str, str] | None = None,
+        saml_relation_data: typing.MutableMapping[str, str] | None = None,
     ) -> "CharmState":
         """Initialize a new instance of the CharmState class from the associated charm.
 
@@ -90,6 +104,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             database_requirers: All database requirers object declared by the charm.
             redis_uri: The redis uri provided by the redis charm.
             s3_connection_info: Connection info from S3 lib.
+            saml_relation_data: Relation data from the SAML app.
 
         Return:
             The CharmState instance created by the provided charm.
@@ -105,6 +120,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             redis_uri=redis_uri,
             database_requirers=database_requirers,
             s3_connection_info=s3_connection_info,
+            saml_relation_data=saml_relation_data,
         )
         return cls(
             framework=framework,
@@ -188,11 +204,13 @@ class IntegrationsState:
         redis_uri: The redis uri provided by the redis charm.
         databases_uris: Map from interface_name to the database uri.
         s3_parameters: S3 parameters.
+        saml_parameters: SAML parameters.
     """
 
     redis_uri: str | None = None
     databases_uris: dict[str, str | None] = field(default_factory=dict)
     s3_parameters: "S3Parameters | None" = None
+    saml_parameters: "SamlParameters | None" = None
 
     @classmethod
     def build(
@@ -200,6 +218,7 @@ class IntegrationsState:
         redis_uri: str | None,
         database_requirers: dict[str, DatabaseRequires],
         s3_connection_info: dict[str, str] | None,
+        saml_relation_data: typing.MutableMapping[str, str] | None = None,
     ) -> "IntegrationsState":
         """Initialize a new instance of the IntegrationsState class.
 
@@ -209,6 +228,7 @@ class IntegrationsState:
             redis_uri: The redis uri provided by the redis charm.
             database_requirers: All database requirers object declared by the charm.
             s3_connection_info: S3 connection info from S3 lib.
+            saml_relation_data: Saml relation data from saml lib.
 
         Return:
             The IntegrationsState instance created.
@@ -228,12 +248,34 @@ class IntegrationsState:
         else:
             s3_parameters = None
 
+        if saml_relation_data is not None:
+            try:
+                saml_data = SamlRelationData.from_relation_data(saml_relation_data)
+                single_sign_on_redirect_url = next(
+                    e for e in saml_data.endpoints if e.name == "SingleSignOnService"
+                )
+                saml_parameters = SamlParameters(
+                    entity_id=saml_data.entity_id,
+                    metadata_url=str(saml_data.metadata_url),
+                    signing_certificate=saml_data.certificates[0],
+                    single_sign_on_redirect_url=str(single_sign_on_redirect_url.url),
+                )
+            except StopIteration as exc:
+                raise CharmConfigInvalidError(
+                    "Invalid Saml Configuration. Missing SingleSignOnService"
+                ) from exc
+            except ValidationError as exc:
+                raise CharmConfigInvalidError(f"Invalid Saml Configuration: {str(exc)}") from exc
+        else:
+            saml_parameters = None
+
         return cls(
             redis_uri=redis_uri,
             databases_uris={
                 interface_name: get_uri(uri) for interface_name, uri in database_requirers.items()
             },
             s3_parameters=s3_parameters,
+            saml_parameters=saml_parameters,
         )
 
 
@@ -274,3 +316,20 @@ class S3Parameters(BaseModel):
             return "virtual"
         # If None or "path", it does not change.
         return self.s3_uri_style
+
+
+@dataclass
+class SamlParameters:
+    """Configuration for accessing SAML.
+
+    Attributes:
+        entity_id: TODO
+        metadata_url: TODO
+        signing_certificate: TODO
+        single_sign_on_redirect_url: TODO
+    """
+
+    entity_id: str
+    metadata_url: str
+    signing_certificate: str
+    single_sign_on_redirect_url: str

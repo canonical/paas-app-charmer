@@ -34,6 +34,14 @@ except ImportError:
         "Missing charm library, please run `charmcraft fetch-lib charms.data_platform_libs.v0.s3`"
     )
 
+try:
+    # pylint: disable=ungrouped-imports
+    from charms.saml_integrator.v0.saml import SamlRequires
+except ImportError:
+    logger.exception(
+        "Missing charm library, please run `charmcraft fetch-lib charms.saml_integrator.v0.saml`"
+    )
+
 
 class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-attributes
     """Gunicorn-based charm service mixin.
@@ -80,6 +88,12 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             self.framework.observe(self._s3.on.credentials_gone, self._on_s3_credential_gone)
         else:
             self._s3 = None
+
+        if "saml" in requires and requires["saml"].interface_name == "saml":
+            self._saml = SamlRequires(self)
+            self.framework.observe(self._saml.on.saml_data_available, self._on_saml_data_available)
+        else:
+            self._saml = None
 
         self._workload_config = WorkloadConfig(self._wsgi_framework)
 
@@ -222,6 +236,15 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         Returns:
             New CharmState
         """
+        if self._saml:
+            saml_relation = self.model.get_relation(self._saml.relation_name)
+            if saml_relation and saml_relation.app in saml_relation.data:
+                saml_relation_data = saml_relation.data[saml_relation.app]
+            else:
+                saml_relation_data = None
+        else:
+            saml_relation_data = None
+
         return CharmState.from_charm(
             charm=self,
             framework=self._wsgi_framework,
@@ -230,6 +253,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             database_requirers=self._database_requirers,
             redis_uri=self._redis.url if self._redis is not None else None,
             s3_connection_info=self._s3.get_s3_connection_info() if self._s3 else None,
+            saml_relation_data=saml_relation_data,
         )
 
     def _build_wsgi_app(self) -> WsgiApp:
@@ -318,4 +342,9 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
     @block_if_invalid_config
     def _on_s3_credential_gone(self, _event: ops.HookEvent) -> None:
         """Handle s3 credentials-gone event."""
+        self.restart()
+
+    @block_if_invalid_config
+    def _on_saml_data_available(self, _event: ops.HookEvent) -> None:
+        """Handle saml data available event."""
         self.restart()

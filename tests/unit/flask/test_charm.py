@@ -18,7 +18,7 @@ from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.flask import Charm
 
-from .constants import DEFAULT_LAYER, FLASK_CONTAINER_NAME
+from .constants import DEFAULT_LAYER, FLASK_CONTAINER_NAME, SAML_APP_RELATION_DATA_EXAMPLE
 
 
 def test_flask_pebble_layer(harness: Harness) -> None:
@@ -117,6 +117,7 @@ def test_integrations_wiring(harness: Harness):
         "bucket": "flask-bucket",
     }
     harness.add_relation("s3", "s3-integration", app_data=s3_relation_data)
+    harness.add_relation("saml", "saml-integrator", app_data=SAML_APP_RELATION_DATA_EXAMPLE)
 
     harness.set_leader(True)
     container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
@@ -131,6 +132,7 @@ def test_integrations_wiring(harness: Harness):
         service_env["POSTGRESQL_DB_CONNECT_STRING"]
         == "postgresql://test-username:test-password@test-postgresql:5432/test-database"
     )
+    assert service_env["SAML_ENTITY_ID"] == SAML_APP_RELATION_DATA_EXAMPLE["entity_id"]
 
 
 def test_invalid_config(harness: Harness):
