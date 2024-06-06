@@ -7,8 +7,8 @@ import typing
 from functools import wraps
 
 import ops
-from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
+from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 
 logger = logging.getLogger(__name__)
@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 class GunicornBaseProtocol(typing.Protocol):  # pylint: disable=too-few-public-methods
     """Protocol to use for the decorator to block if invalid."""
 
-    def get_wsgi_config(self) -> BaseModel:
-        """Return the framework related configurations."""
+    def _build_charm_state(self) -> CharmState:
+        """Build charm state."""
 
     def update_app_and_unit_status(self, status: ops.StatusBase) -> None:
         """Update the application and unit status.
@@ -56,7 +56,7 @@ def block_if_invalid_config(
             The value returned from the original function. That is, None.
         """
         try:
-            instance.get_wsgi_config()
+            instance._build_charm_state()  # pylint: disable=protected-access
             return method(instance, event)
         except CharmConfigInvalidError as exc:
             logger.exception("Wrong Charm Configuration")

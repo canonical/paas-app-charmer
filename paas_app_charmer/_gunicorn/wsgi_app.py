@@ -153,4 +153,24 @@ def map_integrations_to_env(integrations: IntegrationsState) -> dict[str, str]:
             continue
         env_name = f"{interface_name.upper()}_DB_CONNECT_STRING"
         env[env_name] = uri
+    if integrations.s3_parameters:
+        s3 = integrations.s3_parameters
+        env_vars = {
+            "S3_ACCESS_KEY": s3.access_key,
+            "S3_SECRET_KEY": s3.secret_key,
+            "S3_REGION": s3.region,
+            "S3_STORAGE_CLASS": s3.storage_class,
+            "S3_BUCKET": s3.bucket,
+            "S3_ENDPOINT": s3.endpoint,
+            "S3_PATH": s3.path,
+            "S3_API_VERSION": s3.s3_api_version,
+            "S3_URI_STYLE": s3.s3_uri_style,
+            "S3_ADDRESSING_STYLE": s3.addressing_style,
+            "S3_ATTRIBUTES": json.dumps(s3.attributes) if s3.attributes else None,
+            "S3_TLS_CA_CHAIN": json.dumps(s3.tls_ca_chain) if s3.attributes else None,
+        }
+        for k, v in env_vars.items():
+            if v:
+                env[k] = v
+
     return env

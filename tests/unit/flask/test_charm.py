@@ -7,6 +7,7 @@
 # pylint: disable=protected-access
 
 import unittest.mock
+from secrets import token_hex
 
 import ops
 from ops.testing import Harness
@@ -93,7 +94,7 @@ def test_rotate_secret_key_action(harness: Harness):
 
 def test_integrations_wiring(harness: Harness):
     """
-    arrange: Prepare a Redis and a database integration
+    arrange: Prepare a Redis a database and a S3 integration
     act: Start the flask charm and set flask-app container to be ready.
     assert: The flask service should have environment variables in its plan
         for each of the integrations.
@@ -110,6 +111,12 @@ def test_integrations_wiring(harness: Harness):
         "username": "test-username",
     }
     harness.add_relation("postgresql", "postgresql-k8s", app_data=postgresql_relation_data)
+    s3_relation_data = {
+        "access-key": token_hex(16),
+        "secret-key": token_hex(16),
+        "bucket": "flask-bucket",
+    }
+    harness.add_relation("s3", "s3-integration", app_data=s3_relation_data)
 
     harness.set_leader(True)
     container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
@@ -130,8 +137,24 @@ def test_invalid_config(harness: Harness):
     """
     arrange: Prepare the harness. Instantiate the charm.
     act: update the config to an invalid env variables (must be more than 1 chars).
-    assert: The flask service be blocked with invalid configuration.
+    assert: The flask service is blocked with invalid configuration.
     """
     harness.begin()
     harness.update_config({"flask-env": ""})
     assert harness.model.unit.status == ops.BlockedStatus("invalid configuration: flask-env")
+
+
+def test_invalid_integration(harness: Harness):
+    """
+    arrange: Prepare the harness. Instantiate the charm.
+    act: Integrate with an invalid integration.
+    assert: The flask service is blocked because the integration data is wrong.
+    """
+    s3_relation_data = {
+        # Missing required access-key and secret-key.
+        "bucket": "flask-bucket",
+    }
+    harness.add_relation("s3", "s3-integration", app_data=s3_relation_data)
+    harness.begin_with_initial_hooks()
+    assert isinstance(harness.model.unit.status, ops.BlockedStatus)
+    assert "S3" in str(harness.model.unit.status.message)

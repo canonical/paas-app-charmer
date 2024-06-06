@@ -24,6 +24,16 @@ from paas_app_charmer.exceptions import CharmConfigInvalidError
 
 logger = logging.getLogger(__name__)
 
+# Until charmcraft fetch-libs is implemented, the charm will not fail
+# if new optional libs are not fetched, as it will not be backwards compatible.
+try:
+    # pylint: disable=ungrouped-imports
+    from charms.data_platform_libs.v0.s3 import S3Requirer
+except ImportError:
+    logger.exception(
+        "Missing charm library, please run `charmcraft fetch-lib charms.data_platform_libs.v0.s3`"
+    )
+
 
 class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-attributes
     """Gunicorn-based charm service mixin.
@@ -63,6 +73,13 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             self.framework.observe(self.on.redis_relation_updated, self._on_redis_relation_updated)
         else:
             self._redis = None
+
+        if "s3" in requires and requires["s3"].interface_name == "s3":
+            self._s3 = S3Requirer(charm=self, relation_name="s3", bucket_name=self.app.name)
+            self.framework.observe(self._s3.on.credentials_changed, self._on_s3_credential_changed)
+            self.framework.observe(self._s3.on.credentials_gone, self._on_s3_credential_gone)
+        else:
+            self._s3 = None
 
         self._workload_config = WorkloadConfig(self._wsgi_framework)
 
@@ -200,6 +217,8 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
     def _build_charm_state(self) -> CharmState:
         """Build charm state.
 
+        This method may raise CharmConfigInvalidError.
+
         Returns:
             New CharmState
         """
@@ -210,6 +229,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             secret_storage=self._secret_storage,
             database_requirers=self._database_requirers,
             redis_uri=self._redis.url if self._redis is not None else None,
+            s3_connection_info=self._s3.get_s3_connection_info() if self._s3 else None,
         )
 
     def _build_wsgi_app(self) -> WsgiApp:
@@ -288,4 +308,14 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
     @block_if_invalid_config
     def _on_redis_relation_updated(self, _event: DatabaseRequiresEvent) -> None:
         """Handle redis's database-created event."""
+        self.restart()
+
+    @block_if_invalid_config
+    def _on_s3_credential_changed(self, _event: ops.HookEvent) -> None:
+        """Handle s3 credentials-changed event."""
+        self.restart()
+
+    @block_if_invalid_config
+    def _on_s3_credential_gone(self, _event: ops.HookEvent) -> None:
+        """Handle s3 credentials-gone event."""
         self.restart()

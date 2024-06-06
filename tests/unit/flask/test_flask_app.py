@@ -12,7 +12,7 @@ import unittest.mock
 
 import pytest
 
-from paas_app_charmer._gunicorn.charm_state import CharmState, IntegrationsState
+from paas_app_charmer._gunicorn.charm_state import CharmState, IntegrationsState, S3Parameters
 from paas_app_charmer._gunicorn.webserver import WebserverConfig
 from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp, map_integrations_to_env
@@ -206,6 +206,61 @@ def test_integrations_env(
                 "FUTUREDB_DB_CONNECT_STRING": "futuredb://foobar/",
             },
             id="With several databases, one of them None.",
+        ),
+        pytest.param(
+            IntegrationsState(
+                s3_parameters=S3Parameters.model_construct(
+                    access_key="access_key",
+                    secret_key="secret_key",
+                    bucket="bucket",
+                ),
+            ),
+            {
+                "S3_ACCESS_KEY": "access_key",
+                "S3_SECRET_KEY": "secret_key",
+                "S3_BUCKET": "bucket",
+            },
+            id="With minimal variables in S3 Integration.",
+        ),
+        pytest.param(
+            IntegrationsState(
+                s3_parameters=S3Parameters.model_construct(
+                    access_key="access_key",
+                    secret_key="secret_key",
+                    region="region",
+                    storage_class="GLACIER",
+                    bucket="bucket",
+                    endpoint="https://s3.example.com",
+                    path="/path/subpath/",
+                    s3_api_version="s3v4",
+                    uri_style="host",
+                    tls_ca_chain=(
+                        ca_chain := [
+                            "-----BEGIN CERTIFICATE-----\nTHE FIRST LONG CERTIFICATE\n-----END CERTIFICATE-----",
+                            "-----BEGIN CERTIFICATE-----\nTHE SECOND LONG CERTIFICATE\n-----END CERTIFICATE-----",
+                        ]
+                    ),
+                    attributes=(
+                        attributes := [
+                            "header1:value1",
+                            "header2:value2",
+                        ]
+                    ),
+                ),
+            ),
+            {
+                "S3_ACCESS_KEY": "access_key",
+                "S3_SECRET_KEY": "secret_key",
+                "S3_API_VERSION": "s3v4",
+                "S3_BUCKET": "bucket",
+                "S3_ENDPOINT": "https://s3.example.com",
+                "S3_PATH": "/path/subpath/",
+                "S3_REGION": "region",
+                "S3_STORAGE_CLASS": "GLACIER",
+                "S3_ATTRIBUTES": json.dumps(attributes),
+                "S3_TLS_CA_CHAIN": json.dumps(ca_chain),
+            },
+            id="With all variables in S3 Integration.",
         ),
     ],
 )

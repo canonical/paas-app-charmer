@@ -91,7 +91,7 @@ def test_django_create_super_user(harness: Harness) -> None:
     """
     arrange: Start the Django charm. Mock the Django command (pebble exec) to create a superuser.
     act: Run action create superuser.
-    assert: The action is called with the right argumente, returning a password for the user.
+    assert: The action is called with the right arguments, returning a password for the user.
     """
     harness.set_leader(True)
     container = harness.model.unit.get_container("django-app")
