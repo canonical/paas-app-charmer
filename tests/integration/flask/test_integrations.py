@@ -121,7 +121,6 @@ async def test_saml_integration(
         response = requests.get(f"http://{unit_ip}:8000/env", timeout=5)
         assert response.status_code == 200
         env = response.json()
-        logger.info("ENV VARIABLES %s", env)
         assert env["SAML_ENTITY_ID"] == saml_helper.entity_id
         assert env["SAML_METADATA_URL"] == saml_helper.metadata_url
         entity_id_url = urllib.parse.urlparse(saml_helper.entity_id)

@@ -244,7 +244,6 @@ class IntegrationsState:
 
         if saml_relation_data is not None:
             try:
-                logger.info("saml relation data: %s", saml_relation_data)
                 saml_parameters = SamlParameters(**saml_relation_data)
             except ValidationError as exc:
                 error_message = build_validation_error_message(exc)
