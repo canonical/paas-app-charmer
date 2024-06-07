@@ -207,7 +207,7 @@ def _test_saml_integration_invalid_parameters():
     params.append(
         pytest.param(
             {},
-            "Invalid Saml",
+            ["Invalid Saml"],
             id="Empty relation data",
         )
     )
@@ -216,21 +216,39 @@ def _test_saml_integration_invalid_parameters():
     params.append(
         pytest.param(
             saml_app_relation_data,
-            "Missing SingleSignOnService",
-            id="No SingleSignOnService",
+            ["Invalid Saml", "single_sign_on_service_redirect_url"],
+            id="Missing single_sign_on_service_redirect_url",
+        )
+    )
+    saml_app_relation_data = dict(SAML_APP_RELATION_DATA_EXAMPLE)
+    del saml_app_relation_data["x509certs"]
+    params.append(
+        pytest.param(
+            saml_app_relation_data,
+            ["Invalid Saml", "x509certs"],
+            id="Missing x509certs",
+        )
+    )
+    saml_app_relation_data = dict(SAML_APP_RELATION_DATA_EXAMPLE)
+    saml_app_relation_data["x509certs"] = ""
+    params.append(
+        pytest.param(
+            saml_app_relation_data,
+            ["Invalid Saml", "x509certs"],
+            id="Empty x509certs",
         )
     )
     return params
 
 
 @pytest.mark.parametrize(
-    "saml_app_relation_data, error_message", _test_saml_integration_invalid_parameters()
+    "saml_app_relation_data, error_messages", _test_saml_integration_invalid_parameters()
 )
-def test_saml_integration_invalid(saml_app_relation_data, error_message):
+def test_saml_integration_invalid(saml_app_relation_data, error_messages):
     """
-    arrange: TODO.
-    act: TODO.
-    assert: TODO.
+    arrange: Prepare a saml relation data that is invalid.
+    act: Try to build CharmState.
+    assert: It should raise CharmConfigInvalidError with a specific error message.
     """
     config = copy.copy(DEFAULT_CHARM_CONFIG)
     config.update(config)
@@ -244,4 +262,5 @@ def test_saml_integration_invalid(saml_app_relation_data, error_message):
             database_requirers={},
             saml_relation_data=saml_app_relation_data,
         )
-    assert error_message in str(exc)
+    for message in error_messages:
+        assert message in str(exc)

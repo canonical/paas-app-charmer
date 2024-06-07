@@ -10,23 +10,14 @@ from typing import Optional
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Extra, Field, ValidationError, ValidationInfo, field_validator
 
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer.databases import get_uri
 from paas_app_charmer.exceptions import CharmConfigInvalidError
+from paas_app_charmer.utils import build_validation_error_message
 
 logger = logging.getLogger(__name__)
-
-# Until charmcraft fetch-libs is implemented, the charm will not fail
-# if new optional libs are not fetched, as it will not be backwards compatible.
-try:
-    # pylint: disable=ungrouped-imports
-    from charms.saml_integrator.v0.saml import SamlRelationData
-except ImportError:
-    logger.exception(
-        "Missing charm library, please run `charmcraft fetch-lib charms.saml_integrator.v0.saml`"
-    )
 
 
 class ProxyConfig(BaseModel):  # pylint: disable=too-few-public-methods
@@ -244,28 +235,22 @@ class IntegrationsState:
                 # Ignoring as mypy does not work correctly with that information.
                 s3_parameters = S3Parameters(**s3_connection_info)  # type: ignore[arg-type]
             except ValidationError as exc:
-                raise CharmConfigInvalidError(f"Invalid S3 Configuration: {str(exc)}") from exc
+                error_message = build_validation_error_message(exc)
+                raise CharmConfigInvalidError(
+                    f"Invalid S3 configuration: {error_message}"
+                ) from exc
         else:
             s3_parameters = None
 
         if saml_relation_data is not None:
             try:
-                saml_data = SamlRelationData.from_relation_data(saml_relation_data)
-                single_sign_on_redirect_url = next(
-                    e for e in saml_data.endpoints if e.name == "SingleSignOnService"
-                )
-                saml_parameters = SamlParameters(
-                    entity_id=saml_data.entity_id,
-                    metadata_url=str(saml_data.metadata_url),
-                    signing_certificate=saml_data.certificates[0],
-                    single_sign_on_redirect_url=str(single_sign_on_redirect_url.url),
-                )
-            except StopIteration as exc:
-                raise CharmConfigInvalidError(
-                    "Invalid Saml Configuration. Missing SingleSignOnService"
-                ) from exc
+                logger.info("saml relation data: %s", saml_relation_data)
+                saml_parameters = SamlParameters(**saml_relation_data)
             except ValidationError as exc:
-                raise CharmConfigInvalidError(f"Invalid Saml Configuration: {str(exc)}") from exc
+                error_message = build_validation_error_message(exc)
+                raise CharmConfigInvalidError(
+                    f"Invalid Saml configuration: {error_message}"
+                ) from exc
         else:
             saml_parameters = None
 
@@ -318,18 +303,39 @@ class S3Parameters(BaseModel):
         return self.s3_uri_style
 
 
-@dataclass
-class SamlParameters:
+class SamlParameters(BaseModel, extra=Extra.allow):
     """Configuration for accessing SAML.
 
     Attributes:
-        entity_id: TODO
-        metadata_url: TODO
-        signing_certificate: TODO
-        single_sign_on_redirect_url: TODO
+        entity_id: Entity Id of the SP.
+        metadata_url: URL for the metadata for the SP.
+        signing_certificate: Signing certificate for the SP.
+        single_sign_on_redirect_url: Sign on redirect URL for the SP.
     """
 
     entity_id: str
     metadata_url: str
-    signing_certificate: str
-    single_sign_on_redirect_url: str
+    signing_certificate: str = Field(alias="x509certs")
+    single_sign_on_redirect_url: str = Field(alias="single_sign_on_service_redirect_url")
+
+    @field_validator("signing_certificate")
+    @classmethod
+    def validate_signing_certificate(cls, certs: str, _: ValidationInfo) -> str:
+        """Validate signing certificate from list of certificates.
+
+        It is a prerequisite that the fist certificate is the signing certificate,
+        otherwise this method would return a wrong certificate.
+
+        Args:
+            certs: Original x509certs field
+
+        Returns:
+            The validated signing certificate
+
+        Raises:
+            ValueError: If there is no certificate.
+        """
+        certificate = certs.split(",")[0]
+        if not certificate:
+            raise ValueError("Missing x509certs")
+        return certificate

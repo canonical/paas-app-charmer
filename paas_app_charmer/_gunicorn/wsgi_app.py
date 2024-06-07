@@ -180,7 +180,7 @@ def map_integrations_to_env(integrations: IntegrationsState) -> dict[str, str]:
                 "SAML_ENTITY_ID": saml.entity_id,
                 "SAML_METADATA_URL": saml.metadata_url,
                 "SAML_SINGLE_SIGN_ON_REDIRECT_URL": saml.single_sign_on_redirect_url,
-                "SAML_SINGING_CERTIFICATE": saml.signing_certificate,
+                "SAML_SIGNING_CERTIFICATE": saml.signing_certificate,
             }
         )
 
