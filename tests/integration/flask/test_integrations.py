@@ -3,6 +3,7 @@
 
 """Integration tests for Flask charm integrations, like S3 and Saml."""
 import logging
+import urllib.parse
 from secrets import token_hex
 
 import ops
@@ -123,5 +124,8 @@ async def test_saml_integration(
         logger.info("ENV VARIABLES %s", env)
         assert env["SAML_ENTITY_ID"] == saml_helper.entity_id
         assert env["SAML_METADATA_URL"] == saml_helper.metadata_url
-        assert env["SAML_SINGLE_SIGN_ON_REDIRECT_URL"] == "hello"
+        entity_id_url = urllib.parse.urlparse(saml_helper.entity_id)
+        assert env["SAML_SINGLE_SIGN_ON_REDIRECT_URL"] == urllib.parse.urlunparse(
+            entity_id_url._replace(path="sso")
+        )
         assert env["SAML_SIGNING_CERTIFICATE"] in saml_helper.CERTIFICATE.replace("\n", "")
