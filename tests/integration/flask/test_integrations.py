@@ -105,9 +105,8 @@ async def test_saml_integration(
     saml_helper.prepare_pod(model.name, f"{flask_app.name}-0")
     await saml_integrator_app.set_config(
         {
-            # "entity_id": f"https://{saml_helper.SAML_HOST}",
-            "entity_id": f"https://{saml_helper.SAML_HOST}/metadata",
-            "metadata_url": f"https://{saml_helper.SAML_HOST}/metadata",
+            "entity_id": saml_helper.entity_id,
+            "metadata_url": saml_helper.metadata_url,
         }
     )
     await model.wait_for_idle(idle_period=30)
