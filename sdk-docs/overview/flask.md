@@ -1,62 +1,57 @@
 # PaaS App Charmer
 
-Easily deploy and operate your Flask or Django applications and associated
-infrastructure, such as databases and ingress, using open source tooling. This
-lets you focus on creating applications for your users backed with the
-confidence that your operations are taken care of by world class tooling
+With PaaS App Charmer you can easily deploy and operate your flask applications
+and associated infrastructure, such as databases and ingress, using open source
+tooling. This lets you focus on creating applications for your users backed with
+the confidence that your operations are taken care of by world class tooling
 developed by Canonical, the creators of Ubuntu.
 
-Have you ever created an application and then wanted to deploy it for your users
-only to either be forced to use a proprietary public cloud platform or manage
-the deployment and operations yourself? PaaS App Charmer will take your
-application and create an OCI image using Rockcraft and operations code using
-Charmcraft for you. The full suite of tools is open source so you can see
-exactly how it works and even contribute! After creating the app charm and
-image, you can then deploy your application into any Kubernetes cluster using
-Juju. Need a database? Using Juju you can deploy a range of popular open source
-databases, such as [PostgreSQL](https://charmhub.io/postgresql) or
-[MySQL](https://charmhub.io/mysql), and integrate them with your application
-with a few commands. Need an ingress to serve traffic? Use Juju to deploy and
-integrate a range of ingresses, such as
-[Traefik](https://charmhub.io/traefik-k8s), and expose your application to
-external traffic in seconds.
+PaaS App Charmer will create an OCI image for you using the `flask-framework`
+Rockcraft extension and take care of the ops code using the `flask-framework`
+Charmcraft extension. Once you have the OCI image and the charm with the
+packaged ops code, you can then juju deploy your flask application and integrate
+it with databases, ingress and observability.
 
-## Getting Started
+## PaaS App CHarmer Documentation
 
-There are 2 requirements for the flask application:
+<!-- The links below are empty as I'm not sure where the best place is to point
+people -->
 
-* There is a `requirements.txt` file in the project root
-* The WSGI path is `app:app`
+| | |
+|--|--|
+|  [Tutorials]()</br>  Get started - a hands-on introduction to using PaaS App Charmer for new users </br> |  [How-to guides]() </br> Step-by-step guides covering key operations and common tasks |
+| [Reference]() </br> Technical information - specifications, APIs, architecture | [Explanation]() </br> Concepts - discussion and clarification of key topics  |
 
-Make sure that you have the `latest/edge` version of Charmcraft and Rockcraft
-installed:
+## Contributing to this documentation
 
-```bash
-sudo snap install charmcraft --channel latest/edge --classic
-sudo snap install rockcraft --channel latest/edge --classic
-```
+Documentation is an important part of this project, and we take the same
+open-source approach to the documentation as the code. As such, we welcome
+community contributions, suggestions and constructive feedback on our
+documentation. Our documentation is hosted on the
+[Charmhub forum]() to enable easy collaboration. Please use the "Help us improve
+this documentation" links on each documentation page to either directly change
+something you see that's wrong, ask a question, or make a suggestion about a
+potential change via the comments section.
 
-Both have the `flask-framework` profile to create the required files
-and include the `flask-framework` extension which will do all the hard
-operational work for you and you just need to fill in some metadata in the
-`rockcraft.yaml` and `charmcraft.yaml` files. To create the necessary files:
+If there's a particular area of documentation that you'd like to see that's
+missing, please
+[file a bug](https://github.com/canonical/paas-app-charmer/issues).
 
-```bash
-rockcraft init --profile flask-framework
-mkdir charm
-cd charm
-charmcraft init --profile flask-framework
-```
+## Project and community
 
-After packing the rock and charm using `rockcraft pack` and `charmcraft pack`
-and uploading the rock to a k8s registry, you can juju deploy your flask
-application, integrate it with ingress and start serving traffic to your users!
+PaaS App Charmer is a member of the Ubuntu family. It's an open-source project
+that warmly welcomes community projects, contributions, suggestions, fixes, and
+constructive feedback.
 
-Read the
-[comprehensive getting started tutorial](https://juju.is/docs/sdk/write-your-first-kubernetes-charm-using-the-paas-app-charmer)
-for more!
+- [Code of conduct](https://ubuntu.com/community/code-of-conduct)
+- [Get support](https://discourse.charmhub.io/)
+- [Join our online chat](https://matrix.to/#/#12-factor-charms:ubuntu.com)
+- [Contribute](#contribute)
 
-## Contributing
+Thinking about using PaaS App Charmer for your next project?
+[Get in touch](https://matrix.to/#/#12-factor-charms:ubuntu.com)!
+
+## Contribute
 
 Is there something missing from the PaaS App Charmer framework? PaaS App Charmer
 welcomes contributions! This section covers how to add a new integration and a
