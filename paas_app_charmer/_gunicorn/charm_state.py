@@ -319,8 +319,8 @@ class SamlParameters(BaseModel, extra=Extra.allow):
 
     @field_validator("signing_certificate")
     @classmethod
-    def validate_signing_certificate(cls, certs: str, _: ValidationInfo) -> str:
-        """Validate signing certificate from list of certificates.
+    def validate_signing_certificate_exists(cls, certs: str, _: ValidationInfo) -> str:
+        """Validate that at least a certificate exists in the list of certificates.
 
         It is a prerequisite that the fist certificate is the signing certificate,
         otherwise this method would return a wrong certificate.
@@ -336,5 +336,5 @@ class SamlParameters(BaseModel, extra=Extra.allow):
         """
         certificate = certs.split(",")[0]
         if not certificate:
-            raise ValueError("Missing x509certs")
+            raise ValueError("Missing x509certs. There should be at least one certificate.")
         return certificate
