@@ -4,7 +4,6 @@
 # See LICENSE file for licensing details.
 
 """Django Charm service."""
-import itertools
 import logging
 import pathlib
 import secrets
@@ -18,6 +17,7 @@ from pydantic import BaseModel, Extra, Field, ValidationError  # pylint: disable
 from paas_app_charmer._gunicorn.charm import GunicornBase
 from paas_app_charmer._gunicorn.charm_utils import block_if_invalid_config
 from paas_app_charmer.exceptions import CharmConfigInvalidError
+from paas_app_charmer.utils import build_validation_error_message
 
 logger = logging.getLogger(__name__)
 
@@ -71,11 +71,10 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
         try:
             return DjangoConfig.model_validate(django_config)
         except ValidationError as exc:
-            error_fields = set(
-                itertools.chain.from_iterable(error["loc"] for error in exc.errors())
+            error_message = build_validation_error_message(
+                exc, prefix="django-", underscore_to_dash=True
             )
-            error_field_str = " ".join(f"django-{f}".replace("_", "-") for f in error_fields)
-            raise CharmConfigInvalidError(f"invalid configuration: {error_field_str}") from exc
+            raise CharmConfigInvalidError(f"invalid configuration: {error_message}") from exc
 
     def get_cos_dir(self) -> str:
         """Return the directory with COS related files.

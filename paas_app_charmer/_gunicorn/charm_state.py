@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """This module defines the CharmState class which represents the state of the charm."""
+import logging
 import os
 import typing
 from dataclasses import dataclass, field
@@ -9,11 +10,14 @@ from typing import Optional
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Extra, Field, ValidationError, ValidationInfo, field_validator
 
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer.databases import get_uri
 from paas_app_charmer.exceptions import CharmConfigInvalidError
+from paas_app_charmer.utils import build_validation_error_message
+
+logger = logging.getLogger(__name__)
 
 
 class ProxyConfig(BaseModel):  # pylint: disable=too-few-public-methods
@@ -79,6 +83,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         database_requirers: dict[str, DatabaseRequires],
         redis_uri: str | None = None,
         s3_connection_info: dict[str, str] | None = None,
+        saml_relation_data: typing.MutableMapping[str, str] | None = None,
     ) -> "CharmState":
         """Initialize a new instance of the CharmState class from the associated charm.
 
@@ -90,6 +95,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             database_requirers: All database requirers object declared by the charm.
             redis_uri: The redis uri provided by the redis charm.
             s3_connection_info: Connection info from S3 lib.
+            saml_relation_data: Relation data from the SAML app.
 
         Return:
             The CharmState instance created by the provided charm.
@@ -105,6 +111,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             redis_uri=redis_uri,
             database_requirers=database_requirers,
             s3_connection_info=s3_connection_info,
+            saml_relation_data=saml_relation_data,
         )
         return cls(
             framework=framework,
@@ -188,11 +195,13 @@ class IntegrationsState:
         redis_uri: The redis uri provided by the redis charm.
         databases_uris: Map from interface_name to the database uri.
         s3_parameters: S3 parameters.
+        saml_parameters: SAML parameters.
     """
 
     redis_uri: str | None = None
     databases_uris: dict[str, str | None] = field(default_factory=dict)
     s3_parameters: "S3Parameters | None" = None
+    saml_parameters: "SamlParameters | None" = None
 
     @classmethod
     def build(
@@ -200,6 +209,7 @@ class IntegrationsState:
         redis_uri: str | None,
         database_requirers: dict[str, DatabaseRequires],
         s3_connection_info: dict[str, str] | None,
+        saml_relation_data: typing.MutableMapping[str, str] | None = None,
     ) -> "IntegrationsState":
         """Initialize a new instance of the IntegrationsState class.
 
@@ -209,6 +219,7 @@ class IntegrationsState:
             redis_uri: The redis uri provided by the redis charm.
             database_requirers: All database requirers object declared by the charm.
             s3_connection_info: S3 connection info from S3 lib.
+            saml_relation_data: Saml relation data from saml lib.
 
         Return:
             The IntegrationsState instance created.
@@ -224,9 +235,23 @@ class IntegrationsState:
                 # Ignoring as mypy does not work correctly with that information.
                 s3_parameters = S3Parameters(**s3_connection_info)  # type: ignore[arg-type]
             except ValidationError as exc:
-                raise CharmConfigInvalidError(f"Invalid S3 Configuration: {str(exc)}") from exc
+                error_message = build_validation_error_message(exc)
+                raise CharmConfigInvalidError(
+                    f"Invalid S3 configuration: {error_message}"
+                ) from exc
         else:
             s3_parameters = None
+
+        if saml_relation_data is not None:
+            try:
+                saml_parameters = SamlParameters(**saml_relation_data)
+            except ValidationError as exc:
+                error_message = build_validation_error_message(exc)
+                raise CharmConfigInvalidError(
+                    f"Invalid Saml configuration: {error_message}"
+                ) from exc
+        else:
+            saml_parameters = None
 
         return cls(
             redis_uri=redis_uri,
@@ -234,6 +259,7 @@ class IntegrationsState:
                 interface_name: get_uri(uri) for interface_name, uri in database_requirers.items()
             },
             s3_parameters=s3_parameters,
+            saml_parameters=saml_parameters,
         )
 
 
@@ -274,3 +300,41 @@ class S3Parameters(BaseModel):
             return "virtual"
         # If None or "path", it does not change.
         return self.s3_uri_style
+
+
+class SamlParameters(BaseModel, extra=Extra.allow):
+    """Configuration for accessing SAML.
+
+    Attributes:
+        entity_id: Entity Id of the SP.
+        metadata_url: URL for the metadata for the SP.
+        signing_certificate: Signing certificate for the SP.
+        single_sign_on_redirect_url: Sign on redirect URL for the SP.
+    """
+
+    entity_id: str
+    metadata_url: str
+    signing_certificate: str = Field(alias="x509certs")
+    single_sign_on_redirect_url: str = Field(alias="single_sign_on_service_redirect_url")
+
+    @field_validator("signing_certificate")
+    @classmethod
+    def validate_signing_certificate_exists(cls, certs: str, _: ValidationInfo) -> str:
+        """Validate that at least a certificate exists in the list of certificates.
+
+        It is a prerequisite that the fist certificate is the signing certificate,
+        otherwise this method would return a wrong certificate.
+
+        Args:
+            certs: Original x509certs field
+
+        Returns:
+            The validated signing certificate
+
+        Raises:
+            ValueError: If there is no certificate.
+        """
+        certificate = certs.split(",")[0]
+        if not certificate:
+            raise ValueError("Missing x509certs. There should be at least one certificate.")
+        return certificate
