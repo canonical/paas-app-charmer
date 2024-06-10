@@ -14,7 +14,7 @@ def build_validation_error_message(
     """Build a str with a list of error fields from a pydantic exception.
 
     Args:
-        exc: ValidationError exceptoin instance.
+        exc: ValidationError exception instance.
         prefix: Prefix to append to the error field names.
         underscore_to_dash: Replace underscores to dashes in the error field names.
 
