@@ -10,6 +10,7 @@ import unittest.mock
 from secrets import token_hex
 
 import ops
+import pytest
 from ops.testing import Harness
 
 from paas_app_charmer._gunicorn.charm_state import CharmState
@@ -133,7 +134,73 @@ def test_integrations_wiring(harness: Harness):
         == "postgresql://test-username:test-password@test-postgresql:5432/test-database"
     )
     assert service_env["SAML_ENTITY_ID"] == SAML_APP_RELATION_DATA_EXAMPLE["entity_id"]
+    print(container.get_plan())
 
+
+@pytest.mark.parametrize(
+    "integrate_to,required_integrations",
+    [
+        pytest.param(["saml"], ["s3"], id="s3 fails"),
+        pytest.param(["redis", "s3"], ["mysql", "postgresql"], id="postgresql and mysql fail"),
+        pytest.param([], ["mysql", "postgresql", "mongodb", "s3", "redis", "saml"], id="all fail"),
+    ],
+)
+def test_missing_integrations(harness: Harness, integrate_to, required_integrations):
+    """TODO."""
+    integrations = {
+        "postgresql": {
+            "app_data": {
+                "database": "test-database",
+                "endpoints": "test-postgresql:5432,test-postgresql-2:5432",
+                "password": "test-password",
+                "username": "test-username",
+            }
+        },
+        "mongodb": {"app_data": {"uris": "mongodb://foobar/"}},
+        "mysql": {
+            "app_data": {
+                "endpoints": "test-mysql:3306",
+                "password": "test-password",
+                "username": "test-username",
+            }
+        },
+        "s3": {
+            "app_data": {
+                "access-key": token_hex(16),
+                "secret-key": token_hex(16),
+                "bucket": "flask-bucket",
+            }
+        },
+        "redis": {
+            "unit_data": {
+                "hostname": "10.1.88.132",
+                "port": "6379",
+            }
+        },
+        "saml": {"app_data": SAML_APP_RELATION_DATA_EXAMPLE},
+    }
+
+    for integration in required_integrations:
+        harness.framework.meta.requires[integration].optional = False
+
+    for integration in integrate_to:
+        harness.add_relation(integration, integration, **integrations[integration])
+
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+    harness.begin_with_initial_hooks()
+
+    assert isinstance(harness.model.unit.status, ops.model.BlockedStatus)
+
+    failing_integrations = set(required_integrations) - set(integrate_to)
+    for integration in failing_integrations:
+        assert integration in harness.model.unit.status.message
+
+    not_failing_integrations = set(integrations.keys()) - failing_integrations
+    for integration in not_failing_integrations:
+        assert integration not in harness.model.unit.status.message
+
+    assert container.get_plan().services["flask"] == "X"
 
 def test_invalid_config(harness: Harness):
     """

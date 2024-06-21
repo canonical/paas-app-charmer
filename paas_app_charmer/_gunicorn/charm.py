@@ -203,6 +203,38 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             logger.info("secret storage is not initialized")
             self.update_app_and_unit_status(ops.WaitingStatus("Waiting for peer integration"))
             return False
+
+        return self._integrations_ready()
+
+    def _integrations_ready(self):
+        charm_state = self._build_charm_state()
+
+        missing_integrations = []
+        requires = self.framework.meta.requires
+        for name in self._database_requirers.keys():
+            if (
+                not name in charm_state.integrations.databases_uris
+                or charm_state.integrations.databases_uris[name] is None
+            ):
+                if not requires[name].optional:
+                    missing_integrations.append(name)
+        if self._redis and not charm_state.integrations.redis_uri:
+            if not requires["redis"].optional:
+                missing_integrations.append("redis")
+        if self._s3 and not charm_state.integrations.s3_parameters:
+            if not requires["s3"].optional:
+                missing_integrations.append("s3")
+        if self._saml and not charm_state.integrations.saml_parameters:
+            if not requires["saml"].optional:
+                missing_integrations.append("saml")
+
+        if missing_integrations:
+            message = f"wrong or missing integrations {','.join(missing_integrations)}"
+            self.update_app_and_unit_status(ops.BlockedStatus(message))
+            # TODO THIS MEANS THAT WE SHOULD STOP THE SERVICES
+            # AND REMOVE THE MIGRATIONS FILE IF NECESSARY!!
+            return False
+
         return True
 
     def restart(self) -> None:
