@@ -206,14 +206,19 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
         return self._integrations_ready()
 
-    def _integrations_ready(self):
+    def _integrations_ready(self) -> bool:
+        """TODO.
+
+        Returns:
+            True if all non optional integrations are ready.
+        """
         charm_state = self._build_charm_state()
 
         missing_integrations = []
         requires = self.framework.meta.requires
         for name in self._database_requirers.keys():
             if (
-                not name in charm_state.integrations.databases_uris
+                name not in charm_state.integrations.databases_uris
                 or charm_state.integrations.databases_uris[name] is None
             ):
                 if not requires[name].optional:
@@ -233,6 +238,8 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             self.update_app_and_unit_status(ops.BlockedStatus(message))
             # TODO THIS MEANS THAT WE SHOULD STOP THE SERVICES
             # AND REMOVE THE MIGRATIONS FILE IF NECESSARY!!
+            self._build_wsgi_app().stop()
+            self._database_migration.set_status_to_pending()
             return False
 
         return True

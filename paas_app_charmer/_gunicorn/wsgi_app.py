@@ -103,6 +103,15 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
 
         return ops.pebble.LayerDict(services=services)
 
+    def stop(self) -> None:
+        """TODO DO NOT FORGET TO REMOVE CHECKS LIVENESS OR THE POD WILL RESTART BADLY...!!."""
+        # TODO one service or all?
+        # service_name = self._workload_config.service_name
+        services = self._container.get_services()
+        service_names = list(services.keys())
+        if service_names:
+            self._container.stop(*service_names)
+
     def restart(self) -> None:
         """Restart or start the WSGI service if not started with the latest configuration."""
         self._container.add_layer("charm", self._wsgi_layer(), combine=True)

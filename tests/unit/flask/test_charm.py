@@ -11,12 +11,14 @@ from secrets import token_hex
 
 import ops
 import pytest
+from ops.pebble import ServiceStatus
 from ops.testing import Harness
 
 from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
 from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
+from paas_app_charmer.database_migration import DatabaseMigrationStatus
 from paas_app_charmer.flask import Charm
 
 from .constants import DEFAULT_LAYER, FLASK_CONTAINER_NAME, SAML_APP_RELATION_DATA_EXAMPLE
@@ -134,7 +136,6 @@ def test_integrations_wiring(harness: Harness):
         == "postgresql://test-username:test-password@test-postgresql:5432/test-database"
     )
     assert service_env["SAML_ENTITY_ID"] == SAML_APP_RELATION_DATA_EXAMPLE["entity_id"]
-    print(container.get_plan())
 
 
 @pytest.mark.parametrize(
@@ -200,7 +201,10 @@ def test_missing_integrations(harness: Harness, integrate_to, required_integrati
     for integration in not_failing_integrations:
         assert integration not in harness.model.unit.status.message
 
-    assert container.get_plan().services["flask"] == "X"
+    for name, service in container.get_services().items():
+        assert service.current == ServiceStatus.INACTIVE
+    assert harness._charm._database_migration.get_status() == DatabaseMigrationStatus.PENDING
+
 
 def test_invalid_config(harness: Harness):
     """

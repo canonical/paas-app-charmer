@@ -59,6 +59,10 @@ class DatabaseMigration:
             else DatabaseMigrationStatus(cast(str, self._container.pull(self._status_file).read()))
         )
 
+    def set_status_to_pending(self) -> None:
+        """TODO."""
+        self._set_status(DatabaseMigrationStatus.PENDING)
+
     def _set_status(self, status: DatabaseMigrationStatus) -> None:
         """Set the database migration run status.
 
