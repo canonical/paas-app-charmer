@@ -1,5 +1,3 @@
-# ignore CVE introduced by python3-gunicorn
-CVE-2022-40897
 # CVE usr/bin/pebble (gobinary)
 CVE-2023-45288
 # stdlib golang: net/netip: Unexpected behavior from Is methods for IPv4-mapped IPv6 addresses
