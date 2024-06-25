@@ -169,13 +169,13 @@ def test_missing_integrations(harness: Harness, integrate_to, required_integrati
         harness.add_relation(integration, integration, **INTEGRATIONS_RELATION_DATA[integration])
 
     integrations_that_should_fail = set(required_integrations) - set(integrate_to)
-    integrations_that_not_fail = (
+    integrations_that_should_not_fail = (
         set(INTEGRATIONS_RELATION_DATA.keys()) - integrations_that_should_fail
     )
     assert isinstance(harness.model.unit.status, ops.model.BlockedStatus)
     for integration in integrations_that_should_fail:
         assert integration in harness.model.unit.status.message
-    for integration in integrations_that_not_fail:
+    for integration in integrations_that_should_not_fail:
         assert integration not in harness.model.unit.status.message
 
 
