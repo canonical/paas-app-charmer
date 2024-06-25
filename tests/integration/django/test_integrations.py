@@ -12,16 +12,18 @@ async def test_blocking_and_restarting_on_required_integration(
     model: Model, django_app, get_unit_ips
 ):
     """
-    arrange:
-    act:
-    assert:
+    arrange: Charm is deployed with postgresql integration.
+    act: Remove integration.
+    assert: The service is down.
+    act: Integrate again with postgresql.
+    assert: The service is working again.
     """
-
+    # the service is initially running
     unit_ip = (await get_unit_ips(django_app.name))[0]
     response = requests.get(f"http://{unit_ip}:8000/len/users", timeout=5)
     assert response.status_code == 200
 
-    # remove integration and check service is stopped
+    # remove integration and check that the service is stopped
     await django_app.destroy_relation("postgresql", "postgresql-k8s:database")
 
     await model.wait_for_idle(apps=[django_app.name], status="blocked")
@@ -29,7 +31,7 @@ async def test_blocking_and_restarting_on_required_integration(
     with pytest.raises(requests.exceptions.ConnectionError):
         requests.get(f"http://{unit_ip}:8000/len/users", timeout=5)
 
-    # add integration again and check service gets started
+    # add integration again and check that the service is running
     await model.integrate(django_app.name, "postgresql-k8s")
     await model.wait_for_idle(status="active")
 

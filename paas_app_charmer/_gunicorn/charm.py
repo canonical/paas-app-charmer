@@ -209,14 +209,14 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             message = f"wrong or missing integrations {','.join(missing_integrations)}"
             logger.info(message)
             self.update_app_and_unit_status(ops.BlockedStatus(message))
-            self._build_wsgi_app().stop()
+            self._build_wsgi_app().stop_all_services()
             self._database_migration.set_status_to_pending()
             return False
 
         return True
 
     def _missing_required_integrations(self, charm_state: CharmState) -> list[str]:
-        """TODO.
+        """Get list of missing integrations that are required.
 
         Args:
             charm_state: the charm state

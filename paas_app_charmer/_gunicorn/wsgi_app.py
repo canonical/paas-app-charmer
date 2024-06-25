@@ -103,8 +103,11 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
 
         return ops.pebble.LayerDict(services=services)
 
-    def stop(self) -> None:
-        """TODO DO NOT FORGET TO REMOVE CHECKS LIVENESS OR THE POD WILL RESTART BADLY...!!."""
+    def stop_all_services(self) -> None:
+        """Stop all the services in the workload.
+
+        Services will restarted again when the restart method is invoked.
+        """
         services = self._container.get_services()
         service_names = list(services.keys())
         if service_names:

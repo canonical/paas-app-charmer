@@ -60,7 +60,7 @@ class DatabaseMigration:
         )
 
     def set_status_to_pending(self) -> None:
-        """TODO."""
+        """Set the database migration run status to pending."""
         self._set_status(DatabaseMigrationStatus.PENDING)
 
     def _set_status(self, status: DatabaseMigrationStatus) -> None:
