@@ -204,16 +204,26 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             self.update_app_and_unit_status(ops.WaitingStatus("Waiting for peer integration"))
             return False
 
-        return self._integrations_ready()
+        missing_integrations = self._missing_required_integrations(charm_state)
+        if missing_integrations:
+            message = f"wrong or missing integrations {','.join(missing_integrations)}"
+            logger.info(message)
+            self.update_app_and_unit_status(ops.BlockedStatus(message))
+            self._build_wsgi_app().stop()
+            self._database_migration.set_status_to_pending()
+            return False
 
-    def _integrations_ready(self) -> bool:
+        return True
+
+    def _missing_required_integrations(self, charm_state: CharmState) -> list[str]:
         """TODO.
 
-        Returns:
-            True if all non optional integrations are ready.
-        """
-        charm_state = self._build_charm_state()
+        Args:
+            charm_state: the charm state
 
+        Returns:
+            list of names of missing integrations
+        """
         missing_integrations = []
         requires = self.framework.meta.requires
         for name in self._database_requirers.keys():
@@ -232,17 +242,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         if self._saml and not charm_state.integrations.saml_parameters:
             if not requires["saml"].optional:
                 missing_integrations.append("saml")
-
-        if missing_integrations:
-            message = f"wrong or missing integrations {','.join(missing_integrations)}"
-            self.update_app_and_unit_status(ops.BlockedStatus(message))
-            # TODO THIS MEANS THAT WE SHOULD STOP THE SERVICES
-            # AND REMOVE THE MIGRATIONS FILE IF NECESSARY!!
-            self._build_wsgi_app().stop()
-            self._database_migration.set_status_to_pending()
-            return False
-
-        return True
+        return missing_integrations
 
     def restart(self) -> None:
         """Restart or start the service if not started with the latest configuration."""

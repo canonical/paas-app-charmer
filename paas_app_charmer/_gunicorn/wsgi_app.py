@@ -105,8 +105,6 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
 
     def stop(self) -> None:
         """TODO DO NOT FORGET TO REMOVE CHECKS LIVENESS OR THE POD WILL RESTART BADLY...!!."""
-        # TODO one service or all?
-        # service_name = self._workload_config.service_name
         services = self._container.get_services()
         service_names = list(services.keys())
         if service_names:

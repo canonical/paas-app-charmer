@@ -71,7 +71,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         self._app_config = app_config if app_config is not None else {}
         self._is_secret_storage_ready = is_secret_storage_ready
         self._secret_key = secret_key
-        self.integrations = integrations
+        self.integrations = integrations or IntegrationsState()
 
     @classmethod
     def from_charm(  # pylint: disable=too-many-arguments
@@ -199,7 +199,7 @@ class IntegrationsState:
     """
 
     redis_uri: str | None = None
-    databases_uris: dict[str, str | None] = field(default_factory=dict)
+    databases_uris: dict[str, str] = field(default_factory=dict)
     s3_parameters: "S3Parameters | None" = None
     saml_parameters: "SamlParameters | None" = None
 
@@ -256,7 +256,9 @@ class IntegrationsState:
         return cls(
             redis_uri=redis_uri,
             databases_uris={
-                interface_name: get_uri(uri) for interface_name, uri in database_requirers.items()
+                interface_name: uri
+                for interface_name, requirers in database_requirers.items()
+                if (uri := get_uri(requirers)) is not None
             },
             s3_parameters=s3_parameters,
             saml_parameters=saml_parameters,
