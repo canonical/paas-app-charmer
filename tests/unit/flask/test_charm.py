@@ -184,7 +184,7 @@ def test_missing_required_integration_stops_all_and_sets_migration_to_pending(ha
     arrange: Prepare the harness. Instantiate the charm with all the required integrations
         so it is active. Include a migrate.sh file so migrations run.
     act: Remove one required integration.
-    assert: The charm should be blocked. The service should be stopped and the
+    assert: The charm should be blocked. All services should be stopped and the
         database migration pending.
     """
     container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
