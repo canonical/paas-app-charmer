@@ -208,7 +208,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         if missing_integrations:
             self._build_wsgi_app().stop_all_services()
             self._database_migration.set_status_to_pending()
-            message = f"wrong or missing integrations {','.join(missing_integrations)}"
+            message = f"wrong or missing integrations {', '.join(missing_integrations)}"
             logger.info(message)
             self.update_app_and_unit_status(ops.BlockedStatus(message))
             return False
