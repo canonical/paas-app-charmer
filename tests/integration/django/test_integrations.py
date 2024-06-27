@@ -30,6 +30,9 @@ async def test_blocking_and_restarting_on_required_integration(
     unit_ip = (await get_unit_ips(django_app.name))[0]
     with pytest.raises(requests.exceptions.ConnectionError):
         requests.get(f"http://{unit_ip}:8000/len/users", timeout=5)
+    unit = model.applications[django_app.name].units[0]
+    assert unit.workload_status == "blocked"
+    assert "postgresql" in unit.workload_status_message
 
     # add integration again and check that the service is running
     await model.integrate(django_app.name, "postgresql-k8s")
