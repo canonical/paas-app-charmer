@@ -203,7 +203,46 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             logger.info("secret storage is not initialized")
             self.update_app_and_unit_status(ops.WaitingStatus("Waiting for peer integration"))
             return False
+
+        missing_integrations = self._missing_required_integrations(charm_state)
+        if missing_integrations:
+            self._build_wsgi_app().stop_all_services()
+            self._database_migration.set_status_to_pending()
+            message = f"missing integrations: {', '.join(missing_integrations)}"
+            logger.info(message)
+            self.update_app_and_unit_status(ops.BlockedStatus(message))
+            return False
+
         return True
+
+    def _missing_required_integrations(self, charm_state: CharmState) -> list[str]:
+        """Get list of missing integrations that are required.
+
+        Args:
+            charm_state: the charm state
+
+        Returns:
+            list of names of missing integrations
+        """
+        missing_integrations = []
+        requires = self.framework.meta.requires
+        for name in self._database_requirers.keys():
+            if (
+                name not in charm_state.integrations.databases_uris
+                or charm_state.integrations.databases_uris[name] is None
+            ):
+                if not requires[name].optional:
+                    missing_integrations.append(name)
+        if self._redis and not charm_state.integrations.redis_uri:
+            if not requires["redis"].optional:
+                missing_integrations.append("redis")
+        if self._s3 and not charm_state.integrations.s3_parameters:
+            if not requires["s3"].optional:
+                missing_integrations.append("s3")
+        if self._saml and not charm_state.integrations.saml_parameters:
+            if not requires["saml"].optional:
+                missing_integrations.append("saml")
+        return missing_integrations
 
     def restart(self) -> None:
         """Restart or start the service if not started with the latest configuration."""

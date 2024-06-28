@@ -10,15 +10,23 @@ import unittest.mock
 from secrets import token_hex
 
 import ops
+import pytest
+from ops.pebble import ServiceStatus
 from ops.testing import Harness
 
 from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
 from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
+from paas_app_charmer.database_migration import DatabaseMigrationStatus
 from paas_app_charmer.flask import Charm
 
-from .constants import DEFAULT_LAYER, FLASK_CONTAINER_NAME, SAML_APP_RELATION_DATA_EXAMPLE
+from .constants import (
+    DEFAULT_LAYER,
+    FLASK_CONTAINER_NAME,
+    INTEGRATIONS_RELATION_DATA,
+    SAML_APP_RELATION_DATA_EXAMPLE,
+)
 
 
 def test_flask_pebble_layer(harness: Harness) -> None:
@@ -133,6 +141,71 @@ def test_integrations_wiring(harness: Harness):
         == "postgresql://test-username:test-password@test-postgresql:5432/test-database"
     )
     assert service_env["SAML_ENTITY_ID"] == SAML_APP_RELATION_DATA_EXAMPLE["entity_id"]
+
+
+@pytest.mark.parametrize(
+    "integrate_to,required_integrations",
+    [
+        pytest.param(["saml"], ["s3"], id="s3 fails"),
+        pytest.param(["redis", "s3"], ["mysql", "postgresql"], id="postgresql and mysql fail"),
+        pytest.param([], ["mysql", "postgresql", "mongodb", "s3", "redis", "saml"], id="all fail"),
+    ],
+)
+def test_missing_integrations(harness: Harness, integrate_to, required_integrations):
+    """
+    arrange: Prepare the harness. Instantiate the charm with some required integrations.
+    act: Integrate with some integrations (but not all the required ones).
+    assert: The charm should be blocked. The message should list only the required integrations
+         that are missing.
+    """
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+    for integration in required_integrations:
+        harness.framework.meta.requires[integration].optional = False
+    harness.begin_with_initial_hooks()
+    assert isinstance(harness.model.unit.status, ops.model.BlockedStatus)
+
+    for integration in integrate_to:
+        harness.add_relation(integration, integration, **INTEGRATIONS_RELATION_DATA[integration])
+
+    integrations_that_should_fail = set(required_integrations) - set(integrate_to)
+    integrations_that_should_not_fail = (
+        set(INTEGRATIONS_RELATION_DATA.keys()) - integrations_that_should_fail
+    )
+    assert isinstance(harness.model.unit.status, ops.model.BlockedStatus)
+    for integration in integrations_that_should_fail:
+        assert integration in harness.model.unit.status.message
+    for integration in integrations_that_should_not_fail:
+        assert integration not in harness.model.unit.status.message
+
+
+def test_missing_required_integration_stops_all_and_sets_migration_to_pending(harness: Harness):
+    """
+    arrange: Prepare the harness. Instantiate the charm with all the required integrations
+        so it is active. Include a migrate.sh file so migrations run.
+    act: Remove one required integration.
+    assert: The charm should be blocked. All services should be stopped and the
+        database migration pending.
+    """
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    root = harness.get_filesystem_root(container)
+    (root / "flask/app/migrate.sh").touch()
+    harness.handle_exec(container, [], result=0)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+    harness.framework.meta.requires["s3"].optional = False
+    relation_id = harness.add_relation("s3", "s3", **INTEGRATIONS_RELATION_DATA["s3"])
+    harness.begin_with_initial_hooks()
+    assert isinstance(harness.model.unit.status, ops.model.ActiveStatus)
+    for name, service in container.get_services().items():
+        assert service.current == ServiceStatus.ACTIVE
+    assert harness._charm._database_migration.get_status() == DatabaseMigrationStatus.COMPLETED
+
+    harness.remove_relation(relation_id)
+
+    assert isinstance(harness.model.unit.status, ops.model.BlockedStatus)
+    for name, service in container.get_services().items():
+        assert service.current == ServiceStatus.INACTIVE
+    assert harness._charm._database_migration.get_status() == DatabaseMigrationStatus.PENDING
 
 
 def test_invalid_config(harness: Harness):

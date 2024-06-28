@@ -93,7 +93,13 @@ def test_django_create_super_user(harness: Harness) -> None:
     act: Run action create superuser.
     assert: The action is called with the right arguments, returning a password for the user.
     """
-    harness.set_leader(True)
+    postgresql_relation_data = {
+        "database": "test-database",
+        "endpoints": "test-postgresql:5432,test-postgresql-2:5432",
+        "password": "test-password",
+        "username": "test-username",
+    }
+    harness.add_relation("postgresql", "postgresql-k8s", app_data=postgresql_relation_data)
     container = harness.model.unit.get_container("django-app")
     container.add_layer("a_layer", DEFAULT_LAYER)
     harness.begin_with_initial_hooks()

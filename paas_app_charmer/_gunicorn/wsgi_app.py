@@ -103,6 +103,16 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
 
         return ops.pebble.LayerDict(services=services)
 
+    def stop_all_services(self) -> None:
+        """Stop all the services in the workload.
+
+        Services will restarted again when the restart method is invoked.
+        """
+        services = self._container.get_services()
+        service_names = list(services.keys())
+        if service_names:
+            self._container.stop(*service_names)
+
     def restart(self) -> None:
         """Restart or start the WSGI service if not started with the latest configuration."""
         self._container.add_layer("charm", self._wsgi_layer(), combine=True)

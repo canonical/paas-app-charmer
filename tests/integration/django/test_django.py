@@ -2,7 +2,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Integration tests for Flask charm."""
+"""Integration tests for Django charm."""
 import typing
 
 import pytest

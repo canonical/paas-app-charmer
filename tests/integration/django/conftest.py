@@ -66,7 +66,7 @@ async def django_app_fixture(charm_file: str, model: Model, django_app_image: st
         ),
         model.deploy("postgresql-k8s", channel="14/stable", trust=True),
     )
-    await model.relate(app_name, "postgresql-k8s")
+    await model.integrate(app_name, "postgresql-k8s")
     await model.wait_for_idle(status="active")
     return apps[0]
 
