@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
     "endpoint,db_name, db_channel, revision, trust",
     [
         ("redis/status", "redis-k8s", "latest/edge", None, True),
-        ("mysql/status", "mysql-k8s", "8.0/stable", "75", True),
+        ("mysql/status", "mysql-k8s", "8.0/stable", "140", True),
         ("postgresql/status", "postgresql-k8s", "14/stable", None, True),
         ("mongodb/status", "mongodb-k8s", "6/beta", None, True),
     ],
