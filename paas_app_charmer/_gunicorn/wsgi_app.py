@@ -209,7 +209,7 @@ def _db_url_to_env_variables(base_name: str, url: str) -> dict[str, str]:
       url: url of the database
 
     Return:
-      All environment variables, that is, the connect string,
+      All environment variables, that is, the connection string,
       all components as returned from urllib.parse and the
       database name extracted from the path
     """
