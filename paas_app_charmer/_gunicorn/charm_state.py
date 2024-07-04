@@ -253,6 +253,11 @@ class IntegrationsState:
         else:
             saml_parameters = None
 
+        # Workaround as the Redis library temporarily sends this incorrect
+        # value while the integration is being created.
+        if redis_uri == "redis://None:None":
+            redis_uri = None
+
         return cls(
             redis_uri=redis_uri,
             databases_uris={

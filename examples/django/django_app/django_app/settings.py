@@ -83,7 +83,7 @@ DATABASES = {
         "USER": os.environ.get("POSTGRESQL_DB_USERNAME"),
         "PASSWORD": os.environ.get("POSTGRESQL_DB_PASSWORD"),
         "HOST": os.environ.get("POSTGRESQL_DB_HOSTNAME"),
-        "PORT": os.environ.get("POSTGRESQL_DB_PORT", "5432")
+        "PORT": os.environ.get("POSTGRESQL_DB_PORT", "5432"),
     }
 }
 
