@@ -201,14 +201,14 @@ def test_integrations_env(
         pytest.param(
             IntegrationsState(
                 databases_uris={
-                    "postgresql": "postgresql://test-username:test-password@test-postgresql:5432/test-database",
+                    "postgresql": "postgresql://test-username:test-password@test-postgresql:5432/test-database?connect_timeout=10",
                     "mysql": "mysql://test-username:test-password@test-mysql:3306/flask-app",
                     "mongodb": None,
                     "futuredb": "futuredb://foobar/",
                 },
             ),
             {
-                "POSTGRESQL_DB_CONNECT_STRING": "postgresql://test-username:test-password@test-postgresql:5432/test-database",
+                "POSTGRESQL_DB_CONNECT_STRING": "postgresql://test-username:test-password@test-postgresql:5432/test-database?connect_timeout=10",
                 "POSTGRESQL_DB_FRAGMENT": "",
                 "POSTGRESQL_DB_HOSTNAME": "test-postgresql",
                 "POSTGRESQL_DB_NAME": "test-database",
@@ -217,7 +217,7 @@ def test_integrations_env(
                 "POSTGRESQL_DB_PASSWORD": "test-password",
                 "POSTGRESQL_DB_PATH": "/test-database",
                 "POSTGRESQL_DB_PORT": "5432",
-                "POSTGRESQL_DB_QUERY": "",
+                "POSTGRESQL_DB_QUERY": "connect_timeout=10",
                 "POSTGRESQL_DB_SCHEME": "postgresql",
                 "POSTGRESQL_DB_USERNAME": "test-username",
                 "MYSQL_DB_CONNECT_STRING": "mysql://test-username:test-password@test-mysql:3306/flask-app",

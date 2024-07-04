@@ -222,7 +222,7 @@ def _db_url_to_env_variables(base_name: str, url: str) -> dict[str, str]:
 
     parsed_url = urllib.parse.urlparse(url)
 
-    # All components of urlparse. Also same default values.
+    # All components of urlparse, using the same convention for default values.
     # See: https://docs.python.org/3/library/urllib.parse.html#url-parsing
     envvars[f"{base_name}_DB_SCHEME"] = parsed_url.scheme
     envvars[f"{base_name}_DB_NETLOC"] = parsed_url.netloc
