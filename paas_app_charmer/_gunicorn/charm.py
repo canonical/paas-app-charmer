@@ -139,6 +139,8 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
                 self.on[database_requirer.relation_name].relation_broken,
                 getattr(self, f"_on_{database}_database_relation_broken"),
             )
+        self.framework.observe(self._ingress.on.ready, self._on_ingress_ready)
+        self.framework.observe(self._ingress.on.revoked, self._on_ingress_revoked)
 
     @block_if_invalid_config
     def _on_config_changed(self, _event: ops.EventBase) -> None:
@@ -293,6 +295,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             redis_uri=self._redis.url if self._redis is not None else None,
             s3_connection_info=self._s3.get_s3_connection_info() if self._s3 else None,
             saml_relation_data=saml_relation_data,
+            ingress_url=self._ingress.url,
         )
 
     def _build_wsgi_app(self) -> WsgiApp:
@@ -386,4 +389,14 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
     @block_if_invalid_config
     def _on_saml_data_available(self, _event: ops.HookEvent) -> None:
         """Handle saml data available event."""
+        self.restart()
+
+    @block_if_invalid_config
+    def _on_ingress_revoked(self, _: ops.HookEvent) -> None:
+        """Handle event for ingress revoked."""
+        self.restart()
+
+    @block_if_invalid_config
+    def _on_ingress_ready(self, _: ops.HookEvent) -> None:
+        """Handle event for ingress ready."""
         self.restart()

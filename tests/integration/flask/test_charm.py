@@ -217,7 +217,8 @@ async def test_with_ingress(
     """
     arrange: build and deploy the flask charm, and deploy the ingress.
     act: relate the ingress charm with the Flask charm.
-    assert: requesting the charm through traefik should return a correct response
+    assert: requesting the charm through traefik should return a correct response,
+         and the BASE_URL config should be correctly set (FLASK_BASE_URL env variable).
     """
     await model.add_relation(flask_app.name, traefik_app_name)
     # mypy doesn't see that ActiveStatus has a name
@@ -225,9 +226,9 @@ async def test_with_ingress(
 
     traefik_ip = (await get_unit_ips(traefik_app_name))[0]
     response = requests.get(
-        f"http://{traefik_ip}",
+        f"http://{traefik_ip}/config/BASE_URL",
         headers={"Host": f"{ops_test.model_name}-{flask_app.name}.{external_hostname}"},
         timeout=5,
     )
     assert response.status_code == 200
-    assert "Hello, World!" in response.text
+    assert response.json() == f"http://{ops_test.model_name}-{flask_app.name}.{external_hostname}/"

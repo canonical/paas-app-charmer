@@ -100,6 +100,29 @@ def test_rotate_secret_key_action(harness: Harness):
     assert secret_key != new_secret_key
 
 
+def test_ingress(harness: Harness):
+    """
+    arrange: Integrate the charm with an ingress provider.
+    act: Run all initial hooks.
+    assert: The flask service should have the environment variable FLASK_BASE_URL from
+        the ingress url relation.
+    """
+    harness.set_model_name("flask-model")
+    harness.add_relation(
+        "ingress",
+        "nginx-ingress-integrator",
+        app_data={"ingress": '{"url": "http://juju.test/"}'},
+    )
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+
+    harness.begin_with_initial_hooks()
+
+    assert harness.model.unit.status == ops.ActiveStatus()
+    service_env = container.get_plan().services["flask"].environment
+    assert service_env["FLASK_BASE_URL"] == "http://juju.test/"
+
+
 def test_integrations_wiring(harness: Harness):
     """
     arrange: Prepare a Redis a database and a S3 integration

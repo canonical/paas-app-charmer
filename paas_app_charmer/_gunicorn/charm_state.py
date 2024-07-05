@@ -56,6 +56,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         wsgi_config: dict[str, int | str] | None = None,
         secret_key: str | None = None,
         integrations: "IntegrationsState | None" = None,
+        ingress_url: str | None = None,
     ):
         """Initialize a new instance of the CharmState class.
 
@@ -66,6 +67,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             wsgi_config: The value of the WSGI application specific charm configuration.
             secret_key: The secret storage manager associated with the charm.
             integrations: Information about the integrations.
+            ingress_url: Url returned by the ingress interface.
         """
         self.framework = framework
         self._wsgi_config = wsgi_config if wsgi_config is not None else {}
@@ -73,6 +75,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         self._is_secret_storage_ready = is_secret_storage_ready
         self._secret_key = secret_key
         self.integrations = integrations or IntegrationsState()
+        self.ingress_url = ingress_url
 
     @classmethod
     def from_charm(  # pylint: disable=too-many-arguments
@@ -85,6 +88,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         redis_uri: str | None = None,
         s3_connection_info: dict[str, str] | None = None,
         saml_relation_data: typing.MutableMapping[str, str] | None = None,
+        ingress_url: str | None = None,
     ) -> "CharmState":
         """Initialize a new instance of the CharmState class from the associated charm.
 
@@ -97,6 +101,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             redis_uri: The redis uri provided by the redis charm.
             s3_connection_info: Connection info from S3 lib.
             saml_relation_data: Relation data from the SAML app.
+            ingress_url: Url returned by the ingress interface.
 
         Return:
             The CharmState instance created by the provided charm.
@@ -123,6 +128,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             ),
             is_secret_storage_ready=secret_storage.is_initialized,
             integrations=integrations,
+            ingress_url=ingress_url,
         )
 
     @property
