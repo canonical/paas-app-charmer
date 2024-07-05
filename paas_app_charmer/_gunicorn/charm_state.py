@@ -4,6 +4,7 @@
 """This module defines the CharmState class which represents the state of the charm."""
 import logging
 import os
+import re
 import typing
 from dataclasses import dataclass, field
 from typing import Optional
@@ -252,6 +253,11 @@ class IntegrationsState:
                 ) from exc
         else:
             saml_parameters = None
+
+        # Workaround as the Redis library temporarily sends the port
+        # as None while the integration is being created.
+        if redis_uri is not None and re.fullmatch(r"redis://[^:/]+:None", redis_uri):
+            redis_uri = None
 
         return cls(
             redis_uri=redis_uri,

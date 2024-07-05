@@ -5,6 +5,7 @@
 
 import json
 import logging
+import urllib.parse
 
 import ops
 
@@ -157,12 +158,11 @@ def map_integrations_to_env(integrations: IntegrationsState) -> dict[str, str]:
     """
     env = {}
     if integrations.redis_uri:
-        env["REDIS_DB_CONNECT_STRING"] = integrations.redis_uri
+        redis_envvars = _db_url_to_env_variables("redis", integrations.redis_uri)
+        env.update(redis_envvars)
     for interface_name, uri in integrations.databases_uris.items():
-        if uri is None:
-            continue
-        env_name = f"{interface_name.upper()}_DB_CONNECT_STRING"
-        env[env_name] = uri
+        interface_envvars = _db_url_to_env_variables(interface_name, uri)
+        env.update(interface_envvars)
 
     if integrations.s3_parameters:
         s3 = integrations.s3_parameters
@@ -199,3 +199,45 @@ def map_integrations_to_env(integrations: IntegrationsState) -> dict[str, str]:
         )
 
     return env
+
+
+def _db_url_to_env_variables(base_name: str, url: str) -> dict[str, str]:
+    """Convert a database url to environment variables.
+
+    Args:
+      base_name: name of the database.
+      url: url of the database
+
+    Return:
+      All environment variables, that is, the connection string,
+      all components as returned from urllib.parse and the
+      database name extracted from the path
+    """
+    if not url:
+        return {}
+
+    base_name = base_name.upper()
+    envvars: dict[str, str | None] = {}
+    envvars[f"{base_name}_DB_CONNECT_STRING"] = url
+
+    parsed_url = urllib.parse.urlparse(url)
+
+    # All components of urlparse, using the same convention for default values.
+    # See: https://docs.python.org/3/library/urllib.parse.html#url-parsing
+    envvars[f"{base_name}_DB_SCHEME"] = parsed_url.scheme
+    envvars[f"{base_name}_DB_NETLOC"] = parsed_url.netloc
+    envvars[f"{base_name}_DB_PATH"] = parsed_url.path
+    envvars[f"{base_name}_DB_PARAMS"] = parsed_url.params
+    envvars[f"{base_name}_DB_QUERY"] = parsed_url.query
+    envvars[f"{base_name}_DB_FRAGMENT"] = parsed_url.fragment
+    envvars[f"{base_name}_DB_USERNAME"] = parsed_url.username
+    envvars[f"{base_name}_DB_PASSWORD"] = parsed_url.password
+    envvars[f"{base_name}_DB_HOSTNAME"] = parsed_url.hostname
+    envvars[f"{base_name}_DB_PORT"] = str(parsed_url.port) if parsed_url.port is not None else None
+
+    # database name is usually parsed this way.
+    envvars[f"{base_name}_DB_NAME"] = (
+        parsed_url.path.removeprefix("/") if parsed_url.path else None
+    )
+
+    return {k: v for k, v in envvars.items() if v is not None}
