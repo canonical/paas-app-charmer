@@ -211,7 +211,7 @@ async def test_port_without_ingress(
 ):
     """
     arrange: build and deploy the flask charm without ingress
-    act: request env variables throught the app public address (k8s service)
+    act: request env variables through the app public address (k8s service)
     assert: the request should success and the env variable FLASK_BASE_URL
         should point to the service. Unfortunately this hostname is not
         resolved from outside the cluster.
@@ -223,7 +223,7 @@ async def test_port_without_ingress(
 
     assert response.status_code == 200
     env_vars = response.json()
-    assert env_vars['FLASK_BASE_URL'] == f"http://{flask_app.name}.{model.name}:8000"
+    assert env_vars["FLASK_BASE_URL"] == f"http://{flask_app.name}.{model.name}:8000"
 
 
 async def test_with_ingress(
