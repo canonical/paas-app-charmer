@@ -210,26 +210,24 @@ async def test_port_without_ingress(
     flask_app: Application,
 ):
     """
-    arrange: build and deploy the flask charm without ingress
-    act: request env variables through the app public address (k8s service)
+    arrange: build and deploy the flask charm without ingres. get service ip
+        address.
+    act: request env variables through the app service ip address.
     assert: the request should success and the env variable FLASK_BASE_URL
-        should point to the service. Check also that the base url can be resolved
-        to the same ip by K8s.
+        should point to the service.
     """
-    status = await model.get_status()
-    public_address = status.applications[flask_app.name].public_address
+    service_hostname = f"{flask_app.name}.{model.name}"
+    action = await flask_app.units[0].run(f"/usr/bin/getent hosts {service_hostname}")
+    result = await action.wait()
+    assert result.status == "completed"
+    assert result.results["return-code"] == 0
+    service_ip = result.results["stdout"].split()[0]
 
-    response = requests.get(f"http://{public_address}:8000/env", timeout=30)
+    response = requests.get(f"http://{service_ip}:8000/env", timeout=30)
 
     assert response.status_code == 200
     env_vars = response.json()
-    assert env_vars["FLASK_BASE_URL"] == f"http://{flask_app.name}.{model.name}:8000"
-    # Check that name {flask_app.name}.{model.name} gets correctly resolved to
-    # the same IP we just checked.
-    action = await flask_app.units[0].run(f"/usr/bin/getent hosts {flask_app.name}.{model.name}")
-    result = await action.wait()
-    assert result.status == "completed"
-    assert public_address in result.results["stdout"]
+    assert env_vars["FLASK_BASE_URL"] == f"http://{service_hostname}:8000"
 
 
 async def test_with_ingress(
