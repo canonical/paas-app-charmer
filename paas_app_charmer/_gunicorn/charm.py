@@ -301,7 +301,11 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
     @property
     def _base_url(self) -> str:
-        """TODO."""
+        """Return the base_url for the service.
+
+        This URL will be the ingress URL if there is one, otherwise it will
+        point to the K8S service.
+        """
         if self._ingress.url:
             return self._ingress.url
         return f"http://{self.app.name}.{self.model.name}:{self._workload_config.port}"
