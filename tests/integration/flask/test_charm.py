@@ -229,7 +229,7 @@ async def test_port_without_ingress(
     action = await flask_app.units[0].run(f"/usr/bin/getent hosts {flask_app.name}.{model.name}")
     result = await action.wait()
     assert result.status == "completed"
-    assert public_address in result.results['stdout']
+    assert public_address in result.results["stdout"]
 
 
 async def test_with_ingress(
