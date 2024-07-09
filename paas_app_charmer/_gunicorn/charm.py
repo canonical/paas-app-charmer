@@ -256,6 +256,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         except CharmConfigInvalidError as exc:
             self.update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return
+        self.unit.open_port("tcp", self._workload_config.port)
         self.update_app_and_unit_status(ops.ActiveStatus())
 
     def _gen_environment(self) -> dict[str, str]:
@@ -295,8 +296,15 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             redis_uri=self._redis.url if self._redis is not None else None,
             s3_connection_info=self._s3.get_s3_connection_info() if self._s3 else None,
             saml_relation_data=saml_relation_data,
-            ingress_url=self._ingress.url,
+            base_url=self._base_url,
         )
+
+    @property
+    def _base_url(self) -> str:
+        """TODO."""
+        if self._ingress.url:
+            return self._ingress.url
+        return f"http://{self.app.name}.{self.model.name}:{self._workload_config.port}"
 
     def _build_wsgi_app(self) -> WsgiApp:
         """Build a WsgiApp instance.

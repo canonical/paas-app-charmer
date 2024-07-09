@@ -205,6 +205,27 @@ async def test_rotate_secret_key(
         assert new_secret_key != secret_key
 
 
+async def test_port_without_ingress(
+    model: juju.model.Model,
+    flask_app: Application,
+):
+    """
+    arrange: build and deploy the flask charm without ingress
+    act: request env variables throught the app public address (k8s service)
+    assert: the request should success and the env variable FLASK_BASE_URL
+        should point to the service. Unfortunately this hostname is not
+        resolved from outside the cluster.
+    """
+    status = await model.get_status()
+    public_address = status.applications[flask_app.name].public_address
+
+    response = requests.get(f"http://{public_address}:8000/env", timeout=20)
+
+    assert response.status_code == 200
+    env_vars = response.json()
+    assert env_vars['FLASK_BASE_URL'] == f"http://{flask_app.name}.{model.name}:8000"
+
+
 async def test_with_ingress(
     ops_test: OpsTest,
     model: juju.model.Model,
