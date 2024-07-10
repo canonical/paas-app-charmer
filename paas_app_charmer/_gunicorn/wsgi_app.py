@@ -72,6 +72,8 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
         config.update(self._charm_state.wsgi_config)
         prefix = f"{self._workload_config.framework.upper()}_"
         env = {f"{prefix}{k.upper()}": self._encode_env(v) for k, v in config.items()}
+        if self._charm_state.base_url:
+            env[f"{prefix}BASE_URL"] = self._charm_state.base_url
         secret_key_env = f"{prefix}SECRET_KEY"
         if secret_key_env not in env:
             env[secret_key_env] = self._charm_state.secret_key

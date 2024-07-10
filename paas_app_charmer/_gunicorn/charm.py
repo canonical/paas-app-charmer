@@ -139,6 +139,8 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
                 self.on[database_requirer.relation_name].relation_broken,
                 getattr(self, f"_on_{database}_database_relation_broken"),
             )
+        self.framework.observe(self._ingress.on.ready, self._on_ingress_ready)
+        self.framework.observe(self._ingress.on.revoked, self._on_ingress_revoked)
 
     @block_if_invalid_config
     def _on_config_changed(self, _event: ops.EventBase) -> None:
@@ -254,6 +256,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         except CharmConfigInvalidError as exc:
             self.update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return
+        self.unit.open_port("tcp", self._workload_config.port)
         self.update_app_and_unit_status(ops.ActiveStatus())
 
     def _gen_environment(self) -> dict[str, str]:
@@ -293,7 +296,19 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             redis_uri=self._redis.url if self._redis is not None else None,
             s3_connection_info=self._s3.get_s3_connection_info() if self._s3 else None,
             saml_relation_data=saml_relation_data,
+            base_url=self._base_url,
         )
+
+    @property
+    def _base_url(self) -> str:
+        """Return the base_url for the service.
+
+        This URL will be the ingress URL if there is one, otherwise it will
+        point to the K8S service.
+        """
+        if self._ingress.url:
+            return self._ingress.url
+        return f"http://{self.app.name}.{self.model.name}:{self._workload_config.port}"
 
     def _build_wsgi_app(self) -> WsgiApp:
         """Build a WsgiApp instance.
@@ -386,4 +401,14 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
     @block_if_invalid_config
     def _on_saml_data_available(self, _event: ops.HookEvent) -> None:
         """Handle saml data available event."""
+        self.restart()
+
+    @block_if_invalid_config
+    def _on_ingress_revoked(self, _: ops.HookEvent) -> None:
+        """Handle event for ingress revoked."""
+        self.restart()
+
+    @block_if_invalid_config
+    def _on_ingress_ready(self, _: ops.HookEvent) -> None:
+        """Handle event for ingress ready."""
         self.restart()

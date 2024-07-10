@@ -20,6 +20,8 @@ from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 
+WORKLOAD_PORT = 8000
+
 
 async def test_flask_is_up(
     flask_app: Application,
@@ -31,7 +33,7 @@ async def test_flask_is_up(
     assert: the flask application should return a correct response.
     """
     for unit_ip in await get_unit_ips(flask_app.name):
-        response = requests.get(f"http://{unit_ip}:8000", timeout=5)
+        response = requests.get(f"http://{unit_ip}:{WORKLOAD_PORT}", timeout=5)
         assert response.status_code == 200
         assert "Hello, World!" in response.text
 
@@ -59,10 +61,12 @@ async def test_flask_webserver_timeout(
     safety_timeout = timeout + 3
     for unit_ip in await get_unit_ips(flask_app.name):
         assert requests.get(
-            f"http://{unit_ip}:8000/sleep?duration={timeout - 1}", timeout=safety_timeout
+            f"http://{unit_ip}:{WORKLOAD_PORT}/sleep?duration={timeout - 1}",
+            timeout=safety_timeout,
         ).ok
         assert not requests.get(
-            f"http://{unit_ip}:8000/sleep?duration={timeout + 1}", timeout=safety_timeout
+            f"http://{unit_ip}:{WORKLOAD_PORT}/sleep?duration={timeout + 1}",
+            timeout=safety_timeout,
         ).ok
 
 
@@ -76,7 +80,7 @@ async def test_default_secret_key(
     assert: flask should have a default and secure secret configured.
     """
     secret_keys = [
-        requests.get(f"http://{unit_ip}:8000/config/SECRET_KEY", timeout=10).json()
+        requests.get(f"http://{unit_ip}:{WORKLOAD_PORT}/config/SECRET_KEY", timeout=10).json()
         for unit_ip in await get_unit_ips(flask_app.name)
     ]
     assert len(set(secret_keys)) == 1
@@ -111,7 +115,9 @@ async def test_flask_config(
     for unit_ip in await get_unit_ips(flask_app.name):
         for config_key, config_value in excepted_config.items():
             assert (
-                requests.get(f"http://{unit_ip}:8000/config/{config_key}", timeout=10).json()
+                requests.get(
+                    f"http://{unit_ip}:{WORKLOAD_PORT}/config/{config_key}", timeout=10
+                ).json()
                 == config_value
             )
 
@@ -175,7 +181,9 @@ async def test_app_config(
     for unit_ip in await get_unit_ips(flask_app.name):
         for config_key, config_value in excepted_config.items():
             assert (
-                requests.get(f"http://{unit_ip}:8000/config/{config_key}", timeout=10).json()
+                requests.get(
+                    f"http://{unit_ip}:{WORKLOAD_PORT}/config/{config_key}", timeout=10
+                ).json()
                 == config_value
             )
 
@@ -191,7 +199,9 @@ async def test_rotate_secret_key(
     assert: Flask applications on every unit should have a new secret key configured.
     """
     unit_ips = await get_unit_ips(flask_app.name)
-    secret_key = requests.get(f"http://{unit_ips[0]}:8000/config/SECRET_KEY", timeout=10).json()
+    secret_key = requests.get(
+        f"http://{unit_ips[0]}:{WORKLOAD_PORT}/config/SECRET_KEY", timeout=10
+    ).json()
     leader_unit = [u for u in flask_app.units if await u.is_leader_from_status()][0]
     action = await leader_unit.run_action("rotate-secret-key")
     await action.wait()
@@ -199,10 +209,35 @@ async def test_rotate_secret_key(
     await model.wait_for_idle(status=ops.ActiveStatus.name)  # type: ignore
     for unit_ip in unit_ips:
         new_secret_key = requests.get(
-            f"http://{unit_ip}:8000/config/SECRET_KEY", timeout=10
+            f"http://{unit_ip}:{WORKLOAD_PORT}/config/SECRET_KEY", timeout=10
         ).json()
         assert len(new_secret_key) > 10
         assert new_secret_key != secret_key
+
+
+async def test_port_without_ingress(
+    model: juju.model.Model,
+    flask_app: Application,
+):
+    """
+    arrange: build and deploy the flask charm without ingress. Get the service ip
+        address.
+    act: request env variables through the service ip address.
+    assert: the request should success and the env variable FLASK_BASE_URL
+        should point to the service.
+    """
+    service_hostname = f"{flask_app.name}.{model.name}"
+    action = await flask_app.units[0].run(f"/usr/bin/getent hosts {service_hostname}")
+    result = await action.wait()
+    assert result.status == "completed"
+    assert result.results["return-code"] == 0
+    service_ip = result.results["stdout"].split()[0]
+
+    response = requests.get(f"http://{service_ip}:{WORKLOAD_PORT}/env", timeout=30)
+
+    assert response.status_code == 200
+    env_vars = response.json()
+    assert env_vars["FLASK_BASE_URL"] == f"http://{service_hostname}:{WORKLOAD_PORT}"
 
 
 async def test_with_ingress(
@@ -217,7 +252,8 @@ async def test_with_ingress(
     """
     arrange: build and deploy the flask charm, and deploy the ingress.
     act: relate the ingress charm with the Flask charm.
-    assert: requesting the charm through traefik should return a correct response
+    assert: requesting the charm through traefik should return a correct response,
+         and the BASE_URL config should be correctly set (FLASK_BASE_URL env variable).
     """
     await model.add_relation(flask_app.name, traefik_app_name)
     # mypy doesn't see that ActiveStatus has a name
@@ -225,9 +261,9 @@ async def test_with_ingress(
 
     traefik_ip = (await get_unit_ips(traefik_app_name))[0]
     response = requests.get(
-        f"http://{traefik_ip}",
+        f"http://{traefik_ip}/config/BASE_URL",
         headers={"Host": f"{ops_test.model_name}-{flask_app.name}.{external_hostname}"},
         timeout=5,
     )
     assert response.status_code == 200
-    assert "Hello, World!" in response.text
+    assert response.json() == f"http://{ops_test.model_name}-{flask_app.name}.{external_hostname}/"
