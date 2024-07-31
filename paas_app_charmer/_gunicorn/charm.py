@@ -102,8 +102,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             state_dir=self._workload_config.state_dir,
         )
 
-        self._webserver_config = WebserverConfig.from_charm(self)
-
         self._container = self.unit.get_container(f"{self._workload_config.framework}-app")
 
         self._ingress = IngressPerAppRequirer(
@@ -141,6 +139,9 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             )
         self.framework.observe(self._ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self._ingress.on.revoked, self._on_ingress_revoked)
+        self.framework.observe(
+            self.on[self._workload_config.container_name].pebble_ready, self._on_pebble_ready
+        )
 
     @block_if_invalid_config
     def _on_config_changed(self, _event: ops.EventBase) -> None:
@@ -319,7 +320,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         charm_state = self._build_charm_state()
 
         webserver = GunicornWebserver(
-            webserver_config=self._webserver_config,
+            webserver_config=WebserverConfig.from_charm(self),
             workload_config=self._workload_config,
             container=self.unit.get_container(self._workload_config.container_name),
         )
@@ -411,4 +412,9 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
     @block_if_invalid_config
     def _on_ingress_ready(self, _: ops.HookEvent) -> None:
         """Handle event for ingress ready."""
+        self.restart()
+
+    @block_if_invalid_config
+    def _on_pebble_ready(self, _: ops.PebbleReadyEvent) -> None:
+        """Handle the pebble-ready event."""
         self.restart()
