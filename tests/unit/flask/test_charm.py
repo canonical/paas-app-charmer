@@ -14,10 +14,10 @@ import pytest
 from ops.pebble import ServiceStatus
 from ops.testing import Harness
 
-from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
 from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
+from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.database_migration import DatabaseMigrationStatus
 from paas_app_charmer.flask import Charm
 
@@ -44,7 +44,7 @@ def test_flask_pebble_layer(harness: Harness) -> None:
     test_key = "0" * 16
     secret_storage.get_secret_key.return_value = test_key
     charm_state = CharmState.from_charm(
-        wsgi_config=Charm.get_wsgi_config(harness.charm),
+        framework_config=Charm.get_framework_config(harness.charm),
         charm=harness.charm,
         framework="flask",
         secret_storage=secret_storage,

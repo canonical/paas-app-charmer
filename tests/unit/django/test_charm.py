@@ -11,10 +11,10 @@ import unittest.mock
 import pytest
 from ops.testing import ExecArgs, ExecResult, Harness
 
-from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
 from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
+from paas_app_charmer.charm_state import CharmState
 
 from .constants import DEFAULT_LAYER
 
@@ -56,7 +56,7 @@ def test_django_config(harness: Harness, config: dict, env: dict) -> None:
     charm_state = CharmState.from_charm(
         charm=harness.charm,
         framework="django",
-        wsgi_config=harness.charm.get_wsgi_config(),
+        framework_config=harness.charm.get_framework_config(),
         secret_storage=secret_storage,
         database_requirers={},
     )

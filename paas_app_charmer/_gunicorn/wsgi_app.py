@@ -9,9 +9,9 @@ import urllib.parse
 
 import ops
 
-from paas_app_charmer._gunicorn.charm_state import CharmState, IntegrationsState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver
 from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
+from paas_app_charmer.charm_state import CharmState, IntegrationsState
 from paas_app_charmer.database_migration import DatabaseMigration
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ class WsgiApp:  # pylint: disable=too-few-public-methods
             A dictionary representing the WSGI application environment variables.
         """
         config = self._charm_state.app_config
-        config.update(self._charm_state.wsgi_config)
+        config.update(self._charm_state.framework_config)
         prefix = f"{self._workload_config.framework.upper()}_"
         env = {f"{prefix}{k.upper()}": self._encode_env(v) for k, v in config.items()}
         if self._charm_state.base_url:

@@ -12,10 +12,10 @@ import unittest.mock
 
 import pytest
 
-from paas_app_charmer._gunicorn.charm_state import CharmState, IntegrationsState, S3Parameters
 from paas_app_charmer._gunicorn.webserver import WebserverConfig
 from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp, map_integrations_to_env
+from paas_app_charmer.charm_state import CharmState, IntegrationsState, S3Parameters
 
 
 @pytest.mark.parametrize(
@@ -37,7 +37,7 @@ def test_flask_env(flask_config: dict, app_config: dict, database_migration_mock
         framework="flask",
         secret_key="foobar",
         is_secret_storage_ready=True,
-        wsgi_config=flask_config,
+        framework_config=flask_config,
         app_config=app_config,
     )
     workload_config = WorkloadConfig(

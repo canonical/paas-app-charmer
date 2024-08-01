@@ -11,13 +11,13 @@ from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
 from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
-from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.charm_utils import block_if_invalid_config
 from paas_app_charmer._gunicorn.observability import Observability
 from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
 from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
+from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
 from paas_app_charmer.databases import make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
@@ -51,7 +51,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
     """
 
     @abc.abstractmethod
-    def get_wsgi_config(self) -> BaseModel:
+    def get_framework_config(self) -> BaseModel:
         """Return the framework related configurations."""
 
     @abc.abstractmethod
@@ -194,7 +194,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         Returns:
             True if the charm is ready to start the workload application.
         """
-        charm_state = self._build_charm_state()
+        charm_state = self._create_charm_state()
 
         if not self._container.can_connect():
             logger.info(
@@ -271,8 +271,8 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         """
         return self._build_wsgi_app().gen_environment()
 
-    def _build_charm_state(self) -> CharmState:
-        """Build charm state.
+    def _create_charm_state(self) -> CharmState:
+        """Create charm state.
 
         This method may raise CharmConfigInvalidError.
 
@@ -291,7 +291,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         return CharmState.from_charm(
             charm=self,
             framework=self._wsgi_framework,
-            wsgi_config=self.get_wsgi_config(),
+            framework_config=self.get_framework_config(),
             secret_storage=self._secret_storage,
             database_requirers=self._database_requirers,
             redis_uri=self._redis.url if self._redis is not None else None,
@@ -317,7 +317,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         Returns:
             A new WsgiApp instance.
         """
-        charm_state = self._build_charm_state()
+        charm_state = self._create_charm_state()
 
         webserver = GunicornWebserver(
             webserver_config=WebserverConfig.from_charm(self),
