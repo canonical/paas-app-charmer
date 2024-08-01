@@ -50,7 +50,7 @@ def test_flask_pebble_layer(harness: Harness) -> None:
         secret_storage=secret_storage,
         database_requirers={},
     )
-    webserver_config = WebserverConfig.from_charm(harness.charm)
+    webserver_config = WebserverConfig.from_charm_state(charm_state)
     workload_config = WorkloadConfig(
         framework="flask",
     )

@@ -14,6 +14,7 @@ import ops
 from ops.pebble import ExecError, PathError
 
 from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
+from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 
 logger = logging.getLogger(__name__)
@@ -51,19 +52,19 @@ class WebserverConfig:
         }.items()
 
     @classmethod
-    def from_charm(cls, charm: ops.CharmBase) -> "WebserverConfig":
-        """Create a WebserverConfig object from a charm object.
+    def from_charm_state(cls, charm_state: CharmState) -> "WebserverConfig":
+        """Create a WebserverConfig object from a charm state object.
 
         Args:
-            charm: The charm object.
+            charm_state: The charm state object.
 
         Returns:
             A WebserverConfig object.
         """
-        keepalive = charm.config.get("webserver-keepalive")
-        timeout = charm.config.get("webserver-timeout")
-        workers = charm.config.get("webserver-workers")
-        threads = charm.config.get("webserver-threads")
+        keepalive = charm_state.charm_config.get("webserver-keepalive")
+        timeout = charm_state.charm_config.get("webserver-timeout")
+        workers = charm_state.charm_config.get("webserver-workers")
+        threads = charm_state.charm_config.get("webserver-threads")
         return cls(
             workers=int(typing.cast(str, workers)) if workers is not None else None,
             threads=int(typing.cast(str, threads)) if threads is not None else None,

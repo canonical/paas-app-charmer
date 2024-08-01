@@ -60,7 +60,7 @@ def test_django_config(harness: Harness, config: dict, env: dict) -> None:
         secret_storage=secret_storage,
         database_requirers={},
     )
-    webserver_config = WebserverConfig.from_charm(harness.charm)
+    webserver_config = WebserverConfig.from_charm_state(charm_state)
     workload_config = WorkloadConfig(framework="django")
     webserver = GunicornWebserver(
         webserver_config=webserver_config,

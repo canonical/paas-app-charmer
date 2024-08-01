@@ -73,7 +73,7 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
         Args:
             framework: operator framework.
         """
-        super().__init__(framework=framework, wsgi_framework="flask")
+        super().__init__(framework=framework, framework_name="flask")
 
     def get_framework_config(self) -> BaseModel:
         """Return Flask framework related configurations.

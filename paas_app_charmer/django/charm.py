@@ -45,7 +45,7 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
         Args:
             framework: operator framework.
         """
-        super().__init__(framework=framework, wsgi_framework="django")
+        super().__init__(framework=framework, framework_name="django")
         self.framework.observe(self.on.create_superuser_action, self._on_create_superuser_action)
 
     def get_framework_config(self) -> BaseModel:

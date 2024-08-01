@@ -17,6 +17,7 @@ from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
 from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
+from paas_app_charmer.app import App
 from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
 from paas_app_charmer.databases import make_database_requirers
@@ -43,8 +44,8 @@ except ImportError:
     )
 
 
-class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-attributes
-    """Gunicorn-based charm service mixin.
+class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-attributes
+    """PaasCharm base charm service mixin.
 
     Attrs:
         on: charm events replaced by Redis ones for the Redis charm library.
@@ -58,20 +59,24 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
     def get_cos_dir(self) -> str:
         """Return the directory with COS related files."""
 
+    @abc.abstractmethod
+    def _create_app(self) -> App:
+        """Create an App instance."""
+
     on = RedisRelationCharmEvents()
 
-    def __init__(self, framework: ops.Framework, wsgi_framework: str) -> None:
+    def __init__(self, framework: ops.Framework, framework_name: str) -> None:
         """Initialize the instance.
 
         Args:
             framework: operator framework.
-            wsgi_framework: WSGI framework name.
+            framework_name: framework name.
         """
         super().__init__(framework)
-        self._wsgi_framework = wsgi_framework
+        self._framework_name = framework_name
 
         self._secret_storage = GunicornSecretStorage(
-            charm=self, key=f"{wsgi_framework}_secret_key"
+            charm=self, key=f"{framework_name}_secret_key"
         )
         self._database_requirers = make_database_requirers(self, self.app.name)
 
@@ -95,7 +100,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         else:
             self._saml = None
 
-        self._workload_config = WorkloadConfig(self._wsgi_framework)
+        self._workload_config = WorkloadConfig(self._framework_name)
 
         self._database_migration = DatabaseMigration(
             container=self.unit.get_container(self._workload_config.container_name),
@@ -209,7 +214,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
         missing_integrations = self._missing_required_integrations(charm_state)
         if missing_integrations:
-            self._build_wsgi_app().stop_all_services()
+            self._create_app().stop_all_services()
             self._database_migration.set_status_to_pending()
             message = f"missing integrations: {', '.join(missing_integrations)}"
             logger.info(message)
@@ -253,7 +258,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
             return
         try:
             self.update_app_and_unit_status(ops.MaintenanceStatus("Preparing service for restart"))
-            self._build_wsgi_app().restart()
+            self._create_app().restart()
         except CharmConfigInvalidError as exc:
             self.update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return
@@ -269,7 +274,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         Returns:
             A dictionary representing the application environment variables.
         """
-        return self._build_wsgi_app().gen_environment()
+        return self._create_app().gen_environment()
 
     def _create_charm_state(self) -> CharmState:
         """Create charm state.
@@ -290,7 +295,7 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
 
         return CharmState.from_charm(
             charm=self,
-            framework=self._wsgi_framework,
+            framework=self._framework_name,
             framework_config=self.get_framework_config(),
             secret_storage=self._secret_storage,
             database_requirers=self._database_requirers,
@@ -310,28 +315,6 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
         if self._ingress.url:
             return self._ingress.url
         return f"http://{self.app.name}.{self.model.name}:{self._workload_config.port}"
-
-    def _build_wsgi_app(self) -> WsgiApp:
-        """Build a WsgiApp instance.
-
-        Returns:
-            A new WsgiApp instance.
-        """
-        charm_state = self._create_charm_state()
-
-        webserver = GunicornWebserver(
-            webserver_config=WebserverConfig.from_charm(self),
-            workload_config=self._workload_config,
-            container=self.unit.get_container(self._workload_config.container_name),
-        )
-
-        return WsgiApp(
-            container=self._container,
-            charm_state=charm_state,
-            workload_config=self._workload_config,
-            webserver=webserver,
-            database_migration=self._database_migration,
-        )
 
     @block_if_invalid_config
     def _on_update_status(self, _: ops.HookEvent) -> None:
@@ -418,3 +401,29 @@ class GunicornBase(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance
     def _on_pebble_ready(self, _: ops.PebbleReadyEvent) -> None:
         """Handle the pebble-ready event."""
         self.restart()
+
+
+class GunicornBase(PaasCharm):
+    """Gunicorn-based charm service mixin."""
+
+    def _create_app(self) -> App:
+        """Build a App instance.
+
+        Returns:
+            A new App instance.
+        """
+        charm_state = self._create_charm_state()
+
+        webserver = GunicornWebserver(
+            webserver_config=WebserverConfig.from_charm_state(charm_state),
+            workload_config=self._workload_config,
+            container=self.unit.get_container(self._workload_config.container_name),
+        )
+
+        return WsgiApp(
+            container=self._container,
+            charm_state=charm_state,
+            workload_config=self._workload_config,
+            webserver=webserver,
+            database_migration=self._database_migration,
+        )

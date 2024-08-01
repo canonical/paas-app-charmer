@@ -52,6 +52,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         *,
         framework: str,
         is_secret_storage_ready: bool,
+        charm_config: dict[str, int | float | str | bool] | None = None,
         app_config: dict[str, int | str | bool] | None = None,
         framework_config: dict[str, int | str] | None = None,
         secret_key: str | None = None,
@@ -63,6 +64,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         Args:
             framework: the framework name.
             is_secret_storage_ready: whether the secret storage system is ready.
+            charm_config: Original Charm configuration with all items.
             app_config: User-defined configuration values for the application configuration.
             framework_config: The value of the framework application specific charm configuration.
             secret_key: The secret storage manager associated with the charm.
@@ -72,6 +74,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         self.framework = framework
         self._framework_config = framework_config if framework_config is not None else {}
         self._app_config = app_config if app_config is not None else {}
+        self.charm_config = charm_config if charm_config is not None else {}
         self._is_secret_storage_ready = is_secret_storage_ready
         self._secret_key = secret_key
         self.integrations = integrations or IntegrationsState()
@@ -106,6 +109,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         Return:
             The CharmState instance created by the provided charm.
         """
+        charm_config = {**charm.config}
         app_config = {
             k.replace("-", "_"): v
             for k, v in charm.config.items()
@@ -124,6 +128,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         return cls(
             framework=framework,
             framework_config=framework_config.dict(exclude_unset=True, exclude_none=True),
+            charm_config=charm_config,
             app_config=typing.cast(dict[str, str | int | bool], app_config),
             secret_key=(
                 secret_storage.get_secret_key() if secret_storage.is_initialized else None

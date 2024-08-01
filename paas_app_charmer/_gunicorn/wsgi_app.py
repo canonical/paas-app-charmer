@@ -11,13 +11,14 @@ import ops
 
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver
 from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
+from paas_app_charmer.app import App
 from paas_app_charmer.charm_state import CharmState, IntegrationsState
 from paas_app_charmer.database_migration import DatabaseMigration
 
 logger = logging.getLogger(__name__)
 
 
-class WsgiApp:  # pylint: disable=too-few-public-methods
+class WsgiApp(App):  # pylint: disable=too-few-public-methods
     """WSGI application manager."""
 
     def __init__(  # pylint: disable=too-many-arguments
