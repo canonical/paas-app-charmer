@@ -1,7 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""The base Gunicorn charm class for all WSGI application charms."""
+"""The base charm class for all application charms."""
 import abc
 import logging
 
@@ -11,7 +11,6 @@ from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
 from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
 from pydantic import BaseModel
 
-from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer.app import App, AppConfig
 from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.charm_utils import block_if_invalid_config
@@ -19,6 +18,7 @@ from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigra
 from paas_app_charmer.databases import make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.observability import Observability
+from paas_app_charmer.secret_storage import KeySecretStorage
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +77,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         super().__init__(framework)
         self._framework_name = framework_name
 
-        self._secret_storage = GunicornSecretStorage(
-            charm=self, key=f"{framework_name}_secret_key"
-        )
+        self._secret_storage = KeySecretStorage(charm=self, key=f"{framework_name}_secret_key")
         self._database_requirers = make_database_requirers(self, self.app.name)
 
         requires = self.framework.meta.requires

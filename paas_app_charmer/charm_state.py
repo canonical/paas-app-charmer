@@ -13,9 +13,9 @@ import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from pydantic import BaseModel, Extra, Field, ValidationError, ValidationInfo, field_validator
 
-from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer.databases import get_uri
 from paas_app_charmer.exceptions import CharmConfigInvalidError
+from paas_app_charmer.secret_storage import KeySecretStorage
 from paas_app_charmer.utils import build_validation_error_message
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class ProxyConfig(BaseModel):  # pylint: disable=too-few-public-methods
 
 # too-many-instance-attributes is okay since we use a factory function to construct the CharmState
 class CharmState:  # pylint: disable=too-many-instance-attributes
-    """Represents the state of the Gunicorn based charm.
+    """Represents the state of the charm.
 
     Attrs:
         framework_config: the value of the framework specific charm configuration.
@@ -86,7 +86,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         charm: ops.CharmBase,
         framework: str,
         framework_config: BaseModel,
-        secret_storage: GunicornSecretStorage,
+        secret_storage: KeySecretStorage,
         database_requirers: dict[str, DatabaseRequires],
         redis_uri: str | None = None,
         s3_connection_info: dict[str, str] | None = None,
