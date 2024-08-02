@@ -13,10 +13,10 @@ import ops
 import pytest
 from ops.testing import Harness
 
-from paas_app_charmer._gunicorn.charm_state import CharmState
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
-from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
+from paas_app_charmer._gunicorn.workload_config import create_app_config
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
+from paas_app_charmer.charm_state import CharmState
 
 from .constants import DEFAULT_LAYER, FLASK_CONTAINER_NAME
 
@@ -72,19 +72,17 @@ def test_gunicorn_config(
         secret_key="",
         is_secret_storage_ready=True,
     )
-    workload_config = WorkloadConfig(
-        framework="flask",
-    )
+    app_config = create_app_config(framework_name="flask")
     webserver_config = WebserverConfig(**charm_state_params)
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
-        workload_config=workload_config,
+        app_config=app_config,
         container=container,
     )
     flask_app = WsgiApp(
         container=container,
         charm_state=charm_state,
-        workload_config=workload_config,
+        app_config=app_config,
         webserver=webserver,
         database_migration=database_migration_mock,
     )
@@ -117,18 +115,16 @@ def test_webserver_reload(monkeypatch, harness: Harness, is_running, database_mi
         is_secret_storage_ready=True,
     )
     webserver_config = WebserverConfig()
-    workload_config = WorkloadConfig(
-        framework="flask",
-    )
+    app_config = create_app_config(framework_name="flask")
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
-        workload_config=workload_config,
+        app_config=app_config,
         container=container,
     )
     flask_app = WsgiApp(
         container=container,
         charm_state=charm_state,
-        workload_config=workload_config,
+        app_config=app_config,
         webserver=webserver,
         database_migration=database_migration_mock,
     )

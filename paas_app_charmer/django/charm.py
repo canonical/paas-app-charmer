@@ -15,7 +15,6 @@ import ops
 from pydantic import BaseModel, Extra, Field, ValidationError  # pylint: disable=no-name-in-module
 
 from paas_app_charmer._gunicorn.charm import GunicornBase
-from paas_app_charmer._gunicorn.charm_utils import block_if_invalid_config
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.utils import build_validation_error_message
 
@@ -46,11 +45,10 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
         Args:
             framework: operator framework.
         """
-        super().__init__(framework=framework, wsgi_framework="django")
-        self.framework.observe(self.on.django_app_pebble_ready, self._on_django_app_pebble_ready)
+        super().__init__(framework=framework, framework_name="django")
         self.framework.observe(self.on.create_superuser_action, self._on_create_superuser_action)
 
-    def get_wsgi_config(self) -> BaseModel:
+    def get_framework_config(self) -> BaseModel:
         """Return Django framework related configurations.
 
         Returns:
@@ -84,11 +82,6 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
         """
         return str((pathlib.Path(__file__).parent / "cos").absolute())
 
-    @block_if_invalid_config
-    def _on_django_app_pebble_ready(self, _: ops.PebbleReadyEvent) -> None:
-        """Handle the pebble-ready event."""
-        self.restart()
-
     def _on_create_superuser_action(self, event: ops.ActionEvent) -> None:
         """Handle the create-superuser action.
 
@@ -108,7 +101,7 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
                     **self._gen_environment(),
                 },
                 combine_stderr=True,
-                working_dir=str(self._workload_config.app_dir),
+                working_dir=str(self._app_config.app_dir),
             ).wait_output()
             event.set_results({"password": password})
         except ops.pebble.ExecError as e:
