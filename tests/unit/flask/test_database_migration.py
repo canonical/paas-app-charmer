@@ -9,7 +9,7 @@ import pytest
 from ops.testing import Harness
 
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
-from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
+from paas_app_charmer._gunicorn.workload_config import create_app_config
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
@@ -35,13 +35,11 @@ def test_database_migration(harness: Harness):
         is_secret_storage_ready=True,
         secret_key="",
     )
-    workload_config = WorkloadConfig(
-        framework="flask",
-    )
+    app_config = create_app_config(framework_name="flask")
     webserver_config = WebserverConfig()
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
-        workload_config=workload_config,
+        app_config=app_config,
         container=container,
     )
     database_migration = DatabaseMigration(
@@ -50,7 +48,7 @@ def test_database_migration(harness: Harness):
     flask_app = WsgiApp(
         container=container,
         charm_state=charm_state,
-        workload_config=workload_config,
+        app_config=app_config,
         webserver=webserver,
         database_migration=database_migration,
     )
@@ -111,12 +109,10 @@ def test_database_migrate_command(harness: Harness, file: str, command: list[str
         secret_key="",
     )
     webserver_config = WebserverConfig()
-    workload_config = WorkloadConfig(
-        framework="flask",
-    )
+    app_config = create_app_config(framework_name="flask")
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
-        workload_config=workload_config,
+        app_config=app_config,
         container=container,
     )
     database_migration = DatabaseMigration(
@@ -125,7 +121,7 @@ def test_database_migrate_command(harness: Harness, file: str, command: list[str
     flask_app = WsgiApp(
         container=container,
         charm_state=charm_state,
-        workload_config=workload_config,
+        app_config=app_config,
         webserver=webserver,
         database_migration=database_migration,
     )

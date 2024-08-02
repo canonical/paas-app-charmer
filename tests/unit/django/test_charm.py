@@ -12,7 +12,7 @@ import pytest
 from ops.testing import ExecArgs, ExecResult, Harness
 
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
-from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
+from paas_app_charmer._gunicorn.workload_config import create_app_config
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.charm_state import CharmState
 
@@ -61,16 +61,16 @@ def test_django_config(harness: Harness, config: dict, env: dict) -> None:
         database_requirers={},
     )
     webserver_config = WebserverConfig.from_charm_state(charm_state)
-    workload_config = WorkloadConfig(framework="django")
+    app_config = create_app_config(framework_name="django")
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
-        workload_config=workload_config,
+        app_config=app_config,
         container=container,
     )
     django_app = WsgiApp(
         container=harness.charm.unit.get_container("django-app"),
         charm_state=charm_state,
-        workload_config=workload_config,
+        app_config=app_config,
         webserver=webserver,
         database_migration=harness.charm._database_migration,
     )

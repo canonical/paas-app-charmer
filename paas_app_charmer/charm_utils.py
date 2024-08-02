@@ -14,7 +14,7 @@ from paas_app_charmer.exceptions import CharmConfigInvalidError
 logger = logging.getLogger(__name__)
 
 
-class GunicornBaseProtocol(typing.Protocol):  # pylint: disable=too-few-public-methods
+class PaasCharmBaseProtocol(typing.Protocol):  # pylint: disable=too-few-public-methods
     """Protocol to use for the decorator to block if invalid."""
 
     def _create_charm_state(self) -> CharmState:
@@ -28,7 +28,7 @@ class GunicornBaseProtocol(typing.Protocol):  # pylint: disable=too-few-public-m
         """
 
 
-C = typing.TypeVar("C", bound=GunicornBaseProtocol)
+C = typing.TypeVar("C", bound=PaasCharmBaseProtocol)
 E = typing.TypeVar("E", bound=ops.EventBase)
 
 

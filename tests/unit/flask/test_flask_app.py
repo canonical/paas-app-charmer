@@ -13,7 +13,7 @@ import unittest.mock
 import pytest
 
 from paas_app_charmer._gunicorn.webserver import WebserverConfig
-from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
+from paas_app_charmer._gunicorn.workload_config import create_app_config
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp, map_integrations_to_env
 from paas_app_charmer.charm_state import CharmState, IntegrationsState, S3Parameters
 
@@ -40,13 +40,11 @@ def test_flask_env(flask_config: dict, app_config: dict, database_migration_mock
         framework_config=flask_config,
         app_config=app_config,
     )
-    workload_config = WorkloadConfig(
-        framework="flask",
-    )
+    app_config = create_app_config(framework_name="flask")
     flask_app = WsgiApp(
         container=unittest.mock.MagicMock(),
         charm_state=charm_state,
-        workload_config=workload_config,
+        app_config=app_config,
         webserver=unittest.mock.MagicMock(),
         database_migration=database_migration_mock,
     )
@@ -105,13 +103,11 @@ def test_http_proxy(
         secret_key="foobar",
         is_secret_storage_ready=True,
     )
-    workload_config = WorkloadConfig(
-        framework="flask",
-    )
+    app_config = create_app_config(framework_name="flask")
     flask_app = WsgiApp(
         container=unittest.mock.MagicMock(),
         charm_state=charm_state,
-        workload_config=workload_config,
+        app_config=app_config,
         webserver=unittest.mock.MagicMock(),
         database_migration=database_migration_mock,
     )
@@ -160,13 +156,11 @@ def test_integrations_env(
         is_secret_storage_ready=True,
         integrations=integrations,
     )
-    workload_config = WorkloadConfig(
-        framework="flask",
-    )
+    app_config = create_app_config(framework_name="flask")
     flask_app = WsgiApp(
         container=unittest.mock.MagicMock(),
         charm_state=charm_state,
-        workload_config=workload_config,
+        app_config=app_config,
         webserver=unittest.mock.MagicMock(),
         database_migration=database_migration_mock,
     )

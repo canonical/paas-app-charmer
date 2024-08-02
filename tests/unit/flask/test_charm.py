@@ -15,7 +15,7 @@ from ops.pebble import ServiceStatus
 from ops.testing import Harness
 
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
-from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
+from paas_app_charmer._gunicorn.workload_config import create_app_config
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.database_migration import DatabaseMigrationStatus
@@ -51,18 +51,16 @@ def test_flask_pebble_layer(harness: Harness) -> None:
         database_requirers={},
     )
     webserver_config = WebserverConfig.from_charm_state(charm_state)
-    workload_config = WorkloadConfig(
-        framework="flask",
-    )
+    app_config = create_app_config(framework_name="flask")
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
-        workload_config=workload_config,
+        app_config=app_config,
         container=container,
     )
     flask_app = WsgiApp(
         container=container,
         charm_state=charm_state,
-        workload_config=workload_config,
+        app_config=app_config,
         webserver=webserver,
         database_migration=harness.charm._database_migration,
     )

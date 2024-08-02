@@ -30,6 +30,7 @@ class GunicornSecretStorage(paas_app_charmer.secret_storage.SecretStorage):
         super().__init__(charm=charm, keys=[key])
         self._key = key
 
+    # JAVI this not an overridden abstract method. Why?
     def get_secret_key(self) -> str:
         """Retrieve the application secret key from the peer relation data.
 
@@ -38,6 +39,7 @@ class GunicornSecretStorage(paas_app_charmer.secret_storage.SecretStorage):
         """
         return self.get_secret(self._key)
 
+    # JAVI this not an overridden abstract method. Why?
     def reset_secret_key(self) -> None:
         """Generate a new application secret key and store it within the peer relation data."""
         self.set_secret(self._key, secrets.token_urlsafe(32))

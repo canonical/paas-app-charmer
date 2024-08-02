@@ -19,7 +19,7 @@ class Observability(ops.Object):  # pylint: disable=too-few-public-methods
         charm: ops.CharmBase,
         container_name: str,
         cos_dir: str,
-        log_files: list[str | pathlib.Path],
+        log_files: list[pathlib.Path],
     ):
         """Initialize a new instance of the Observability class.
 
