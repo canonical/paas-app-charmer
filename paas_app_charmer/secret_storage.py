@@ -110,7 +110,7 @@ class SecretStorage(ops.Object, abc.ABC):
 
 
 class KeySecretStorage(SecretStorage):
-    """A class that manages secret keys required by the WSGI charms."""
+    """A class that manages secret keys with one default secret key."""
 
     def gen_initial_value(self) -> dict[str, str]:
         """Generate the initial secret values.
