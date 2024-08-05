@@ -52,6 +52,8 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         *,
         framework: str,
         is_secret_storage_ready: bool,
+        # JAVI charm_config fields should probably go to framework_config.
+        # I have done this basically for _gunicorn.WebserverConfig
         charm_config: dict[str, int | float | str | bool] | None = None,
         app_config: dict[str, int | str | bool] | None = None,
         framework_config: dict[str, int | str] | None = None,

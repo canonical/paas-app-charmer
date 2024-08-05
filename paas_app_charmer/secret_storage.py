@@ -140,4 +140,4 @@ class KeySecretStorage(SecretStorage):
 
     def reset_secret_key(self) -> None:
         """Generate a new application secret key and store it within the peer relation data."""
-        self.set_secret(self._key, secrets.token_urlsafe(32))
+        self.set_secret(self._key, secrets.token_urlsafe(64))

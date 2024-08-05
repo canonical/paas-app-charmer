@@ -105,7 +105,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             state_dir=self._app_config.state_dir,
         )
 
-        self._container = self.unit.get_container(f"{self._app_config.framework}-app")
+        self._container = self.unit.get_container(self._app_config.container_name)
 
         self._ingress = IngressPerAppRequirer(
             self,
