@@ -64,7 +64,7 @@ requires:
     limit: 1
 resources:
   app-image:
-    description: django application image.
+    description: go application image.
     type: oci-image
 type: charm
 
