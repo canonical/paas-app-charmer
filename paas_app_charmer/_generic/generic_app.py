@@ -58,6 +58,8 @@ class GenericApp(App):  # pylint: disable=too-few-public-methods
         Returns:
             A dictionary representing the application environment variables.
         """
+        # JAVI remove this line
+        # pylint: disable=R0801
         config = self._charm_state.app_config
         config.update(self._charm_state.framework_config)
         prefix = "APP_"
@@ -84,6 +86,8 @@ class GenericApp(App):  # pylint: disable=too-few-public-methods
         Returns:
             The pebble layer definition for the application.
         """
+        # JAVI remove this line
+        # pylint: disable=R0801
         original_services_file = self._app_config.state_dir / "original-services.json"
         if self._container.exists(original_services_file):
             services = json.loads(self._container.pull(original_services_file).read())
