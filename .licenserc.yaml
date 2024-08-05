@@ -10,6 +10,7 @@ header:
   paths-ignore:
     - '.github/**'
     - '.woke.yaml'
+    - '**/*.sum'
     - '**/*.json'
     - '**/*.j2'
     - '**/*.md'
