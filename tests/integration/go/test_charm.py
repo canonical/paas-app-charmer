@@ -3,12 +3,13 @@
 
 """Integration tests for Go charm."""
 
-import requests
 import typing
 
+import requests
 from juju.application import Application
 
 WORKLOAD_PORT = 8080
+
 
 async def test_go_is_up(
     go_app: Application,
