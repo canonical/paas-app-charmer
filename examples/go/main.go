@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go-app/internal/service"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -15,21 +17,22 @@ import (
 	"time"
 
 	"encoding/json"
+	"net/http"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"net/http"
 )
 
 type mainHandler struct {
 	counter prometheus.Counter
+	service service.Service
 }
 
 func (h mainHandler) serveHelloWorld(w http.ResponseWriter, r *http.Request) {
 	h.counter.Inc()
-	log.Println("root handler")
 	log.Printf("Counter %#v\n", h.counter)
-
-	fmt.Fprintf(w, "Hello, World!! Path: %s\n", r.URL.Path)
+	fmt.Fprintf(w, "Hello, World!")
 }
 
 func (h mainHandler) serveEnvs(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +56,17 @@ func (h mainHandler) serveEnvs(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(envVars)
 }
 
+func (h mainHandler) servePostgresql(w http.ResponseWriter, r *http.Request) {
+	err := h.service.CheckPostgresqlStatus()
+	if err != nil {
+		log.Printf(err.Error())
+		io.WriteString(w, "FAILURE")
+		return
+	} else {
+		io.WriteString(w, "SUCCESS")
+	}
+}
+
 func main() {
 	metricsPort, found := os.LookupEnv("APP_METRICS_PORT")
 	if !found {
@@ -62,11 +76,13 @@ func main() {
 	if !found {
 		metricsPath = "/metrics"
 	}
-
 	port, found := os.LookupEnv("APP_PORT")
 	if !found {
 		port = "8000"
 	}
+
+	// If wrong or missing, the sql check will fail.
+	postgresqlUrl := os.Getenv("APP_POSTGRESQL_DB_CONNECT_STRING")
 
 	requestCounter := prometheus.NewCounter(
 		prometheus.CounterOpts{
@@ -77,9 +93,11 @@ func main() {
 	mux := http.NewServeMux()
 	mainHandler := mainHandler{
 		counter: requestCounter,
+		service: service.Service{PostgresqlUrl: postgresqlUrl},
 	}
 	mux.HandleFunc("/", mainHandler.serveHelloWorld)
 	mux.HandleFunc("/env", mainHandler.serveEnvs)
+	mux.HandleFunc("/postgresql/status", mainHandler.servePostgresql)
 
 	if metricsPort != port {
 		prometheus.MustRegister(requestCounter)

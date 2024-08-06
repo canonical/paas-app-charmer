@@ -24,3 +24,24 @@ async def test_go_is_up(
         response = requests.get(f"http://{unit_ip}:{WORKLOAD_PORT}", timeout=5)
         assert response.status_code == 200
         assert "Hello, World!" in response.text
+
+
+        
+async def test_migration(
+    go_app: Application,
+    get_unit_ips: typing.Callable[[str], typing.Awaitable[tuple[str, ...]]],
+):
+    """
+    arrange:
+    act:
+    assert:
+    """
+    # before and after integrating with postgresql?
+    for unit_ip in await get_unit_ips(go_app.name):
+        response = requests.get(f"http://{unit_ip}:{WORKLOAD_PORT}/postgresql/status", timeout=5)
+        assert response.status_code == 200
+        assert "SUCCESS" in response.text
+
+
+# async def test_env_variables
+# metrics to an specific port could be nice? async def test_env_variables

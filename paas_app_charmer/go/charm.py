@@ -47,13 +47,13 @@ class Charm(PaasCharm):  # pylint: disable=too-many-instance-attributes
     def _app_config(self) -> AppConfig:
         """Return an AppConfig instance."""
         framework_name = self._framework_name
-        base_dir = pathlib.Path(f"/{framework_name}")
+        base_dir = pathlib.Path("/app")
         return AppConfig(
             framework=framework_name,
             container_name="app",
             port=8000,
             base_dir=base_dir,
-            app_dir=base_dir / "app",
+            app_dir=base_dir,
             state_dir=base_dir / "state",
             service_name=framework_name,
             log_files=[],

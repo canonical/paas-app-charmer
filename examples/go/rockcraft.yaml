@@ -27,7 +27,7 @@ extensions:
     - go-framework
 
 # Uncomment the sections you need and adjust according to your requirements.
-# parts:
+parts:
 #   go-framework/install-app:
 #    # Select a specific Go version. Otherwise the current stable one will be used.
 #    build-snaps:
@@ -52,3 +52,9 @@ extensions:
 #       - go/static
 #       - go/otherdirectory
 #       - go/otherfile
+
+  runtime-debs:
+    plugin: nil
+    stage-packages:
+      # Added manually for the migrations
+      - postgresql-client-14
