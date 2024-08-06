@@ -59,8 +59,8 @@ class Charm(PaasCharm):  # pylint: disable=too-many-instance-attributes
             state_dir=base_dir / "state",
             service_name=framework_name,
             log_files=[],
-            # JAVI review the / between port and path.
-            metric_targets=[f"*:{framework_config.metrics_port}{framework_config.metrics_path}"],
+            metrics_target=f"*:{framework_config.metrics_port}",
+            metrics_path=framework_config.metrics_path,
         )
 
     def get_framework_config(self) -> BaseModel:

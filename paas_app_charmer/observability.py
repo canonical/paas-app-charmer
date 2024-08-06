@@ -20,7 +20,8 @@ class Observability(ops.Object):  # pylint: disable=too-few-public-methods
         container_name: str,
         cos_dir: str,
         log_files: list[pathlib.Path],
-        metric_targets: list[str],
+        metrics_target: str | None,
+        metrics_path: str | None,
     ):
         """Initialize a new instance of the Observability class.
 
@@ -30,14 +31,20 @@ class Observability(ops.Object):  # pylint: disable=too-few-public-methods
             cos_dir: The directories containing the grafana_dashboards, loki_alert_rules and
                 prometheus_alert_rules.
             log_files: List of files to monitor.
-            metric_targets: List of targets to scrape for metrics.
+            metrics_target: Target to scrape for metrics.
+            metrics_path: Path to scrape for metrics.
         """
         super().__init__(charm, "observability")
         self._charm = charm
+        jobs = None
+        if metrics_path and metrics_target:
+            jobs = [
+                {"metrics_path": metrics_path, "static_configs": [{"targets": [metrics_target]}]}
+            ]
         self._metrics_endpoint = MetricsEndpointProvider(
             charm,
             alert_rules_path=os.path.join(cos_dir, "prometheus_alert_rules"),
-            jobs=[{"static_configs": [{"targets": metric_targets}]}],
+            jobs=jobs,
             relation_name="metrics-endpoint",
         )
         self._logging = LogProxyConsumer(
