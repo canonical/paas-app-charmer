@@ -34,4 +34,5 @@ def create_app_config(framework_name: str) -> AppConfig:
             pathlib.Path(str.format(APPLICATION_LOG_FILE_FMT, framework=framework_name)),
             pathlib.Path(str.format(APPLICATION_ERROR_LOG_FILE_FMT, framework=framework_name)),
         ],
+        metric_targets=["*:9102"],
     )

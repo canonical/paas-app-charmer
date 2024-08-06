@@ -19,13 +19,14 @@ from .constants import DEFAULT_LAYER, GO_CONTAINER_NAME
             {},
             {
                 "APP_PORT": "8080",
-                "APP_BASE_URL": "http://go-k8s.None:8000",
+                "APP_BASE_URL": "http://go-k8s.None:8080",
                 "APP_METRICS_PORT": "8080",
                 "APP_METRICS_PATH": "/metrics",
                 "APP_SECRET_KEY": "test",
             },
             id="default",
         ),
+        # JAVI pending test for metrics port and path different.
     ],
 )
 def test_go_config(harness: Harness, config: dict, env: dict) -> None:
@@ -51,3 +52,6 @@ def test_go_config(harness: Harness, config: dict, env: dict) -> None:
         "user": "_daemon_",
         "working-dir": "/app",
     }
+
+
+# JAVI pending test for metrics port and path in observability relation check relation data.

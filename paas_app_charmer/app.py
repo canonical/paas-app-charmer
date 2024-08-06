@@ -33,6 +33,7 @@ class AppConfig:  # pylint: disable=too-many-instance-attributes
         state_dir: the directory in the application container to store states information.
         service_name: The WSGI application pebble service name.
         log_files: List of files to monitor.
+        metric_targets: List of targets to scrape for metrics.
     """
 
     framework: str
@@ -45,6 +46,7 @@ class AppConfig:  # pylint: disable=too-many-instance-attributes
     state_dir: pathlib.Path
     service_name: str
     log_files: List[pathlib.Path]
+    metric_targets: List[str]
 
 
 class App(abc.ABC):

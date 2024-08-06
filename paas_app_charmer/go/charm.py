@@ -4,6 +4,7 @@
 """Go Charm service."""
 
 import pathlib
+import typing
 
 import ops
 from pydantic import BaseModel, Extra, Field, ValidationError
@@ -48,15 +49,18 @@ class Charm(PaasCharm):  # pylint: disable=too-many-instance-attributes
         """Return an AppConfig instance."""
         framework_name = self._framework_name
         base_dir = pathlib.Path("/app")
+        framework_config = typing.cast(GoConfig, self.get_framework_config())
         return AppConfig(
             framework=framework_name,
             container_name="app",
-            port=8000,
+            port=framework_config.port,
             base_dir=base_dir,
             app_dir=base_dir,
             state_dir=base_dir / "state",
             service_name=framework_name,
             log_files=[],
+            # JAVI review the / between port and path.
+            metric_targets=[f"*:{framework_config.metrics_port}{framework_config.metrics_path}"],
         )
 
     def get_framework_config(self) -> BaseModel:

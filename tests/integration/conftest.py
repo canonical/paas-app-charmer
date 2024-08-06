@@ -67,6 +67,25 @@ def grafana_app_name_fixture() -> str:
     return "grafana-k8s"
 
 
+@pytest_asyncio.fixture(scope="module", name="prometheus_app")
+async def deploy_prometheus_fixture(
+    model: Model,
+    prometheus_app_name: str,
+):
+    """Deploy prometheus."""
+    app = await model.deploy(
+        "prometheus-k8s",
+        application_name=prometheus_app_name,
+        channel="1.0/stable",
+        revision=129,
+        series="focal",
+        trust=True,
+    )
+    await model.wait_for_idle(raise_on_blocked=True)
+
+    return app
+
+
 @pytest_asyncio.fixture
 def run_action(ops_test: OpsTest):
     async def _run_action(application_name, action_name, **params):
