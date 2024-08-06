@@ -11,7 +11,7 @@ jobs:
       extra-arguments: -x --localstack-address 172.17.0.1
       pre-run-script: localstack-installation.sh
       charmcraft-channel: latest/edge
-      modules: '["test_charm", "test_proxy", "test_cos", "test_database", "test_integrations", "test_db_migration", "test_django"]'
+      modules: '["test_charm", "test_proxy", "test_cos", "test_database", "test_integrations", "test_db_migration", "test_django", "test_django_integrations"]'
       rockcraft-repository: javierdelapuente/rockcraft
       rockcraft-ref: go-extension
       juju-channel: 3.1/stable
