@@ -67,6 +67,18 @@ class App(abc.ABC):
         """Restart or start the WSGI service if not started with the latest configuration."""
 
 
+def encode_env(value: str | int | float | bool | list | dict) -> str:
+    """Encode the environment variable values.
+
+    Args:
+        value: The input environment variable value.
+
+    Return:
+        The original string if the input is a string, or JSON encoded value.
+    """
+    return value if isinstance(value, str) else json.dumps(value)
+
+
 def map_integrations_to_env(integrations: IntegrationsState, prefix: str = "") -> dict[str, str]:
     """Generate environment variables for the IntegrationState.
 

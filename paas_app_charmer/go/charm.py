@@ -28,7 +28,7 @@ class GoConfig(BaseModel, extra=Extra.allow):
     """
 
     port: int = Field(default=8080, gt=0)
-    metrics_port: int | None = Field(default=8080, gt=0)
+    metrics_port: int | None = Field(default=None, gt=0)
     metrics_path: str | None = Field(default=None, min_length=1)
     secret_key: str | None = Field(default=None, min_length=1)
 

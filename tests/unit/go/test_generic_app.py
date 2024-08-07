@@ -6,15 +6,69 @@
 import pathlib
 import unittest
 
+import pytest
+
 from paas_app_charmer._generic.generic_app import GenericApp
 from paas_app_charmer.app import WorkloadConfig
-from paas_app_charmer.charm_state import CharmState
+from paas_app_charmer.charm_state import CharmState, IntegrationsState
 from paas_app_charmer.go.charm import GoConfig
 
 
-def test_go_env():
+@pytest.mark.parametrize(
+    "set_env, app_config, framework_config, integrations, expected",
+    [
+        pytest.param(
+            {},
+            {},
+            {},
+            None,
+            {
+                "APP_PORT": "8080",
+                "APP_SECRET_KEY": "foobar",
+                "APP_OTHERCONFIG": "othervalue",
+                "APP_BASE_URL": "https://paas.example.com",
+            },
+        ),
+        pytest.param(
+            {"JUJU_CHARM_HTTP_PROXY": "http://proxy.test"},
+            {"extra-config", "extravalue"},
+            {"metrics_port": "9000", "metrics_path": "/m", "secret_key": "notfoobar"},
+            IntegrationsState(redis_uri="redis://10.1.88.132:6379"),
+            {
+                "APP_PORT": "8080",
+                "APP_METRICS_PATH": "/m",
+                "APP_METRICS_PORT": "9000",
+                "APP_SECRET_KEY": "notfoobar",
+                "APP_OTHERCONFIG": "othervalue",
+                "APP_BASE_URL": "https://paas.example.com",
+                "HTTP_PROXY": "http://proxy.test",
+                "http_proxy": "http://proxy.test",
+                "APP_REDIS_DB_CONNECT_STRING": "redis://10.1.88.132:6379",
+                "APP_REDIS_DB_FRAGMENT": "",
+                "APP_REDIS_DB_HOSTNAME": "10.1.88.132",
+                "APP_REDIS_DB_NETLOC": "10.1.88.132:6379",
+                "APP_REDIS_DB_PARAMS": "",
+                "APP_REDIS_DB_PATH": "",
+                "APP_REDIS_DB_PORT": "6379",
+                "APP_REDIS_DB_QUERY": "",
+                "APP_REDIS_DB_SCHEME": "redis",
+            },
+        ),
+    ],
+)
+def test_go_environment_vars(
+    monkeypatch, set_env, app_config, framework_config, integrations, expected
+):
+    """
+    arrange: set juju charm generic app with distinct combinations of configuration.
+    act: generate a go environment.
+    assert: environment generated should contain proper proxy environment variables.
+    """
+    for set_env_name, set_env_value in set_env.items():
+        monkeypatch.setenv(set_env_name, set_env_value)
+
     framework_name = "go"
-    framework_config = GoConfig.model_validate({"port": 8080})
+    framework_config = GoConfig.model_validate(framework_config)
     base_dir = pathlib.Path("/app")
     workload_config = WorkloadConfig(
         framework=framework_name,
@@ -33,8 +87,10 @@ def test_go_env():
         framework="go",
         secret_key="foobar",
         is_secret_storage_ready=True,
-        framework_config=framework_config.dict(exclude_unset=True, exclude_none=True),
+        framework_config=framework_config.dict(exclude_none=True),
+        base_url="https://paas.example.com",
         app_config={"otherconfig": "othervalue"},
+        integrations=integrations,
     )
 
     app = GenericApp(
@@ -44,8 +100,4 @@ def test_go_env():
         database_migration=unittest.mock.MagicMock(),
     )
     env = app.gen_environment()
-    assert env == {
-        "APP_PORT": "8080",
-        "APP_SECRET_KEY": "foobar",
-        "APP_OTHERCONFIG": "othervalue",
-    }
+    assert env == expected

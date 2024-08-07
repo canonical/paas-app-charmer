@@ -8,7 +8,7 @@ import logging
 
 import ops
 
-from paas_app_charmer.app import App, WorkloadConfig, map_integrations_to_env
+from paas_app_charmer.app import App, WorkloadConfig, encode_env, map_integrations_to_env
 from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.database_migration import DatabaseMigration
 
@@ -38,18 +38,6 @@ class GenericApp(App):  # pylint: disable=too-few-public-methods
         self._container = container
         self._database_migration = database_migration
 
-    # JAVI copy pasted from WsgiApp. Extract somewhere.
-    def _encode_env(self, value: str | int | float | bool | list | dict) -> str:
-        """Encode the environment variable values.
-
-        Args:
-            value: The input environment variable value.
-
-        Return:
-            The original string if the input is a string, or JSON encoded value.
-        """
-        return value if isinstance(value, str) else json.dumps(value)
-
     # JAVI look what is generic and what is not.
     # Basically copy pasted...
     def gen_environment(self) -> dict[str, str]:
@@ -63,7 +51,7 @@ class GenericApp(App):  # pylint: disable=too-few-public-methods
         config = self._charm_state.app_config
         config.update(self._charm_state.framework_config)
         prefix = "APP_"
-        env = {f"{prefix}{k.upper()}": self._encode_env(v) for k, v in config.items()}
+        env = {f"{prefix}{k.upper()}": encode_env(v) for k, v in config.items()}
         if self._charm_state.base_url:
             env[f"{prefix}BASE_URL"] = self._charm_state.base_url
         secret_key_env = f"{prefix}SECRET_KEY"

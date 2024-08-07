@@ -9,7 +9,7 @@ import logging
 import ops
 
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver
-from paas_app_charmer.app import App, WorkloadConfig, map_integrations_to_env
+from paas_app_charmer.app import App, WorkloadConfig, encode_env, map_integrations_to_env
 from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.database_migration import DatabaseMigration
 
@@ -42,17 +42,6 @@ class WsgiApp(App):
         self._webserver = webserver
         self._database_migration = database_migration
 
-    def _encode_env(self, value: str | int | float | bool | list | dict) -> str:
-        """Encode the environment variable values.
-
-        Args:
-            value: The input environment variable value.
-
-        Return:
-            The original string if the input is a string, or JSON encoded value.
-        """
-        return value if isinstance(value, str) else json.dumps(value)
-
     def gen_environment(self) -> dict[str, str]:
         """Generate a WSGI environment dictionary from the charm WSGI configurations.
 
@@ -70,7 +59,7 @@ class WsgiApp(App):
         config = self._charm_state.app_config
         config.update(self._charm_state.framework_config)
         prefix = f"{self._workload_config.framework.upper()}_"
-        env = {f"{prefix}{k.upper()}": self._encode_env(v) for k, v in config.items()}
+        env = {f"{prefix}{k.upper()}": encode_env(v) for k, v in config.items()}
         if self._charm_state.base_url:
             env[f"{prefix}BASE_URL"] = self._charm_state.base_url
         secret_key_env = f"{prefix}SECRET_KEY"

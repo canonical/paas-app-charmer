@@ -129,7 +129,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         )
         return cls(
             framework=framework,
-            framework_config=framework_config.dict(exclude_unset=True, exclude_none=True),
+            framework_config=framework_config.dict(exclude_none=True),
             charm_config=charm_config,
             app_config=typing.cast(dict[str, str | int | bool], app_config),
             secret_key=(
