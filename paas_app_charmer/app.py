@@ -57,8 +57,8 @@ class App:
     """Base class for the application manager.
 
     Attrs:
-        configuration_prefix: X
-        integrations_prefix: X
+        configuration_prefix: Prefix for environment variables related to configuration.
+        integrations_prefix: Prefix for environment variables related to integrations.
     """
 
     configuration_prefix = "APP_"
