@@ -1,9 +1,8 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Provide the base class to represent the application."""
+"""Provide the base generic class to represent the application."""
 
-import abc
 import json
 import logging
 import pathlib
@@ -54,7 +53,7 @@ class WorkloadConfig:  # pylint: disable=too-many-instance-attributes
     metrics_path: str | None = "/metrics"
 
 
-class App(abc.ABC):
+class App:
     """Base class for the application manager.
 
     Attrs:
