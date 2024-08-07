@@ -122,10 +122,11 @@ class GunicornWebserver:  # pylint: disable=too-few-public-methods
         new_line = "\n"
         config = f"""\
 bind = ['0.0.0.0:{self._workload_config.port}']
-chdir = '{str(self._workload_config.app_dir)}'
-accesslog = '{str.format(APPLICATION_LOG_FILE_FMT, framework=self._workload_config.framework)}'
-errorlog = '{str.format(APPLICATION_ERROR_LOG_FILE_FMT, framework=self._workload_config.framework)}'
-statsd_host = '{STATSD_HOST}'
+chdir = {repr(str(self._workload_config.app_dir))}
+accesslog = {repr(str.format(APPLICATION_LOG_FILE_FMT, framework=self._workload_config.framework))}
+errorlog = {repr(str.format(APPLICATION_ERROR_LOG_FILE_FMT,
+                            framework=self._workload_config.framework))}
+statsd_host = {repr(STATSD_HOST)}
 {new_line.join(config_entries)}"""
         return config
 
