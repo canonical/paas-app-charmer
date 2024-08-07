@@ -55,7 +55,15 @@ class WorkloadConfig:  # pylint: disable=too-many-instance-attributes
 
 
 class App(abc.ABC):
-    """Base class for the application manager."""
+    """Base class for the application manager.
+
+    Attrs:
+        configuration_prefix: X
+        integrations_prefix: X
+    """
+
+    configuration_prefix = "APP_"
+    integrations_prefix = "APP_"
 
     def __init__(
         self,
@@ -77,14 +85,6 @@ class App(abc.ABC):
         self._workload_config = workload_config
         self._database_migration = database_migration
 
-    @abc.abstractmethod
-    def gen_environment(self) -> dict[str, str]:
-        """Generate a environment dictionary from the charm configurations."""
-
-    @abc.abstractmethod
-    def restart(self) -> None:
-        """Restart or start the WSGI service if not started with the latest configuration."""
-
     def stop_all_services(self) -> None:
         """Stop all the services in the workload.
 
@@ -95,9 +95,14 @@ class App(abc.ABC):
         if service_names:
             self._container.stop(*service_names)
 
-    def _gen_environment(
-        self, config_prefix: str = "", integrations_prefix: str = ""
-    ) -> dict[str, str]:
+    def restart(self) -> None:
+        """Restart or start the service if not started with the latest configuration."""
+        self._container.add_layer("charm", self._app_layer(), combine=True)
+        self._prepare_service_for_restart()
+        self._run_migrations()
+        self._container.replan()
+
+    def gen_environment(self) -> dict[str, str]:
         """Generate a environment dictionary from the charm configurations.
 
         The environment generation follows these rules:
@@ -110,16 +115,12 @@ class App(abc.ABC):
              4. Different prefixes can be set to the environment variable names depending on the
                 framework.
 
-        Args:
-            config_prefix: Prefix for the configuration options in the environment variables.
-            integrations_prefix: Prefix for the integration options in the environment variables.
-
         Returns:
             A dictionary representing the application environment variables.
         """
         config = self._charm_state.app_config
         config.update(self._charm_state.framework_config)
-        prefix = config_prefix
+        prefix = self.configuration_prefix
         env = {f"{prefix}{k.upper()}": encode_env(v) for k, v in config.items()}
         if self._charm_state.base_url:
             env[f"{prefix}BASE_URL"] = self._charm_state.base_url
@@ -134,9 +135,36 @@ class App(abc.ABC):
 
         if self._charm_state.integrations:
             env.update(
-                map_integrations_to_env(self._charm_state.integrations, prefix=integrations_prefix)
+                map_integrations_to_env(
+                    self._charm_state.integrations, prefix=self.integrations_prefix
+                )
             )
         return env
+
+    def _prepare_service_for_restart(self) -> None:
+        """Specific framework operations before restarting the service."""
+
+    def _run_migrations(self) -> None:
+        """Run migrations."""
+        migration_command = None
+        app_dir = self._workload_config.app_dir
+        if self._container.exists(app_dir / "migrate"):
+            migration_command = [str((app_dir / "migrate").absolute())]
+        if self._container.exists(app_dir / "migrate.sh"):
+            migration_command = ["bash", "-eo", "pipefail", "migrate.sh"]
+        if self._container.exists(app_dir / "migrate.py"):
+            migration_command = ["python3", "migrate.py"]
+        if self._container.exists(app_dir / "manage.py"):
+            # Django migrate command
+            migration_command = ["python3", "manage.py", "migrate"]
+        if migration_command:
+            self._database_migration.run(
+                command=migration_command,
+                environment=self.gen_environment(),
+                working_dir=app_dir,
+                user=self._workload_config.user,
+                group=self._workload_config.group,
+            )
 
     def _app_layer(self) -> ops.pebble.LayerDict:
         """Generate the pebble layer definition for the application.

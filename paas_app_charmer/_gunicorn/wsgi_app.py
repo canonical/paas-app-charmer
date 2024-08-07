@@ -3,7 +3,6 @@
 
 """Provide the WsgiApp class to represent the WSGI application."""
 
-import json
 import logging
 
 import ops
@@ -43,19 +42,11 @@ class WsgiApp(App):
             database_migration=database_migration,
         )
         self._webserver = webserver
+        self.configuration_prefix = f"{self._workload_config.framework.upper()}_"
+        self.integrations_prefix = ""
 
-    def gen_environment(self) -> dict[str, str]:
-        """Generate a WSGI environment dictionary from the charm WSGI configurations.
-
-        Returns:
-            A dictionary representing the WSGI application environment variables.
-        """
-        prefix = f"{self._workload_config.framework.upper()}_"
-        return self._gen_environment(config_prefix=prefix)
-
-    def restart(self) -> None:
-        """Restart or start the WSGI service if not started with the latest configuration."""
-        self._container.add_layer("charm", self._app_layer(), combine=True)
+    def _prepare_service_for_restart(self) -> None:
+        """Specific framework operations before restarting the service."""
         service_name = self._workload_config.service_name
         is_webserver_running = self._container.get_service(service_name).is_running()
         command = self._app_layer()["services"][self._workload_config.framework]["command"]
@@ -64,23 +55,3 @@ class WsgiApp(App):
             is_webserver_running=is_webserver_running,
             command=command,
         )
-        migration_command = None
-        app_dir = self._workload_config.app_dir
-        if self._container.exists(app_dir / "migrate"):
-            migration_command = [str((app_dir / "migrate").absolute())]
-        if self._container.exists(app_dir / "migrate.sh"):
-            migration_command = ["bash", "-eo", "pipefail", "migrate.sh"]
-        if self._container.exists(app_dir / "migrate.py"):
-            migration_command = ["python3", "migrate.py"]
-        if self._container.exists(app_dir / "manage.py"):
-            # Django migrate command
-            migration_command = ["python3", "manage.py", "migrate"]
-        if migration_command:
-            self._database_migration.run(
-                command=migration_command,
-                environment=self.gen_environment(),
-                working_dir=app_dir,
-                user=self._workload_config.user,
-                group=self._workload_config.group,
-            )
-        self._container.replan()

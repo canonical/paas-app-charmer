@@ -9,7 +9,6 @@ import typing
 import ops
 from pydantic import BaseModel, Extra, Field, ValidationError
 
-from paas_app_charmer._generic.generic_app import GenericApp
 from paas_app_charmer.app import App, WorkloadConfig
 from paas_app_charmer.charm import PaasCharm
 from paas_app_charmer.exceptions import CharmConfigInvalidError
@@ -94,7 +93,7 @@ class Charm(PaasCharm):  # pylint: disable=too-many-instance-attributes
             A new App instance.
         """
         charm_state = self._create_charm_state()
-        return GenericApp(
+        return App(
             container=self._container,
             charm_state=charm_state,
             workload_config=self._workload_config,

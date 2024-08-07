@@ -8,8 +8,7 @@ import unittest
 
 import pytest
 
-from paas_app_charmer._generic.generic_app import GenericApp
-from paas_app_charmer.app import WorkloadConfig
+from paas_app_charmer.app import App, WorkloadConfig
 from paas_app_charmer.charm_state import CharmState, IntegrationsState
 from paas_app_charmer.go.charm import GoConfig
 
@@ -93,7 +92,7 @@ def test_go_environment_vars(
         integrations=integrations,
     )
 
-    app = GenericApp(
+    app = App(
         container=unittest.mock.MagicMock(),
         charm_state=charm_state,
         workload_config=workload_config,
