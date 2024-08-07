@@ -11,7 +11,10 @@ import urllib.parse
 from dataclasses import dataclass
 from typing import List
 
-from paas_app_charmer.charm_state import IntegrationsState
+import ops
+
+from paas_app_charmer.charm_state import CharmState, IntegrationsState
+from paas_app_charmer.database_migration import DatabaseMigration
 
 logger = logging.getLogger(__name__)
 
@@ -54,17 +57,105 @@ class WorkloadConfig:  # pylint: disable=too-many-instance-attributes
 class App(abc.ABC):
     """Base class for the application manager."""
 
+    def __init__(
+        self,
+        container: ops.Container,
+        charm_state: CharmState,
+        workload_config: WorkloadConfig,
+        database_migration: DatabaseMigration,
+    ):
+        """Construct the App instance.
+
+        Args:
+            container: The application container.
+            charm_state: The state of the charm.
+            workload_config: The state of the workload that the App belongs to.
+            database_migration: The database migration manager object.
+        """
+        self._container = container
+        self._charm_state = charm_state
+        self._workload_config = workload_config
+        self._database_migration = database_migration
+
     @abc.abstractmethod
     def gen_environment(self) -> dict[str, str]:
         """Generate a environment dictionary from the charm configurations."""
 
     @abc.abstractmethod
-    def stop_all_services(self) -> None:
-        """Stop all the services in the workload."""
-
-    @abc.abstractmethod
     def restart(self) -> None:
         """Restart or start the WSGI service if not started with the latest configuration."""
+
+    def stop_all_services(self) -> None:
+        """Stop all the services in the workload.
+
+        Services will restarted again when the restart method is invoked.
+        """
+        services = self._container.get_services()
+        service_names = list(services.keys())
+        if service_names:
+            self._container.stop(*service_names)
+
+    def _gen_environment(
+        self, config_prefix: str = "", integrations_prefix: str = ""
+    ) -> dict[str, str]:
+        """Generate a environment dictionary from the charm configurations.
+
+        The environment generation follows these rules:
+             1. User-defined configuration cannot overwrite built-in framework configurations,
+                even if the built-in framework application configuration value is None (undefined).
+             2. Boolean and integer-typed configuration values will be JSON encoded before
+                being passed to application.
+             3. String-typed configuration values will be passed to the application as environment
+                variables directly.
+             4. Different prefixes can be set to the environment variable names depending on the
+                framework.
+
+        Args:
+            config_prefix: Prefix for the configuration options in the environment variables.
+            integrations_prefix: Prefix for the integration options in the environment variables.
+
+        Returns:
+            A dictionary representing the application environment variables.
+        """
+        config = self._charm_state.app_config
+        config.update(self._charm_state.framework_config)
+        prefix = config_prefix
+        env = {f"{prefix}{k.upper()}": encode_env(v) for k, v in config.items()}
+        if self._charm_state.base_url:
+            env[f"{prefix}BASE_URL"] = self._charm_state.base_url
+        secret_key_env = f"{prefix}SECRET_KEY"
+        if secret_key_env not in env:
+            env[secret_key_env] = self._charm_state.secret_key
+        for proxy_variable in ("http_proxy", "https_proxy", "no_proxy"):
+            proxy_value = getattr(self._charm_state.proxy, proxy_variable)
+            if proxy_value:
+                env[proxy_variable] = str(proxy_value)
+                env[proxy_variable.upper()] = str(proxy_value)
+
+        if self._charm_state.integrations:
+            env.update(
+                map_integrations_to_env(self._charm_state.integrations, prefix=integrations_prefix)
+            )
+        return env
+
+    def _app_layer(self) -> ops.pebble.LayerDict:
+        """Generate the pebble layer definition for the application.
+
+        Returns:
+            The pebble layer definition for the application.
+        """
+        original_services_file = self._workload_config.state_dir / "original-services.json"
+        if self._container.exists(original_services_file):
+            services = json.loads(self._container.pull(original_services_file).read())
+        else:
+            plan = self._container.get_plan()
+            services = {k: v.to_dict() for k, v in plan.services.items()}
+            self._container.push(original_services_file, json.dumps(services), make_dirs=True)
+
+        services[self._workload_config.service_name]["override"] = "replace"
+        services[self._workload_config.service_name]["environment"] = self.gen_environment()
+
+        return ops.pebble.LayerDict(services=services)
 
 
 def encode_env(value: str | int | float | bool | list | dict) -> str:

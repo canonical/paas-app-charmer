@@ -35,12 +35,10 @@ async def test_migration(
     get_unit_ips: typing.Callable[[str], typing.Awaitable[tuple[str, ...]]],
 ):
     """
-    arrange:
-    act:
-    assert:
+    arrange: build and deploy the go charm with postgresql integration.
+    act: send a request to an endpoint that uses the table created by the micration script.
+    assert: the go application should return a correct response.
     """
-    # JAVI before and after integrating with postgresql?
-    # JAVI postgresql/status checks that the migration was correct!
     for unit_ip in await get_unit_ips(go_app.name):
         response = requests.get(
             f"http://{unit_ip}:{WORKLOAD_PORT}/postgresql/migratestatus", timeout=5

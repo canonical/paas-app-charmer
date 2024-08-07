@@ -113,7 +113,6 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             strip_prefix=True,
         )
 
-        # JAVI metrics port and path configuration should be passed.
         self._observability = Observability(
             self,
             log_files=self._workload_config.log_files,

@@ -14,7 +14,8 @@ import pytest
 
 from paas_app_charmer._gunicorn.webserver import WebserverConfig
 from paas_app_charmer._gunicorn.workload_config import create_workload_config
-from paas_app_charmer._gunicorn.wsgi_app import WsgiApp, map_integrations_to_env
+from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
+from paas_app_charmer.app import map_integrations_to_env
 from paas_app_charmer.charm_state import CharmState, IntegrationsState, S3Parameters
 
 

@@ -72,7 +72,6 @@ class Charm(PaasCharm):  # pylint: disable=too-many-instance-attributes
         Raises:
             CharmConfigInvalidError: if charm config is not valid.
         """
-        # JAVI NO PREFIX IN THIS CONFIG, DIFFERENT FROM FLASK AND DJANGO
         config = {k.replace("-", "_"): v for k, v in self.config.items()}
         try:
             return GoConfig.model_validate(config)
