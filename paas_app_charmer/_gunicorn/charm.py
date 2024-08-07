@@ -30,7 +30,7 @@ class GunicornBase(PaasCharm):
         charm_state = self._create_charm_state()
 
         webserver = GunicornWebserver(
-            webserver_config=WebserverConfig.from_charm_state(charm_state),
+            webserver_config=WebserverConfig.from_charm_config(dict(self.config)),
             workload_config=self._workload_config,
             container=self.unit.get_container(self._workload_config.container_name),
         )

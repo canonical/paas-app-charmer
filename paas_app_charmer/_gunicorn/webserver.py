@@ -19,7 +19,6 @@ from paas_app_charmer._gunicorn.workload_config import (
     STATSD_HOST,
 )
 from paas_app_charmer.app import WorkloadConfig
-from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 
 logger = logging.getLogger(__name__)
@@ -57,19 +56,19 @@ class WebserverConfig:
         }.items()
 
     @classmethod
-    def from_charm_state(cls, charm_state: CharmState) -> "WebserverConfig":
+    def from_charm_config(cls, config: dict[str, int | float | str | bool]) -> "WebserverConfig":
         """Create a WebserverConfig object from a charm state object.
 
         Args:
-            charm_state: The charm state object.
+            config: The charm config as a dict.
 
         Returns:
             A WebserverConfig object.
         """
-        keepalive = charm_state.charm_config.get("webserver-keepalive")
-        timeout = charm_state.charm_config.get("webserver-timeout")
-        workers = charm_state.charm_config.get("webserver-workers")
-        threads = charm_state.charm_config.get("webserver-threads")
+        keepalive = config.get("webserver-keepalive")
+        timeout = config.get("webserver-timeout")
+        workers = config.get("webserver-workers")
+        threads = config.get("webserver-threads")
         return cls(
             workers=int(typing.cast(str, workers)) if workers is not None else None,
             threads=int(typing.cast(str, threads)) if threads is not None else None,
