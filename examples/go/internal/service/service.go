@@ -12,7 +12,7 @@ type Service struct {
 	PostgresqlUrl string
 }
 
-func (s *Service) CheckPostgresqlStatus() (err error) {
+func (s *Service) CheckPostgresqlMigrateStatus() (err error) {
 	db, err := sql.Open("pgx", s.PostgresqlUrl)
 	if err != nil {
 		return
@@ -27,6 +27,7 @@ func (s *Service) CheckPostgresqlStatus() (err error) {
 	log.Printf("postgresql version %s.", version)
 
 	var numUsers int
+	// This will fail if the table does not exist.
 	err = db.QueryRow("SELECT count(*) from USERS").Scan(&numUsers)
 	if err != nil {
 		return

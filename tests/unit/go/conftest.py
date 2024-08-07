@@ -1,7 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""pytest fixtures for the integration test."""
+"""pytest fixtures for the go unit test."""
 import os
 import pathlib
 import shlex

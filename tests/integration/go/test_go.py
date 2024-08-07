@@ -39,9 +39,12 @@ async def test_migration(
     act:
     assert:
     """
-    # before and after integrating with postgresql?
+    # JAVI before and after integrating with postgresql?
+    # JAVI postgresql/status checks that the migration was correct!
     for unit_ip in await get_unit_ips(go_app.name):
-        response = requests.get(f"http://{unit_ip}:{WORKLOAD_PORT}/postgresql/status", timeout=5)
+        response = requests.get(
+            f"http://{unit_ip}:{WORKLOAD_PORT}/postgresql/migratestatus", timeout=5
+        )
         assert response.status_code == 200
         assert "SUCCESS" in response.text
 
@@ -75,8 +78,3 @@ async def test_prometheus_integration(
         else:
             logger.error("Application not scraped. Scraped targets: %s", active_targets)
             assert False, "Scrape Target not configured correctly"
-
-
-# JAVI pending to do.
-# async def test_env_variables
-# metrics to an specific port could be nice? async def test_env_variables

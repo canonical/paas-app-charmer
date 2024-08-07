@@ -57,7 +57,7 @@ func (h mainHandler) serveEnvs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h mainHandler) servePostgresql(w http.ResponseWriter, r *http.Request) {
-	err := h.service.CheckPostgresqlStatus()
+	err := h.service.CheckPostgresqlMigrateStatus()
 	if err != nil {
 		log.Printf(err.Error())
 		io.WriteString(w, "FAILURE")
@@ -97,7 +97,7 @@ func main() {
 	}
 	mux.HandleFunc("/", mainHandler.serveHelloWorld)
 	mux.HandleFunc("/env", mainHandler.serveEnvs)
-	mux.HandleFunc("/postgresql/status", mainHandler.servePostgresql)
+	mux.HandleFunc("/postgresql/migratestatus", mainHandler.servePostgresql)
 
 	if metricsPort != port {
 		prometheus.MustRegister(requestCounter)

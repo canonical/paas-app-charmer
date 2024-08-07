@@ -26,7 +26,22 @@ from .constants import DEFAULT_LAYER, GO_CONTAINER_NAME
             },
             id="default",
         ),
-        # JAVI pending test for metrics port and path different.
+        pytest.param(
+            {
+                "secret-key": "foobar",
+                "port": 9000,
+                "metrics-port": 9001,
+                "metrics-path": "/othermetrics",
+            },
+            {
+                "APP_PORT": "9000",
+                "APP_BASE_URL": "http://go-k8s.None:9000",
+                "APP_METRICS_PORT": "9001",
+                "APP_METRICS_PATH": "/othermetrics",
+                "APP_SECRET_KEY": "foobar",
+            },
+            id="custom config",
+        ),
     ],
 )
 def test_go_config(harness: Harness, config: dict, env: dict) -> None:
@@ -54,4 +69,30 @@ def test_go_config(harness: Harness, config: dict, env: dict) -> None:
     }
 
 
-# JAVI pending test for metrics port and path in observability relation check relation data.
+def test_metrics_config(harness: Harness):
+    """
+    arrange: Charm with a metrics-endpoint integration
+    act: Start the charm with all initial hooks
+    assert: The correct port and path for scraping should be in the relation data.
+    """
+    container = harness.model.unit.get_container(GO_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+    harness.add_relation("metrics-endpoint", "prometheus-k8s")
+    # update_config has to be executed before begin, as the charm does not call __init__
+    # twice in ops and the observability information is updated in __init__.
+    harness.update_config({"metrics-port": 9999, "metrics-path": "/metricspath"})
+
+    harness.begin_with_initial_hooks()
+
+    metrics_endpoint_relation = harness.model.relations["metrics-endpoint"]
+    assert len(metrics_endpoint_relation) == 1
+    relation_data = metrics_endpoint_relation[0].data
+
+    relation_data_unit = relation_data[harness.model.unit]
+    assert relation_data_unit["prometheus_scrape_unit_address"]
+    assert relation_data_unit["prometheus_scrape_unit_name"] == harness.model.unit.name
+
+    relation_data_app = relation_data[harness.model.app]
+    scrape_jobs = relation_data_app["scrape_jobs"]
+    assert "/metricspath" in scrape_jobs
+    assert "*:9999" in scrape_jobs
