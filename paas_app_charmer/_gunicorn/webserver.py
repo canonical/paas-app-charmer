@@ -18,7 +18,7 @@ from paas_app_charmer._gunicorn.workload_config import (
     APPLICATION_LOG_FILE_FMT,
     STATSD_HOST,
 )
-from paas_app_charmer.app import AppConfig
+from paas_app_charmer.app import WorkloadConfig
 from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 
@@ -86,18 +86,18 @@ class GunicornWebserver:  # pylint: disable=too-few-public-methods
     def __init__(
         self,
         webserver_config: WebserverConfig,
-        app_config: AppConfig,
+        workload_config: WorkloadConfig,
         container: ops.Container,
     ):
         """Initialize a new instance of the GunicornWebserver class.
 
         Args:
             webserver_config: the Gunicorn webserver configuration.
-            app_config: The state of the workload that the GunicornWebserver belongs to.
+            workload_config: The state of the workload that the GunicornWebserver belongs to.
             container: The WSGI application container in this charm unit.
         """
         self._webserver_config = webserver_config
-        self._app_config = app_config
+        self._workload_config = workload_config
         self._container = container
         self._reload_signal = signal.SIGHUP
 
@@ -121,10 +121,10 @@ class GunicornWebserver:  # pylint: disable=too-few-public-methods
             config_entries.append(f"{setting} = {setting_value}")
         new_line = "\n"
         config = f"""\
-bind = ['0.0.0.0:{self._app_config.port}']
-chdir = {repr(str(self._app_config.app_dir))}
-accesslog = {repr(str.format(APPLICATION_LOG_FILE_FMT, framework=self._app_config.framework))}
-errorlog = {repr(str.format(APPLICATION_ERROR_LOG_FILE_FMT, framework=self._app_config.framework))}
+bind = ['0.0.0.0:{self._workload_config.port}']
+chdir = {repr(str(self._workload_config.app_dir))}
+accesslog = {repr(str.format(APPLICATION_LOG_FILE_FMT, framework=self._workload_config.framework))}
+errorlog = {repr(str.format(APPLICATION_ERROR_LOG_FILE_FMT, framework=self._workload_config.framework))}
 statsd_host = {repr(STATSD_HOST)}
 {new_line.join(config_entries)}"""
         return config
@@ -136,7 +136,7 @@ statsd_host = {repr(STATSD_HOST)}
         Returns:
             The path to the web server configuration file.
         """
-        return self._app_config.base_dir / "gunicorn.conf.py"
+        return self._workload_config.base_dir / "gunicorn.conf.py"
 
     def update_config(
         self, environment: dict[str, str], is_webserver_running: bool, command: str
@@ -165,9 +165,9 @@ statsd_host = {repr(STATSD_HOST)}
         exec_process = self._container.exec(
             check_config_command,
             environment=environment,
-            user=self._app_config.user,
-            group=self._app_config.group,
-            working_dir=str(self._app_config.app_dir),
+            user=self._workload_config.user,
+            group=self._workload_config.group,
+            working_dir=str(self._workload_config.app_dir),
         )
         try:
             exec_process.wait_output()
@@ -183,17 +183,17 @@ statsd_host = {repr(STATSD_HOST)}
             ) from exc
         if is_webserver_running:
             logger.info("gunicorn config changed, reloading")
-            self._container.send_signal(self._reload_signal, self._app_config.service_name)
+            self._container.send_signal(self._reload_signal, self._workload_config.service_name)
 
     def _prepare_log_dir(self) -> None:
         """Prepare access and error log directory for the application."""
         container = self._container
-        for log in self._app_config.log_files:
+        for log in self._workload_config.log_files:
             log_dir = str(log.parent.absolute())
             if not container.exists(log_dir):
                 container.make_dir(
                     log_dir,
                     make_parents=True,
-                    user=self._app_config.user,
-                    group=self._app_config.group,
+                    user=self._workload_config.user,
+                    group=self._workload_config.group,
                 )

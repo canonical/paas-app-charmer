@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(kw_only=True)
-class AppConfig:  # pylint: disable=too-many-instance-attributes
+class WorkloadConfig:  # pylint: disable=too-many-instance-attributes
     """Base Configuration for App.
 
     This class contains attributes that are configuration for the app/workload.

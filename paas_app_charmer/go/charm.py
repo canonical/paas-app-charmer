@@ -10,7 +10,7 @@ import ops
 from pydantic import BaseModel, Extra, Field, ValidationError
 
 from paas_app_charmer._generic.generic_app import GenericApp
-from paas_app_charmer.app import App, AppConfig
+from paas_app_charmer.app import App, WorkloadConfig
 from paas_app_charmer.charm import PaasCharm
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.utils import build_validation_error_message
@@ -45,12 +45,12 @@ class Charm(PaasCharm):  # pylint: disable=too-many-instance-attributes
         super().__init__(framework=framework, framework_name="go")
 
     @property
-    def _app_config(self) -> AppConfig:
-        """Return an AppConfig instance."""
+    def _workload_config(self) -> WorkloadConfig:
+        """Return an WorkloadConfig instance."""
         framework_name = self._framework_name
         base_dir = pathlib.Path("/app")
         framework_config = typing.cast(GoConfig, self.get_framework_config())
-        return AppConfig(
+        return WorkloadConfig(
             framework=framework_name,
             container_name="app",
             port=framework_config.port,
@@ -98,6 +98,6 @@ class Charm(PaasCharm):  # pylint: disable=too-many-instance-attributes
         return GenericApp(
             container=self._container,
             charm_state=charm_state,
-            app_config=self._app_config,
+            workload_config=self._workload_config,
             database_migration=self._database_migration,
         )

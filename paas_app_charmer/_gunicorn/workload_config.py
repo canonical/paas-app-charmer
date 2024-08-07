@@ -5,24 +5,24 @@
 
 import pathlib
 
-from paas_app_charmer.app import AppConfig
+from paas_app_charmer.app import WorkloadConfig
 
 STATSD_HOST = "localhost:9125"
 APPLICATION_LOG_FILE_FMT = "/var/log/{framework}/access.log"
 APPLICATION_ERROR_LOG_FILE_FMT = "/var/log/{framework}/error.log"
 
 
-def create_app_config(framework_name: str) -> AppConfig:
-    """Create an AppConfig for Gunicorn.
+def create_workload_config(framework_name: str) -> WorkloadConfig:
+    """Create an WorkloadConfig for Gunicorn.
 
     Args:
         framework_name: framework name.
 
     Returns:
-       new AppConfig
+       new WorkloadConfig
     """
     base_dir = pathlib.Path(f"/{framework_name}")
-    return AppConfig(
+    return WorkloadConfig(
         framework=framework_name,
         container_name=f"{framework_name}-app",
         port=8000,

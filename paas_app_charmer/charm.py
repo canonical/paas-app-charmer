@@ -11,7 +11,7 @@ from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
 from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
 from pydantic import BaseModel
 
-from paas_app_charmer.app import App, AppConfig
+from paas_app_charmer.app import App, WorkloadConfig
 from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.charm_utils import block_if_invalid_config
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
@@ -58,8 +58,8 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
 
     @property
     @abc.abstractmethod
-    def _app_config(self) -> AppConfig:
-        """Return an AppConfig instance."""
+    def _workload_config(self) -> WorkloadConfig:
+        """Return an WorkloadConfig instance."""
 
     @abc.abstractmethod
     def _create_app(self) -> App:
@@ -101,26 +101,26 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             self._saml = None
 
         self._database_migration = DatabaseMigration(
-            container=self.unit.get_container(self._app_config.container_name),
-            state_dir=self._app_config.state_dir,
+            container=self.unit.get_container(self._workload_config.container_name),
+            state_dir=self._workload_config.state_dir,
         )
 
-        self._container = self.unit.get_container(self._app_config.container_name)
+        self._container = self.unit.get_container(self._workload_config.container_name)
 
         self._ingress = IngressPerAppRequirer(
             self,
-            port=self._app_config.port,
+            port=self._workload_config.port,
             strip_prefix=True,
         )
 
         # JAVI metrics port and path configuration should be passed.
         self._observability = Observability(
             self,
-            log_files=self._app_config.log_files,
-            container_name=self._app_config.container_name,
+            log_files=self._workload_config.log_files,
+            container_name=self._workload_config.container_name,
             cos_dir=self.get_cos_dir(),
-            metrics_target=self._app_config.metrics_target,
-            metrics_path=self._app_config.metrics_path,
+            metrics_target=self._workload_config.metrics_target,
+            metrics_path=self._workload_config.metrics_path,
         )
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -146,7 +146,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         self.framework.observe(self._ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self._ingress.on.revoked, self._on_ingress_revoked)
         self.framework.observe(
-            self.on[self._app_config.container_name].pebble_ready, self._on_pebble_ready
+            self.on[self._workload_config.container_name].pebble_ready, self._on_pebble_ready
         )
 
     @block_if_invalid_config
@@ -204,7 +204,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
 
         if not self._container.can_connect():
             logger.info(
-                "pebble client in the %s container is not ready", self._app_config.framework
+                "pebble client in the %s container is not ready", self._workload_config.framework
             )
             self.update_app_and_unit_status(ops.WaitingStatus("Waiting for pebble ready"))
             return False
@@ -263,7 +263,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         except CharmConfigInvalidError as exc:
             self.update_app_and_unit_status(ops.BlockedStatus(exc.msg))
             return
-        self.unit.open_port("tcp", self._app_config.port)
+        self.unit.open_port("tcp", self._workload_config.port)
         self.update_app_and_unit_status(ops.ActiveStatus())
 
     def _gen_environment(self) -> dict[str, str]:
@@ -315,7 +315,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         """
         if self._ingress.url:
             return self._ingress.url
-        return f"http://{self.app.name}.{self.model.name}:{self._app_config.port}"
+        return f"http://{self.app.name}.{self.model.name}:{self._workload_config.port}"
 
     @block_if_invalid_config
     def _on_update_status(self, _: ops.HookEvent) -> None:

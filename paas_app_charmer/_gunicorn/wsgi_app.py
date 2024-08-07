@@ -9,7 +9,7 @@ import logging
 import ops
 
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver
-from paas_app_charmer.app import App, AppConfig, map_integrations_to_env
+from paas_app_charmer.app import App, WorkloadConfig, map_integrations_to_env
 from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.database_migration import DatabaseMigration
 
@@ -23,7 +23,7 @@ class WsgiApp(App):
         self,
         container: ops.Container,
         charm_state: CharmState,
-        app_config: AppConfig,
+        workload_config: WorkloadConfig,
         webserver: GunicornWebserver,
         database_migration: DatabaseMigration,
     ):
@@ -32,12 +32,12 @@ class WsgiApp(App):
         Args:
             container: The WSGI application container.
             charm_state: The state of the charm.
-            app_config: The state of the workload that the WsgiApp belongs to.
+            workload_config: The state of the workload that the WsgiApp belongs to.
             webserver: The webserver manager object.
             database_migration: The database migration manager object.
         """
         self._charm_state = charm_state
-        self._app_config = app_config
+        self._workload_config = workload_config
         self._container = container
         self._webserver = webserver
         self._database_migration = database_migration
@@ -69,7 +69,7 @@ class WsgiApp(App):
         """
         config = self._charm_state.app_config
         config.update(self._charm_state.framework_config)
-        prefix = f"{self._app_config.framework.upper()}_"
+        prefix = f"{self._workload_config.framework.upper()}_"
         env = {f"{prefix}{k.upper()}": self._encode_env(v) for k, v in config.items()}
         if self._charm_state.base_url:
             env[f"{prefix}BASE_URL"] = self._charm_state.base_url
@@ -92,7 +92,7 @@ class WsgiApp(App):
         Returns:
             The pebble layer definition for the application.
         """
-        original_services_file = self._app_config.state_dir / "original-services.json"
+        original_services_file = self._workload_config.state_dir / "original-services.json"
         if self._container.exists(original_services_file):
             services = json.loads(self._container.pull(original_services_file).read())
         else:
@@ -100,8 +100,8 @@ class WsgiApp(App):
             services = {k: v.to_dict() for k, v in plan.services.items()}
             self._container.push(original_services_file, json.dumps(services), make_dirs=True)
 
-        services[self._app_config.service_name]["override"] = "replace"
-        services[self._app_config.service_name]["environment"] = self.gen_environment()
+        services[self._workload_config.service_name]["override"] = "replace"
+        services[self._workload_config.service_name]["environment"] = self.gen_environment()
 
         return ops.pebble.LayerDict(services=services)
 
@@ -118,16 +118,16 @@ class WsgiApp(App):
     def restart(self) -> None:
         """Restart or start the WSGI service if not started with the latest configuration."""
         self._container.add_layer("charm", self._wsgi_layer(), combine=True)
-        service_name = self._app_config.service_name
+        service_name = self._workload_config.service_name
         is_webserver_running = self._container.get_service(service_name).is_running()
-        command = self._wsgi_layer()["services"][self._app_config.framework]["command"]
+        command = self._wsgi_layer()["services"][self._workload_config.framework]["command"]
         self._webserver.update_config(
             environment=self.gen_environment(),
             is_webserver_running=is_webserver_running,
             command=command,
         )
         migration_command = None
-        app_dir = self._app_config.app_dir
+        app_dir = self._workload_config.app_dir
         if self._container.exists(app_dir / "migrate"):
             migration_command = [str((app_dir / "migrate").absolute())]
         if self._container.exists(app_dir / "migrate.sh"):
@@ -142,7 +142,7 @@ class WsgiApp(App):
                 command=migration_command,
                 environment=self.gen_environment(),
                 working_dir=app_dir,
-                user=self._app_config.user,
-                group=self._app_config.group,
+                user=self._workload_config.user,
+                group=self._workload_config.group,
             )
         self._container.replan()

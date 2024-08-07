@@ -8,7 +8,7 @@ import logging
 
 import ops
 
-from paas_app_charmer.app import App, AppConfig, map_integrations_to_env
+from paas_app_charmer.app import App, WorkloadConfig, map_integrations_to_env
 from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.database_migration import DatabaseMigration
 
@@ -22,7 +22,7 @@ class GenericApp(App):  # pylint: disable=too-few-public-methods
         self,
         container: ops.Container,
         charm_state: CharmState,
-        app_config: AppConfig,
+        workload_config: WorkloadConfig,
         database_migration: DatabaseMigration,
     ):
         """Construct the instance.
@@ -30,11 +30,11 @@ class GenericApp(App):  # pylint: disable=too-few-public-methods
         Args:
             container: The application container.
             charm_state: The state of the charm.
-            app_config: The state of the workload that the App belongs to.
+            workload_config: The state of the workload that the App belongs to.
             database_migration: The database migration manager object.
         """
         self._charm_state = charm_state
-        self._app_config = app_config
+        self._workload_config = workload_config
         self._container = container
         self._database_migration = database_migration
 
@@ -88,7 +88,7 @@ class GenericApp(App):  # pylint: disable=too-few-public-methods
         """
         # JAVI remove this line
         # pylint: disable=R0801
-        original_services_file = self._app_config.state_dir / "original-services.json"
+        original_services_file = self._workload_config.state_dir / "original-services.json"
         if self._container.exists(original_services_file):
             services = json.loads(self._container.pull(original_services_file).read())
         else:
@@ -96,8 +96,8 @@ class GenericApp(App):  # pylint: disable=too-few-public-methods
             services = {k: v.to_dict() for k, v in plan.services.items()}
             self._container.push(original_services_file, json.dumps(services), make_dirs=True)
 
-        services[self._app_config.service_name]["override"] = "replace"
-        services[self._app_config.service_name]["environment"] = self.gen_environment()
+        services[self._workload_config.service_name]["override"] = "replace"
+        services[self._workload_config.service_name]["environment"] = self.gen_environment()
 
         return ops.pebble.LayerDict(services=services)
 
@@ -109,7 +109,7 @@ class GenericApp(App):  # pylint: disable=too-few-public-methods
         #   the migration scripts that use python
         self._container.add_layer("charm", self._wsgi_layer(), combine=True)
         migration_command = None
-        app_dir = self._app_config.app_dir
+        app_dir = self._workload_config.app_dir
         if self._container.exists(app_dir / "migrate"):
             migration_command = [str((app_dir / "migrate").absolute())]
         if self._container.exists(app_dir / "migrate.sh"):
@@ -119,8 +119,8 @@ class GenericApp(App):  # pylint: disable=too-few-public-methods
                 command=migration_command,
                 environment=self.gen_environment(),
                 working_dir=app_dir,
-                user=self._app_config.user,
-                group=self._app_config.group,
+                user=self._workload_config.user,
+                group=self._workload_config.group,
             )
         self._container.replan()
 
