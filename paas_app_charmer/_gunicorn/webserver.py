@@ -125,7 +125,7 @@ bind = ['0.0.0.0:{self._workload_config.port}']
 chdir = '{str(self._workload_config.app_dir)}'
 accesslog = '{str.format(APPLICATION_LOG_FILE_FMT, framework=self._workload_config.framework)}'
 errorlog = '{str.format(APPLICATION_ERROR_LOG_FILE_FMT, framework=self._workload_config.framework)}'
-statsd_host = {repr(STATSD_HOST)}
+statsd_host = '{STATSD_HOST}'
 {new_line.join(config_entries)}"""
         return config
 
