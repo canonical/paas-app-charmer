@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
@@ -19,7 +17,6 @@ from pydantic import (  # pylint: disable=no-name-in-module
 )
 
 from paas_app_charmer._gunicorn.charm import GunicornBase
-from paas_app_charmer._gunicorn.charm_utils import block_if_invalid_config
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.utils import build_validation_error_message
 
@@ -74,10 +71,9 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
         Args:
             framework: operator framework.
         """
-        super().__init__(framework=framework, wsgi_framework="flask")
-        self.framework.observe(self.on.flask_app_pebble_ready, self._on_flask_app_pebble_ready)
+        super().__init__(framework=framework, framework_name="flask")
 
-    def get_wsgi_config(self) -> BaseModel:
+    def get_framework_config(self) -> BaseModel:
         """Return Flask framework related configurations.
 
         Returns:
@@ -106,8 +102,3 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
             Return the directory with COS related files.
         """
         return str((pathlib.Path(__file__).parent / "cos").absolute())
-
-    @block_if_invalid_config
-    def _on_flask_app_pebble_ready(self, _: ops.PebbleReadyEvent) -> None:
-        """Handle the pebble-ready event."""
-        self.restart()

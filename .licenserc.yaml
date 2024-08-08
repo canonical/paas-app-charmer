@@ -10,6 +10,7 @@ header:
   paths-ignore:
     - '.github/**'
     - '.woke.yaml'
+    - '**/*.sum'
     - '**/*.json'
     - '**/*.j2'
     - '**/*.md'
@@ -31,4 +32,5 @@ header:
     - '**/prometheus_alert_rules/**'
     - 'examples/django/charm/lib/charms/redis_k8s/v0/redis.py'
     - 'examples/flask/lib/charms/redis_k8s/v0/redis.py'
+    - 'examples/go/charm/lib/charms/redis_k8s/v0/redis.py'
   comment: on-failure

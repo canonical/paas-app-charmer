@@ -12,10 +12,11 @@ import unittest.mock
 
 import pytest
 
-from paas_app_charmer._gunicorn.charm_state import CharmState, IntegrationsState, S3Parameters
 from paas_app_charmer._gunicorn.webserver import WebserverConfig
-from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
-from paas_app_charmer._gunicorn.wsgi_app import WsgiApp, map_integrations_to_env
+from paas_app_charmer._gunicorn.workload_config import create_workload_config
+from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
+from paas_app_charmer.app import map_integrations_to_env
+from paas_app_charmer.charm_state import CharmState, IntegrationsState, S3Parameters
 
 
 @pytest.mark.parametrize(
@@ -37,12 +38,10 @@ def test_flask_env(flask_config: dict, app_config: dict, database_migration_mock
         framework="flask",
         secret_key="foobar",
         is_secret_storage_ready=True,
-        wsgi_config=flask_config,
+        framework_config=flask_config,
         app_config=app_config,
     )
-    workload_config = WorkloadConfig(
-        framework="flask",
-    )
+    workload_config = create_workload_config(framework_name="flask")
     flask_app = WsgiApp(
         container=unittest.mock.MagicMock(),
         charm_state=charm_state,
@@ -105,9 +104,7 @@ def test_http_proxy(
         secret_key="foobar",
         is_secret_storage_ready=True,
     )
-    workload_config = WorkloadConfig(
-        framework="flask",
-    )
+    workload_config = create_workload_config(framework_name="flask")
     flask_app = WsgiApp(
         container=unittest.mock.MagicMock(),
         charm_state=charm_state,
@@ -160,9 +157,7 @@ def test_integrations_env(
         is_secret_storage_ready=True,
         integrations=integrations,
     )
-    workload_config = WorkloadConfig(
-        framework="flask",
-    )
+    workload_config = create_workload_config(framework_name="flask")
     flask_app = WsgiApp(
         container=unittest.mock.MagicMock(),
         charm_state=charm_state,

@@ -13,7 +13,12 @@ import typing
 import ops
 from ops.pebble import ExecError, PathError
 
-from paas_app_charmer._gunicorn.workload_config import WorkloadConfig
+from paas_app_charmer._gunicorn.workload_config import (
+    APPLICATION_ERROR_LOG_FILE_FMT,
+    APPLICATION_LOG_FILE_FMT,
+    STATSD_HOST,
+)
+from paas_app_charmer.app import WorkloadConfig
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 
 logger = logging.getLogger(__name__)
@@ -51,19 +56,19 @@ class WebserverConfig:
         }.items()
 
     @classmethod
-    def from_charm(cls, charm: ops.CharmBase) -> "WebserverConfig":
-        """Create a WebserverConfig object from a charm object.
+    def from_charm_config(cls, config: dict[str, int | float | str | bool]) -> "WebserverConfig":
+        """Create a WebserverConfig object from a charm state object.
 
         Args:
-            charm: The charm object.
+            config: The charm config as a dict.
 
         Returns:
             A WebserverConfig object.
         """
-        keepalive = charm.config.get("webserver-keepalive")
-        timeout = charm.config.get("webserver-timeout")
-        workers = charm.config.get("webserver-workers")
-        threads = charm.config.get("webserver-threads")
+        keepalive = config.get("webserver-keepalive")
+        timeout = config.get("webserver-timeout")
+        workers = config.get("webserver-workers")
+        threads = config.get("webserver-threads")
         return cls(
             workers=int(typing.cast(str, workers)) if workers is not None else None,
             threads=int(typing.cast(str, threads)) if threads is not None else None,
@@ -117,9 +122,10 @@ class GunicornWebserver:  # pylint: disable=too-few-public-methods
         config = f"""\
 bind = ['0.0.0.0:{self._workload_config.port}']
 chdir = {repr(str(self._workload_config.app_dir))}
-accesslog = {repr(str(self._workload_config.application_log_file.absolute()))}
-errorlog = {repr(str(self._workload_config.application_error_log_file.absolute()))}
-statsd_host = {repr(self._workload_config.statsd_host)}
+accesslog = {repr(str.format(APPLICATION_LOG_FILE_FMT, framework=self._workload_config.framework))}
+errorlog = {repr(str.format(APPLICATION_ERROR_LOG_FILE_FMT,
+                            framework=self._workload_config.framework))}
+statsd_host = {repr(STATSD_HOST)}
 {new_line.join(config_entries)}"""
         return config
 
@@ -182,10 +188,7 @@ statsd_host = {repr(self._workload_config.statsd_host)}
     def _prepare_log_dir(self) -> None:
         """Prepare access and error log directory for the application."""
         container = self._container
-        for log in (
-            self._workload_config.application_log_file,
-            self._workload_config.application_error_log_file,
-        ):
+        for log in self._workload_config.log_files:
             log_dir = str(log.parent.absolute())
             if not container.exists(log_dir):
                 container.make_dir(

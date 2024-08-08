@@ -87,3 +87,13 @@ resources:
     description: django application image.
     type: oci-image
 type: charm
+
+parts:
+  charm:
+    charm-strict-dependencies: false
+    plugin: charm
+    build-snaps:
+    - rustup
+    override-build: |-
+      rustup default stable
+      craftctl default
