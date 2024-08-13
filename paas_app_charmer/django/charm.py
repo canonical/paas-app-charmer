@@ -67,32 +67,6 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
         super().__init__(framework=framework, framework_name="django")
         self.framework.observe(self.on.create_superuser_action, self._on_create_superuser_action)
 
-    # def get_framework_config(self) -> BaseModel:
-    #     """Return Django framework related configurations.
-
-    #     Returns:
-    #          Django framework related configurations.
-
-    #     Raises:
-    #         CharmConfigInvalidError: if charm config is not valid.
-    #     """
-    #     django_config: dict[str, typing.Any] = {
-    #         "debug": self.config.get("django-debug"),
-    #         "secret_key": self.config.get("django-secret-key"),
-    #     }
-    #     allowed_hosts = str(self.config.get("django-allowed-hosts", ""))
-    #     if allowed_hosts.strip():
-    #         django_config["allowed_hosts"] = [h.strip() for h in allowed_hosts.split(",")]
-    #     else:
-    #         django_config["allowed_hosts"] = []
-    #     try:
-    #         return DjangoConfig.model_validate(django_config)
-    #     except ValidationError as exc:
-    #         error_message = build_validation_error_message(
-    #             exc, prefix="django-", underscore_to_dash=True
-    #         )
-    #         raise CharmConfigInvalidError(f"invalid configuration: {error_message}") from exc
-
     def get_cos_dir(self) -> str:
         """Return the directory with COS related files.
 
