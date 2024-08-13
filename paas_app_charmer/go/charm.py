@@ -7,12 +7,10 @@ import pathlib
 import typing
 
 import ops
-from pydantic import BaseModel, Extra, Field, ValidationError
+from pydantic import BaseModel, Extra, Field
 
 from paas_app_charmer.app import App, WorkloadConfig
 from paas_app_charmer.charm import PaasCharm
-from paas_app_charmer.exceptions import CharmConfigInvalidError
-from paas_app_charmer.utils import build_validation_error_message
 
 
 class GoConfig(BaseModel, extra=Extra.allow):
@@ -26,14 +24,20 @@ class GoConfig(BaseModel, extra=Extra.allow):
             and can be used for any other security related needs by your Flask application.
     """
 
-    port: int = Field(default=8080, gt=0)
-    metrics_port: int | None = Field(default=None, gt=0)
-    metrics_path: str | None = Field(default=None, min_length=1)
-    secret_key: str | None = Field(default=None, min_length=1)
+    port: int = Field(alias="port", default=8080, gt=0)
+    metrics_port: int | None = Field(alias="metrics-port", default=None, gt=0)
+    metrics_path: str | None = Field(alias="metrics-path", default=None, min_length=1)
+    secret_key: str | None = Field(alias="secret-key", default=None, min_length=1)
 
 
 class Charm(PaasCharm):  # pylint: disable=too-many-instance-attributes
-    """Go Charm service."""
+    """Go Charm service.
+
+    Attrs:
+        framework_config_class: Base class for framework configuration.
+    """
+
+    framework_config_class = GoConfig
 
     def __init__(self, framework: ops.Framework) -> None:
         """Initialize the Go charm.
@@ -61,22 +65,6 @@ class Charm(PaasCharm):  # pylint: disable=too-many-instance-attributes
             metrics_target=f"*:{framework_config.metrics_port}",
             metrics_path=framework_config.metrics_path,
         )
-
-    def get_framework_config(self) -> BaseModel:
-        """Return Go framework related configurations.
-
-        Returns:
-             Go framework related configurations.
-
-        Raises:
-            CharmConfigInvalidError: if charm config is not valid.
-        """
-        config = {k.replace("-", "_"): v for k, v in self.config.items()}
-        try:
-            return GoConfig.model_validate(config)
-        except ValidationError as exc:
-            error_message = build_validation_error_message(exc, underscore_to_dash=True)
-            raise CharmConfigInvalidError(f"invalid configuration: {error_message}") from exc
 
     def get_cos_dir(self) -> str:
         """Return the directory with COS related files.

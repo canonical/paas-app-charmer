@@ -8,22 +8,14 @@ import pathlib
 import ops
 
 # pydantic is causing this no-name-in-module problem
-from pydantic import (  # pylint: disable=no-name-in-module
-    BaseModel,
-    Extra,
-    Field,
-    ValidationError,
-    field_validator,
-)
+from pydantic import BaseModel, Extra, Field, field_validator  # pylint: disable=no-name-in-module
 
 from paas_app_charmer._gunicorn.charm import GunicornBase
-from paas_app_charmer.exceptions import CharmConfigInvalidError
-from paas_app_charmer.utils import build_validation_error_message
 
 logger = logging.getLogger(__name__)
 
 
-class FlaskConfig(BaseModel, extra=Extra.allow):  # pylint: disable=too-few-public-methods
+class FlaskConfig(BaseModel, extra=Extra.ignore):  # pylint: disable=too-few-public-methods
     """Represent Flask builtin configuration values.
 
     Attrs:
@@ -40,13 +32,19 @@ class FlaskConfig(BaseModel, extra=Extra.allow):  # pylint: disable=too-few-publ
             context in the Flask application.
     """
 
-    env: str | None = Field(default=None, min_length=1)
-    debug: bool | None = Field(default=None)
-    secret_key: str | None = Field(default=None, min_length=1)
-    permanent_session_lifetime: int | None = Field(default=None, gt=0)
-    application_root: str | None = Field(default=None, min_length=1)
-    session_cookie_secure: bool | None = Field(default=None)
-    preferred_url_scheme: str | None = Field(default=None, pattern="(?i)^(HTTP|HTTPS)$")
+    env: str | None = Field(alias="flask-env", default=None, min_length=1)
+    debug: bool | None = Field(alias="flask-debug", default=None)
+    secret_key: str | None = Field(alias="flask-secret-key", default=None, min_length=1)
+    permanent_session_lifetime: int | None = Field(
+        alias="flask-permanent-session-lifetime", default=None, gt=0
+    )
+    application_root: str | None = Field(
+        alias="flask-application-root", default=None, min_length=1
+    )
+    session_cookie_secure: bool | None = Field(alias="flask-session-cookie-secure", default=None)
+    preferred_url_scheme: str | None = Field(
+        alias="flask-preferred-url-scheme", default=None, pattern="(?i)^(HTTP|HTTPS)$"
+    )
 
     @field_validator("preferred_url_scheme")
     @staticmethod
@@ -63,7 +61,13 @@ class FlaskConfig(BaseModel, extra=Extra.allow):  # pylint: disable=too-few-publ
 
 
 class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
-    """Flask Charm service."""
+    """Flask Charm service.
+
+    Attrs:
+        framework_config_class: Base class for framework configuration.
+    """
+
+    framework_config_class = FlaskConfig
 
     def __init__(self, framework: ops.Framework) -> None:
         """Initialize the Flask charm.
@@ -72,28 +76,6 @@ class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
             framework: operator framework.
         """
         super().__init__(framework=framework, framework_name="flask")
-
-    def get_framework_config(self) -> BaseModel:
-        """Return Flask framework related configurations.
-
-        Returns:
-             Flask framework related configurations.
-
-        Raises:
-            CharmConfigInvalidError: if charm config is not valid.
-        """
-        flask_config = {
-            k.removeprefix("flask-").replace("-", "_"): v
-            for k, v in self.config.items()
-            if k.startswith("flask-")
-        }
-        try:
-            return FlaskConfig.model_validate(flask_config)
-        except ValidationError as exc:
-            error_message = build_validation_error_message(
-                exc, prefix="flask-", underscore_to_dash=True
-            )
-            raise CharmConfigInvalidError(f"invalid configuration: {error_message}") from exc
 
     def get_cos_dir(self) -> str:
         """Return the directory with COS related files.

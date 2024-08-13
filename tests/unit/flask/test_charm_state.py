@@ -50,7 +50,9 @@ def test_charm_state_flask_config(charm_config: dict, flask_config: dict) -> Non
     """
     config = copy.copy(DEFAULT_CHARM_CONFIG)
     config.update(charm_config)
-    charm = unittest.mock.MagicMock(config=config)
+    charm = unittest.mock.MagicMock(
+        config=config, framework_config_class=Charm.framework_config_class
+    )
     charm_state = CharmState.from_charm(
         framework="flask",
         framework_config=Charm.get_framework_config(charm),
@@ -80,7 +82,9 @@ def test_charm_state_invalid_flask_config(charm_config: dict) -> None:
     """
     config = copy.copy(DEFAULT_CHARM_CONFIG)
     config.update(charm_config)
-    charm = unittest.mock.MagicMock(config=config)
+    charm = unittest.mock.MagicMock(
+        config=config, framework_config_class=Charm.framework_config_class
+    )
     with pytest.raises(CharmConfigInvalidError) as exc:
         CharmState.from_charm(
             framework_config=Charm.get_framework_config(charm),

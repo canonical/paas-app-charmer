@@ -10,7 +10,7 @@ from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
 from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
 from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
 from ops.model import Container
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from paas_app_charmer.app import App, WorkloadConfig
 from paas_app_charmer.charm_state import CharmState
@@ -20,6 +20,7 @@ from paas_app_charmer.databases import make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.observability import Observability
 from paas_app_charmer.secret_storage import KeySecretStorage
+from paas_app_charmer.utils import build_validation_error_message
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +48,10 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
 
     Attrs:
         on: charm events replaced by Redis ones for the Redis charm library.
+        framework_config_class: base class for the framework config.
     """
 
-    @abc.abstractmethod
-    def get_framework_config(self) -> BaseModel:
-        """Return the framework related configurations."""
+    framework_config_class: type[BaseModel]
 
     @abc.abstractmethod
     def get_cos_dir(self) -> str:
@@ -146,6 +146,24 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         self.framework.observe(
             self.on[self._workload_config.container_name].pebble_ready, self._on_pebble_ready
         )
+
+    def get_framework_config(self) -> BaseModel:
+        """Return the framework related configurations.
+
+        Raises:
+            CharmConfigInvalidError: if charm config is not valid.
+
+        Returns:
+             Framework related configurations.
+        """
+        # Will raise an AttributeError if it the attribute framework_config_class does not exist.
+        framework_config_class = self.framework_config_class
+        config = dict(self.config.items())
+        try:
+            return framework_config_class.model_validate(config)
+        except ValidationError as exc:
+            error_message = build_validation_error_message(exc, underscore_to_dash=False)
+            raise CharmConfigInvalidError(f"invalid configuration: {error_message}") from exc
 
     @property
     def _container(self) -> Container:
