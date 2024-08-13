@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
@@ -10,16 +8,14 @@ import secrets
 import typing
 
 import ops
-
-# pydantic is causing this no-name-in-module problem
-from pydantic import BaseModel, Extra, Field, validator  # pylint: disable=no-name-in-module
+from pydantic import BaseModel, Extra, Field, validator
 
 from paas_app_charmer._gunicorn.charm import GunicornBase
 
 logger = logging.getLogger(__name__)
 
 
-class DjangoConfig(BaseModel, extra=Extra.ignore):  # pylint: disable=too-few-public-methods
+class DjangoConfig(BaseModel, extra=Extra.ignore):
     """Represent Django builtin configuration values.
 
     Attrs:
@@ -49,7 +45,7 @@ class DjangoConfig(BaseModel, extra=Extra.ignore):  # pylint: disable=too-few-pu
         return [h.strip() for h in value.split(",")]
 
 
-class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
+class Charm(GunicornBase):
     """Django Charm service.
 
     Attrs:

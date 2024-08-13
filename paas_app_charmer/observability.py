@@ -11,7 +11,7 @@ from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 
 
-class Observability(ops.Object):  # pylint: disable=too-few-public-methods
+class Observability(ops.Object):
     """A class representing the observability stack for charm managed application."""
 
     def __init__(  # pylint: disable=too-many-arguments

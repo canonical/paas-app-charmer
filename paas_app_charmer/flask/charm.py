@@ -6,16 +6,14 @@ import logging
 import pathlib
 
 import ops
-
-# pydantic is causing this no-name-in-module problem
-from pydantic import BaseModel, Extra, Field, field_validator  # pylint: disable=no-name-in-module
+from pydantic import BaseModel, Extra, Field, field_validator
 
 from paas_app_charmer._gunicorn.charm import GunicornBase
 
 logger = logging.getLogger(__name__)
 
 
-class FlaskConfig(BaseModel, extra=Extra.ignore):  # pylint: disable=too-few-public-methods
+class FlaskConfig(BaseModel, extra=Extra.ignore):
     """Represent Flask builtin configuration values.
 
     Attrs:
@@ -60,7 +58,7 @@ class FlaskConfig(BaseModel, extra=Extra.ignore):  # pylint: disable=too-few-pub
         return value.upper()
 
 
-class Charm(GunicornBase):  # pylint: disable=too-many-instance-attributes
+class Charm(GunicornBase):
     """Flask Charm service.
 
     Attrs:

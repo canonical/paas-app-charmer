@@ -30,7 +30,7 @@ class GoConfig(BaseModel, extra=Extra.allow):
     secret_key: str | None = Field(alias="secret-key", default=None, min_length=1)
 
 
-class Charm(PaasCharm):  # pylint: disable=too-many-instance-attributes
+class Charm(PaasCharm):
     """Go Charm service.
 
     Attrs:
