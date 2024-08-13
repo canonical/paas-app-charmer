@@ -288,14 +288,9 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         Returns:
             New CharmState
         """
-        if self._saml:
-            saml_relation = self.model.get_relation(self._saml.relation_name)
-            if saml_relation and saml_relation.app in saml_relation.data:
-                saml_relation_data = saml_relation.data[saml_relation.app]
-            else:
-                saml_relation_data = None
-        else:
-            saml_relation_data = None
+        saml_relation_data = None
+        if self._saml and (saml_data := self._saml.get_relation_data()):
+            saml_relation_data = saml_data.to_relation_data()
 
         return CharmState.from_charm(
             charm=self,
