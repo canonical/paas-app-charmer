@@ -9,6 +9,7 @@ import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
 from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
 from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
+from ops.model import Container
 from pydantic import BaseModel
 
 from paas_app_charmer.app import App, WorkloadConfig
@@ -105,8 +106,6 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             state_dir=self._workload_config.state_dir,
         )
 
-        self._container = self.unit.get_container(self._workload_config.container_name)
-
         self._ingress = IngressPerAppRequirer(
             self,
             port=self._workload_config.port,
@@ -147,6 +146,11 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         self.framework.observe(
             self.on[self._workload_config.container_name].pebble_ready, self._on_pebble_ready
         )
+
+    @property
+    def _container(self) -> Container:
+        """Return the workload container."""
+        return self.unit.get_container(self._workload_config.container_name)
 
     @block_if_invalid_config
     def _on_config_changed(self, _event: ops.EventBase) -> None:
