@@ -58,7 +58,6 @@ async def go_app_fixture(charm_file: str, model: Model, go_app_image: str):
             charm_file,
             application_name=app_name,
             resources=resources,
-            series="noble",
         ),
         model.deploy("postgresql-k8s", channel="14/stable", trust=True),
     )
