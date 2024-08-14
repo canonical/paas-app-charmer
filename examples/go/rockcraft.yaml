@@ -57,4 +57,4 @@ parts:
     plugin: nil
     stage-packages:
       # Added manually for the migrations
-      - postgresql-client-14
+      - postgresql-client
