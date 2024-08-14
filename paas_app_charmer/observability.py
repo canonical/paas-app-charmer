@@ -11,15 +11,17 @@ from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 
 
-class Observability(ops.Object):  # pylint: disable=too-few-public-methods
+class Observability(ops.Object):
     """A class representing the observability stack for charm managed application."""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         charm: ops.CharmBase,
         container_name: str,
         cos_dir: str,
-        log_files: list[str | pathlib.Path],
+        log_files: list[pathlib.Path],
+        metrics_target: str | None,
+        metrics_path: str | None,
     ):
         """Initialize a new instance of the Observability class.
 
@@ -29,13 +31,20 @@ class Observability(ops.Object):  # pylint: disable=too-few-public-methods
             cos_dir: The directories containing the grafana_dashboards, loki_alert_rules and
                 prometheus_alert_rules.
             log_files: List of files to monitor.
+            metrics_target: Target to scrape for metrics.
+            metrics_path: Path to scrape for metrics.
         """
         super().__init__(charm, "observability")
         self._charm = charm
+        jobs = None
+        if metrics_path and metrics_target:
+            jobs = [
+                {"metrics_path": metrics_path, "static_configs": [{"targets": [metrics_target]}]}
+            ]
         self._metrics_endpoint = MetricsEndpointProvider(
             charm,
             alert_rules_path=os.path.join(cos_dir, "prometheus_alert_rules"),
-            jobs=[{"static_configs": [{"targets": ["*:9102"]}]}],
+            jobs=jobs,
             relation_name="metrics-endpoint",
         )
         self._logging = LogProxyConsumer(

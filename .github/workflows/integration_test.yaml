@@ -10,10 +10,9 @@ jobs:
     with:
       extra-arguments: -x --localstack-address 172.17.0.1
       pre-run-script: localstack-installation.sh
-      charmcraft-repository: weiiwang01/charmcraft
-      charmcraft-ref: update-12f
-      modules: '["test_charm", "test_proxy", "test_cos", "test_database", "test_integrations", "test_db_migration", "test_django"]'
-      rockcraft-repository: canonical/rockcraft
-      rockcraft-ref: feature/12f
-      juju-channel: 3.1/stable
+      charmcraft-channel: latest/edge
+      modules: '["test_charm.py", "test_cos.py", "test_database.py", "test_db_migration.py", "test_django.py", "test_django_integrations.py", "test_integrations.py", "test_proxy.py"]'
+      rockcraft-repository: javierdelapuente/rockcraft
+      rockcraft-ref: go-extension
+      juju-channel: 3.5/stable
       channel: 1.29-strict/stable
