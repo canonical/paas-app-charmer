@@ -20,23 +20,23 @@ logger = logging.getLogger(__name__)
 
 @dataclass(kw_only=True)
 class WorkloadConfig:  # pylint: disable=too-many-instance-attributes
-    """Base Configuration for App.
+    """Main Configuration for the workload of an App.
 
     This class contains attributes that are configuration for the app/workload.
 
     Attrs:
         framework: the framework name.
-        container_name: The container name.
+        container_name: the container name.
         port: the port number to use for the server.
-        user: The UNIX user name for running the service.
-        group: The UNIX group name for running the service.
-        base_dir: The project base directory in the application container.
-        app_dir: The application directory in the application container.
+        user: the UNIX user name for running the service.
+        group: the UNIX group name for running the service.
+        base_dir: the project base directory in the application container.
+        app_dir: the application directory in the application container.
         state_dir: the directory in the application container to store states information.
-        service_name: The WSGI application pebble service name.
-        log_files: List of files to monitor.
-        metrics_target: Target to scrape for metrics.
-        metrics_path: Path to scrape for metrics.
+        service_name: the WSGI application pebble service name.
+        log_files: list of files to monitor.
+        metrics_target: target to scrape for metrics.
+        metrics_path: path to scrape for metrics.
     """
 
     framework: str
@@ -57,8 +57,8 @@ class App:
     """Base class for the application manager.
 
     Attrs:
-        configuration_prefix: Prefix for environment variables related to configuration.
-        integrations_prefix: Prefix for environment variables related to integrations.
+        configuration_prefix: prefix for environment variables related to configuration.
+        integrations_prefix: prefix for environment variables related to integrations.
     """
 
     configuration_prefix = "APP_"
@@ -74,10 +74,10 @@ class App:
         """Construct the App instance.
 
         Args:
-            container: The application container.
-            charm_state: The state of the charm.
-            workload_config: The state of the workload that the App belongs to.
-            database_migration: The database migration manager object.
+            container: phe application container.
+            charm_state: the state of the charm.
+            workload_config: the state of the workload that the App belongs to.
+            database_migration: the database migration manager object.
         """
         self._container = container
         self._charm_state = charm_state
@@ -189,7 +189,7 @@ def encode_env(value: str | int | float | bool | list | dict) -> str:
     """Encode the environment variable values.
 
     Args:
-        value: The input environment variable value.
+        value: the input environment variable value.
 
     Return:
         The original string if the input is a string, or JSON encoded value.
@@ -201,8 +201,8 @@ def map_integrations_to_env(integrations: IntegrationsState, prefix: str = "") -
     """Generate environment variables for the IntegrationState.
 
     Args:
-       integrations: The IntegrationsState information.
-       prefix: Prefix to append to the env variables.
+       integrations: the IntegrationsState information.
+       prefix: prefix to append to the env variables.
 
     Returns:
        A dictionary representing the environment variables for the IntegrationState.

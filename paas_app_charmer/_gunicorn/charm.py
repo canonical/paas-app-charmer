@@ -18,11 +18,11 @@ class GunicornBase(PaasCharm):
 
     @property
     def _workload_config(self) -> WorkloadConfig:
-        """Return an WorkloadConfig instance."""
+        """Return a WorkloadConfig instance."""
         return create_workload_config(self._framework_name)
 
     def _create_app(self) -> App:
-        """Build a App instance.
+        """Build an App instance for the Gunicorn based charm.
 
         Returns:
             A new App instance.
