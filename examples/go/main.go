@@ -70,7 +70,7 @@ func (h mainHandler) servePostgresql(w http.ResponseWriter, r *http.Request) {
 func main() {
 	metricsPort, found := os.LookupEnv("APP_METRICS_PORT")
 	if !found {
-		metricsPort = "8000"
+		metricsPort = "8080"
 	}
 	metricsPath, found := os.LookupEnv("APP_METRICS_PATH")
 	if !found {
@@ -78,17 +78,15 @@ func main() {
 	}
 	port, found := os.LookupEnv("APP_PORT")
 	if !found {
-		port = "8000"
+		port = "8080"
 	}
-
-	// If wrong or missing, the sql check will fail.
-	postgresqlUrl := os.Getenv("APP_POSTGRESQL_DB_CONNECT_STRING")
 
 	requestCounter := prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "request_count",
 			Help: "No of request handled",
 		})
+	postgresqlUrl := os.Getenv("APP_POSTGRESQL_DB_CONNECT_STRING")
 
 	mux := http.NewServeMux()
 	mainHandler := mainHandler{

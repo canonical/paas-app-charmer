@@ -5,14 +5,11 @@
 
 """Go Charm service."""
 
-import logging
 import typing
 
 import ops
 
 import paas_app_charmer.go
-
-logger = logging.getLogger(__name__)
 
 
 class GoCharm(paas_app_charmer.go.Charm):
