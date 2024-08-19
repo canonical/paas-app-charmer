@@ -47,7 +47,9 @@ def fixture_test_db_flask_image(pytestconfig: Config):
 @pytest_asyncio.fixture(scope="module", name="charm_file")
 async def charm_file_fixture(pytestconfig: pytest.Config, ops_test: OpsTest) -> pathlib.Path:
     """Get the existing charm file."""
-    charm_file = next(f for f in pytestconfig.getoption("--charm-file") if "flask-k8s" in f)
+    charm_file = next(
+        (f for f in pytestconfig.getoption("--charm-file") if "flask-k8s" in f), None
+    )
     if not charm_file:
         charm_file = await ops_test.build_charm(PROJECT_ROOT / "examples/flask")
     elif charm_file[0] != "/":
