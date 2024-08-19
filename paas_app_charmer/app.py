@@ -54,22 +54,17 @@ class WorkloadConfig:  # pylint: disable=too-many-instance-attributes
 
 
 class App:
-    """Base class for the application manager.
+    """Base class for the application manager."""
 
-    Attrs:
-        configuration_prefix: prefix for environment variables related to configuration.
-        integrations_prefix: prefix for environment variables related to integrations.
-    """
-
-    configuration_prefix = "APP_"
-    integrations_prefix = "APP_"
-
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         container: ops.Container,
         charm_state: CharmState,
         workload_config: WorkloadConfig,
         database_migration: DatabaseMigration,
+        framework_config_prefix: str = "APP_",
+        configuration_prefix: str = "APP_",
+        integrations_prefix: str = "APP_",
     ):
         """Construct the App instance.
 
@@ -78,11 +73,17 @@ class App:
             charm_state: the state of the charm.
             workload_config: the state of the workload that the App belongs to.
             database_migration: the database migration manager object.
+            framework_config_prefix: prefix for environment variables related to framework config.
+            configuration_prefix: prefix for environment variables related to configuration.
+            integrations_prefix: prefix for environment variables related to integrations.
         """
         self._container = container
         self._charm_state = charm_state
         self._workload_config = workload_config
         self._database_migration = database_migration
+        self.framework_config_prefix = framework_config_prefix
+        self.configuration_prefix = configuration_prefix
+        self.integrations_prefix = integrations_prefix
 
     def stop_all_services(self) -> None:
         """Stop all the services in the workload.
@@ -118,9 +119,18 @@ class App:
             A dictionary representing the application environment variables.
         """
         config = self._charm_state.app_config
-        config.update(self._charm_state.framework_config)
         prefix = self.configuration_prefix
         env = {f"{prefix}{k.upper()}": encode_env(v) for k, v in config.items()}
+
+        framework_config = self._charm_state.framework_config
+        framework_config_prefix = self.framework_config_prefix
+        env.update(
+            {
+                f"{framework_config_prefix}{k.upper()}": encode_env(v)
+                for k, v in framework_config.items()
+            }
+        )
+
         if self._charm_state.base_url:
             env[f"{prefix}BASE_URL"] = self._charm_state.base_url
         secret_key_env = f"{prefix}SECRET_KEY"

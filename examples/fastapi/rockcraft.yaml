@@ -1,0 +1,14 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: fastapi-app
+summary: Example FastAPI application image.
+description: Example FastAPI application image.
+version: "0.1"
+base: ubuntu@24.04
+
+platforms:
+  amd64:
+
+extensions:
+  - fastapi-framework

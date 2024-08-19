@@ -40,10 +40,11 @@ class WsgiApp(App):
             charm_state=charm_state,
             workload_config=workload_config,
             database_migration=database_migration,
+            configuration_prefix=f"{workload_config.framework.upper()}_",
+            framework_config_prefix=f"{workload_config.framework.upper()}_",
+            integrations_prefix="",
         )
         self._webserver = webserver
-        self.configuration_prefix = f"{self._workload_config.framework.upper()}_"
-        self.integrations_prefix = ""
 
     def _prepare_service_for_restart(self) -> None:
         """Specific framework operations before restarting the service."""
