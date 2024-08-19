@@ -13,15 +13,15 @@ import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from pydantic import BaseModel, Extra, Field, ValidationError, ValidationInfo, field_validator
 
-from paas_app_charmer._gunicorn.secret_storage import GunicornSecretStorage
 from paas_app_charmer.databases import get_uri
 from paas_app_charmer.exceptions import CharmConfigInvalidError
+from paas_app_charmer.secret_storage import KeySecretStorage
 from paas_app_charmer.utils import build_validation_error_message
 
 logger = logging.getLogger(__name__)
 
 
-class ProxyConfig(BaseModel):  # pylint: disable=too-few-public-methods
+class ProxyConfig(BaseModel):
     """Configuration for network access through proxy.
 
     Attributes:
@@ -37,12 +37,12 @@ class ProxyConfig(BaseModel):  # pylint: disable=too-few-public-methods
 
 # too-many-instance-attributes is okay since we use a factory function to construct the CharmState
 class CharmState:  # pylint: disable=too-many-instance-attributes
-    """Represents the state of the Gunicorn based charm.
+    """Represents the state of the charm.
 
     Attrs:
-        wsgi_config: the value of the WSGI specific charm configuration.
-        app_config: user-defined configurations for the WSGI application.
-        secret_key: the charm managed WSGI application secret key.
+        framework_config: the value of the framework specific charm configuration.
+        app_config: user-defined configurations for the application.
+        secret_key: the charm managed application secret key.
         is_secret_storage_ready: whether the secret storage system is ready.
         proxy: proxy information.
     """
@@ -53,7 +53,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         framework: str,
         is_secret_storage_ready: bool,
         app_config: dict[str, int | str | bool] | None = None,
-        wsgi_config: dict[str, int | str] | None = None,
+        framework_config: dict[str, int | str] | None = None,
         secret_key: str | None = None,
         integrations: "IntegrationsState | None" = None,
         base_url: str | None = None,
@@ -63,14 +63,14 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         Args:
             framework: the framework name.
             is_secret_storage_ready: whether the secret storage system is ready.
-            app_config: User-defined configuration values for the WSGI application configuration.
-            wsgi_config: The value of the WSGI application specific charm configuration.
+            app_config: User-defined configuration values for the application configuration.
+            framework_config: The value of the framework application specific charm configuration.
             secret_key: The secret storage manager associated with the charm.
             integrations: Information about the integrations.
             base_url: Base URL for the service.
         """
         self.framework = framework
-        self._wsgi_config = wsgi_config if wsgi_config is not None else {}
+        self._framework_config = framework_config if framework_config is not None else {}
         self._app_config = app_config if app_config is not None else {}
         self._is_secret_storage_ready = is_secret_storage_ready
         self._secret_key = secret_key
@@ -82,8 +82,8 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         cls,
         charm: ops.CharmBase,
         framework: str,
-        wsgi_config: BaseModel,
-        secret_storage: GunicornSecretStorage,
+        framework_config: BaseModel,
+        secret_storage: KeySecretStorage,
         database_requirers: dict[str, DatabaseRequires],
         redis_uri: str | None = None,
         s3_connection_info: dict[str, str] | None = None,
@@ -94,8 +94,8 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
 
         Args:
             charm: The charm instance associated with this state.
-            framework: The WSGI framework name.
-            wsgi_config: The WSGI framework specific configurations.
+            framework: The framework name.
+            framework_config: The framework specific configurations.
             secret_storage: The secret storage manager associated with the charm.
             database_requirers: All database requirers object declared by the charm.
             redis_uri: The redis uri provided by the redis charm.
@@ -111,7 +111,9 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             for k, v in charm.config.items()
             if not any(k.startswith(prefix) for prefix in (f"{framework}-", "webserver-"))
         }
-        app_config = {k: v for k, v in app_config.items() if k not in wsgi_config.dict().keys()}
+        app_config = {
+            k: v for k, v in app_config.items() if k not in framework_config.dict().keys()
+        }
 
         integrations = IntegrationsState.build(
             redis_uri=redis_uri,
@@ -121,7 +123,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         )
         return cls(
             framework=framework,
-            wsgi_config=wsgi_config.dict(exclude_unset=True, exclude_none=True),
+            framework_config=framework_config.dict(exclude_none=True),
             app_config=typing.cast(dict[str, str | int | bool], app_config),
             secret_key=(
                 secret_storage.get_secret_key() if secret_storage.is_initialized else None
@@ -148,13 +150,13 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         )
 
     @property
-    def wsgi_config(self) -> dict[str, str | int | bool]:
-        """Get the value of the WSGI application specific configuration.
+    def framework_config(self) -> dict[str, str | int | bool]:
+        """Get the value of the framework application specific configuration.
 
         Returns:
-            The value of the WSGI application specific configuration.
+            The value of the framework application specific configuration.
         """
-        return self._wsgi_config
+        return self._framework_config
 
     @property
     def app_config(self) -> dict[str, str | int | bool]:
@@ -167,15 +169,15 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
 
     @property
     def secret_key(self) -> str:
-        """Return the WSGI application secret key stored in the SecretStorage.
+        """Return the application secret key stored in the SecretStorage.
 
         It's an error to read the secret key before SecretStorage is initialized.
 
         Returns:
-            The WSGI application secret key stored in the SecretStorage.
+            The application secret key stored in the SecretStorage.
 
         Raises:
-            RuntimeError: raised when accessing WSGI application secret key before
+            RuntimeError: raised when accessing application secret key before
                           secret storage is ready.
         """
         if self._secret_key is None:

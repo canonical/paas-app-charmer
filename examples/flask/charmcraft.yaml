@@ -119,3 +119,13 @@ resources:
   flask-app-image:
     description: flask application image.
     type: oci-image
+
+parts:
+  charm:
+    charm-strict-dependencies: false
+    plugin: charm
+    build-snaps:
+    - rustup
+    override-build: |-
+      rustup default stable
+      craftctl default

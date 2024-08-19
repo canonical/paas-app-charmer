@@ -8,7 +8,7 @@ from secrets import token_hex
 
 import pytest
 
-from paas_app_charmer._gunicorn.charm_state import CharmState, S3Parameters
+from paas_app_charmer.charm_state import CharmState, S3Parameters
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.flask.charm import Charm, FlaskConfig
 
@@ -50,15 +50,17 @@ def test_charm_state_flask_config(charm_config: dict, flask_config: dict) -> Non
     """
     config = copy.copy(DEFAULT_CHARM_CONFIG)
     config.update(charm_config)
-    charm = unittest.mock.MagicMock(config=config)
+    charm = unittest.mock.MagicMock(
+        config=config, framework_config_class=Charm.framework_config_class
+    )
     charm_state = CharmState.from_charm(
         framework="flask",
-        wsgi_config=Charm.get_wsgi_config(charm),
+        framework_config=Charm.get_framework_config(charm),
         secret_storage=SECRET_STORAGE_MOCK,
         charm=charm,
         database_requirers={},
     )
-    assert charm_state.wsgi_config == flask_config
+    assert charm_state.framework_config == flask_config
 
 
 @pytest.mark.parametrize(
@@ -80,10 +82,12 @@ def test_charm_state_invalid_flask_config(charm_config: dict) -> None:
     """
     config = copy.copy(DEFAULT_CHARM_CONFIG)
     config.update(charm_config)
-    charm = unittest.mock.MagicMock(config=config)
+    charm = unittest.mock.MagicMock(
+        config=config, framework_config_class=Charm.framework_config_class
+    )
     with pytest.raises(CharmConfigInvalidError) as exc:
         CharmState.from_charm(
-            wsgi_config=Charm.get_wsgi_config(charm),
+            framework_config=Charm.get_framework_config(charm),
             secret_storage=SECRET_STORAGE_MOCK,
             charm=charm,
             database_requirers={},
@@ -120,7 +124,7 @@ def test_s3_integration(s3_connection_info, expected_s3_parameters):
     charm = unittest.mock.MagicMock(config=config)
     charm_state = CharmState.from_charm(
         charm=charm,
-        wsgi_config=Charm.get_wsgi_config(charm),
+        framework_config=Charm.get_framework_config(charm),
         framework="flask",
         secret_storage=SECRET_STORAGE_MOCK,
         database_requirers={},
@@ -142,7 +146,7 @@ def test_s3_integration_raises():
     with pytest.raises(CharmConfigInvalidError) as exc:
         charm_state = CharmState.from_charm(
             charm=charm,
-            wsgi_config=Charm.get_wsgi_config(charm),
+            framework_config=Charm.get_framework_config(charm),
             framework="flask",
             secret_storage=SECRET_STORAGE_MOCK,
             database_requirers={},
@@ -184,7 +188,7 @@ def test_saml_integration():
     charm = unittest.mock.MagicMock(config=config)
     charm_state = CharmState.from_charm(
         charm=charm,
-        wsgi_config=Charm.get_wsgi_config(charm),
+        framework_config=Charm.get_framework_config(charm),
         framework="flask",
         secret_storage=SECRET_STORAGE_MOCK,
         database_requirers={},
@@ -256,7 +260,7 @@ def test_saml_integration_invalid(saml_app_relation_data, error_messages):
     with pytest.raises(CharmConfigInvalidError) as exc:
         charm_state = CharmState.from_charm(
             charm=charm,
-            wsgi_config=Charm.get_wsgi_config(charm),
+            framework_config=Charm.get_framework_config(charm),
             framework="flask",
             secret_storage=SECRET_STORAGE_MOCK,
             database_requirers={},

@@ -47,7 +47,7 @@ def fixture_test_db_flask_image(pytestconfig: Config):
 @pytest_asyncio.fixture(scope="module", name="charm_file")
 async def charm_file_fixture(pytestconfig: pytest.Config, ops_test: OpsTest) -> pathlib.Path:
     """Get the existing charm file."""
-    charm_file = pytestconfig.getoption("--charm-file")
+    charm_file = next(f for f in pytestconfig.getoption("--charm-file") if "flask-k8s" in f)
     if not charm_file:
         charm_file = await ops_test.build_charm(PROJECT_ROOT / "examples/flask")
     elif charm_file[0] != "/":
@@ -125,25 +125,6 @@ async def deploy_traefik_fixture(
             "external_hostname": external_hostname,
             "routing_mode": "subdomain",
         },
-    )
-    await model.wait_for_idle(raise_on_blocked=True)
-
-    return app
-
-
-@pytest_asyncio.fixture(scope="module", name="prometheus_app")
-async def deploy_prometheus_fixture(
-    model: Model,
-    prometheus_app_name: str,
-):
-    """Deploy prometheus."""
-    app = await model.deploy(
-        "prometheus-k8s",
-        application_name=prometheus_app_name,
-        channel="1.0/stable",
-        revision=129,
-        series="focal",
-        trust=True,
     )
     await model.wait_for_idle(raise_on_blocked=True)
 

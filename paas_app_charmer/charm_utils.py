@@ -8,17 +8,17 @@ from functools import wraps
 
 import ops
 
-from paas_app_charmer._gunicorn.charm_state import CharmState
+from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 
 logger = logging.getLogger(__name__)
 
 
-class GunicornBaseProtocol(typing.Protocol):  # pylint: disable=too-few-public-methods
+class PaasCharmBaseProtocol(typing.Protocol):  # pylint: disable=too-few-public-methods
     """Protocol to use for the decorator to block if invalid."""
 
-    def _build_charm_state(self) -> CharmState:
-        """Build charm state."""
+    def _create_charm_state(self) -> CharmState:
+        """Create charm state."""
 
     def update_app_and_unit_status(self, status: ops.StatusBase) -> None:
         """Update the application and unit status.
@@ -28,7 +28,7 @@ class GunicornBaseProtocol(typing.Protocol):  # pylint: disable=too-few-public-m
         """
 
 
-C = typing.TypeVar("C", bound=GunicornBaseProtocol)
+C = typing.TypeVar("C", bound=PaasCharmBaseProtocol)
 E = typing.TypeVar("E", bound=ops.EventBase)
 
 
@@ -56,7 +56,7 @@ def block_if_invalid_config(
             The value returned from the original function. That is, None.
         """
         try:
-            instance._build_charm_state()  # pylint: disable=protected-access
+            instance._create_charm_state()  # pylint: disable=protected-access
             return method(instance, event)
         except CharmConfigInvalidError as exc:
             logger.exception("Wrong Charm Configuration")
