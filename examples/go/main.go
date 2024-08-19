@@ -12,7 +12,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -35,25 +34,17 @@ func (h mainHandler) serveHelloWorld(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello, World!")
 }
 
-func (h mainHandler) serveEnvs(w http.ResponseWriter, r *http.Request) {
+func (h mainHandler) serveUserDefinedConfig(w http.ResponseWriter, r *http.Request) {
 	h.counter.Inc()
 
-	type EnvVar struct {
-		Name, Value string
-	}
-
-	envVars := []EnvVar{}
-
-	for _, e := range os.Environ() {
-		pair := strings.SplitN(e, "=", 2)
-		log.Printf("pair 1: %s pair2 %s\n", pair[0], pair[1])
-		envVars = append(envVars, EnvVar{
-			Name:  pair[0],
-			Value: pair[1]})
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(envVars)
+
+	user_defined_config, found := os.LookupEnv("APP_USER_DEFINED_CONFIG")
+	if !found {
+		json.NewEncoder(w).Encode(nil)
+		return
+	}
+	json.NewEncoder(w).Encode(user_defined_config)
 }
 
 func (h mainHandler) servePostgresql(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +85,7 @@ func main() {
 		service: service.Service{PostgresqlURL: postgresqlURL},
 	}
 	mux.HandleFunc("/", mainHandler.serveHelloWorld)
-	mux.HandleFunc("/env", mainHandler.serveEnvs)
+	mux.HandleFunc("/env/user-defined-config", mainHandler.serveUserDefinedConfig)
 	mux.HandleFunc("/postgresql/migratestatus", mainHandler.servePostgresql)
 
 	if metricsPort != port {

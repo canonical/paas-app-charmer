@@ -30,6 +30,27 @@ async def test_go_is_up(
         assert "Hello, World!" in response.text
 
 
+async def test_user_defined_config(
+    model: Model,
+    go_app: Application,
+    get_unit_ips: typing.Callable[[str], typing.Awaitable[tuple[str, ...]]],
+):
+    """
+    arrange: build and deploy the go charm. Set the config user-defined-config to a new value.
+    act: call the endpoint to get the value of the env variable related to the config.
+    assert: the value of the env variable and the config should match.
+    """
+    await go_app.set_config({"user-defined-config": "newvalue"})
+    await model.wait_for_idle(apps=[go_app.name], status="active")
+
+    for unit_ip in await get_unit_ips(go_app.name):
+        response = requests.get(
+            f"http://{unit_ip}:{WORKLOAD_PORT}/env/user-defined-config", timeout=5
+        )
+        assert response.status_code == 200
+        assert "newvalue" in response.text
+
+
 async def test_migration(
     go_app: Application,
     get_unit_ips: typing.Callable[[str], typing.Awaitable[tuple[str, ...]]],
@@ -76,3 +97,4 @@ async def test_prometheus_integration(
         else:
             logger.error("Application not scraped. Scraped targets: %s", active_targets)
             assert False, "Scrape Target not configured correctly"
+
