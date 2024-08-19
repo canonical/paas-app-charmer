@@ -97,4 +97,3 @@ async def test_prometheus_integration(
         else:
             logger.error("Application not scraped. Scraped targets: %s", active_targets)
             assert False, "Scrape Target not configured correctly"
-
