@@ -86,12 +86,12 @@ func main() {
 			Name: "request_count",
 			Help: "No of request handled",
 		})
-	postgresqlUrl := os.Getenv("APP_POSTGRESQL_DB_CONNECT_STRING")
+	postgresqlURL := os.Getenv("APP_POSTGRESQL_DB_CONNECT_STRING")
 
 	mux := http.NewServeMux()
 	mainHandler := mainHandler{
 		counter: requestCounter,
-		service: service.Service{PostgresqlUrl: postgresqlUrl},
+		service: service.Service{PostgresqlURL: postgresqlURL},
 	}
 	mux.HandleFunc("/", mainHandler.serveHelloWorld)
 	mux.HandleFunc("/env", mainHandler.serveEnvs)

@@ -9,11 +9,11 @@ import (
 )
 
 type Service struct {
-	PostgresqlUrl string
+	PostgresqlURL string
 }
 
 func (s *Service) CheckPostgresqlMigrateStatus() (err error) {
-	db, err := sql.Open("pgx", s.PostgresqlUrl)
+	db, err := sql.Open("pgx", s.PostgresqlURL)
 	if err != nil {
 		return
 	}
