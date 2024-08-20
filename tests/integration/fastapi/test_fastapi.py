@@ -61,8 +61,6 @@ async def test_migration(
     assert: the fastapi application should return a correct response.
     """
     for unit_ip in await get_unit_ips(fastapi_app.name):
-        response = requests.get(
-            f"http://{unit_ip}:{WORKLOAD_PORT}/table/users", timeout=5
-        )
+        response = requests.get(f"http://{unit_ip}:{WORKLOAD_PORT}/table/users", timeout=5)
         assert response.status_code == 200
         assert "SUCCESS" in response.text
