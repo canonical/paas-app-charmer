@@ -18,21 +18,23 @@ class FastAPIConfig(BaseModel, extra=Extra.allow):
 
     Attrs:
         uvicorn_port: port where the application is listening
+        uvicorn_host: The uvicorn host name or ip address where uvicorn is listening
         web_concurrency: number of workers for uvicorn
         uvicorn_log_level: uvicorn log level
         metrics_port: port where the metrics are collected
         metrics_path: path where the metrics are collected
-        secret_key: a secret key that will be used for securely signing the session cookie
+        app_secret_key: a secret key that will be used for securely signing the session cookie
             and can be used for any other security related needs by your Flask application.
     """
 
     uvicorn_port: int = Field(alias="webserver-port", default=8080, gt=0)
+    uvicorn_host: str = Field(alias="webserver-host", default="0.0.0.0")
     web_concurrency: int = Field(alias="webserver-workers", default=1, gt=0)
-    uvicorn_log_level: (
-        typing.Literal["critical", "error", "warning", "info", "debug", "trace"]
-    ) = Field(alias="webserver-log-level", default="info")
-    app_metrics_port: int | None = Field(alias="metrics-port", default=None, gt=0)
-    app_metrics_path: str | None = Field(alias="metrics-path", default=None, min_length=1)
+    uvicorn_log_level: typing.Literal["critical", "error", "warning", "info", "debug", "trace"] = (
+        Field(alias="webserver-log-level", default="info")
+    )
+    metrics_port: int | None = Field(alias="metrics-port", default=None, gt=0)
+    metrics_path: str | None = Field(alias="metrics-path", default=None, min_length=1)
     app_secret_key: str | None = Field(alias="secret-key", default=None, min_length=1)
 
 
@@ -68,8 +70,8 @@ class Charm(PaasCharm):
             state_dir=base_dir / "state",
             service_name=framework_name,
             log_files=[],
-            metrics_target=f"*:{framework_config.app_metrics_port}",
-            metrics_path=framework_config.app_metrics_path,
+            metrics_target=f"*:{framework_config.metrics_port}",
+            metrics_path=framework_config.metrics_path,
         )
 
     def get_cos_dir(self) -> str:

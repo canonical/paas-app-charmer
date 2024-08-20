@@ -1,3 +1,4 @@
 ignore_files:
   - examples/django/charm/lib/charms/redis_k8s/v0/redis.py
+  - examples/fastapi/charm/lib/charms/redis_k8s/v0/redis.py
   - examples/flask/lib/charms/redis_k8s/v0/redis.py

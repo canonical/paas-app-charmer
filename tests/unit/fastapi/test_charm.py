@@ -21,9 +21,10 @@ from .constants import DEFAULT_LAYER, FASTAPI_CONTAINER_NAME
                 "UVICORN_PORT": "8080",
                 "WEB_CONCURRENCY": "1",
                 "UVICORN_LOG_LEVEL": "info",
+                "UVICORN_HOST": "0.0.0.0",
                 "APP_BASE_URL": "http://fastapi-k8s.None:8080",
-                "APP_METRICS_PORT": "8080",
-                "APP_METRICS_PATH": "/metrics",
+                "METRICS_PORT": "8080",
+                "METRICS_PATH": "/metrics",
                 "APP_SECRET_KEY": "test",
             },
             id="default",
@@ -39,9 +40,10 @@ from .constants import DEFAULT_LAYER, FASTAPI_CONTAINER_NAME
                 "UVICORN_PORT": "9000",
                 "WEB_CONCURRENCY": "1",
                 "UVICORN_LOG_LEVEL": "info",
+                "UVICORN_HOST": "0.0.0.0",
                 "APP_BASE_URL": "http://fastapi-k8s.None:9000",
-                "APP_METRICS_PORT": "9001",
-                "APP_METRICS_PATH": "/othermetrics",
+                "METRICS_PORT": "9001",
+                "METRICS_PATH": "/othermetrics",
                 "APP_SECRET_KEY": "foobar",
             },
             id="custom config",
@@ -71,5 +73,3 @@ def test_fastapi_config(harness: Harness, config: dict, env: dict) -> None:
         "user": "_daemon_",
         "working-dir": "/app",
     }
-
-
