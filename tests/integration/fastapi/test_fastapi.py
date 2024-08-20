@@ -49,3 +49,20 @@ async def test_user_defined_config(
         )
         assert response.status_code == 200
         assert "newvalue" in response.text
+
+
+async def test_migration(
+    fastapi_app: Application,
+    get_unit_ips: typing.Callable[[str], typing.Awaitable[tuple[str, ...]]],
+):
+    """
+    arrange: build and deploy the fastapi charm with postgresql integration.
+    act: send a request to an endpoint that checks the table created by the micration script.
+    assert: the fastapi application should return a correct response.
+    """
+    for unit_ip in await get_unit_ips(fastapi_app.name):
+        response = requests.get(
+            f"http://{unit_ip}:{WORKLOAD_PORT}/table/users", timeout=5
+        )
+        assert response.status_code == 200
+        assert "SUCCESS" in response.text

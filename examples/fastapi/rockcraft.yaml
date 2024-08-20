@@ -12,3 +12,14 @@ platforms:
 
 extensions:
   - fastapi-framework
+
+parts:
+  alembic:
+    plugin: dump
+    source: .
+    organize:
+      alembic: app/alembic
+      alembic.ini: app/alembic.ini
+    stage:
+    - app/alembic
+    - app/alembic.ini
