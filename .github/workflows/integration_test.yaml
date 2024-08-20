@@ -10,7 +10,8 @@ jobs:
     with:
       extra-arguments: -x --localstack-address 172.17.0.1
       pre-run-script: localstack-installation.sh
-      charmcraft-channel: latest/edge
+      charmcraft-repository: javierdelapuente/charmcraft
+      charmcraft-ref: go-extension
       modules: '["test_charm.py", "test_cos.py", "test_database.py", "test_db_migration.py", "test_django.py", "test_django_integrations.py", "test_go.py", "test_integrations.py", "test_proxy.py"]'
       rockcraft-repository: javierdelapuente/rockcraft
       rockcraft-ref: go-extension
