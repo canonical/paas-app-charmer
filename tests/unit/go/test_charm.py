@@ -28,8 +28,8 @@ from .constants import DEFAULT_LAYER, GO_CONTAINER_NAME
         ),
         pytest.param(
             {
-                "secret-key": "foobar",
-                "port": 9000,
+                "app-secret-key": "foobar",
+                "app-port": 9000,
                 "metrics-port": 9001,
                 "metrics-path": "/othermetrics",
             },
