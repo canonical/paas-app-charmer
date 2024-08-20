@@ -28,7 +28,7 @@ class FastAPIConfig(BaseModel, extra=Extra.allow):
     """
 
     uvicorn_port: int = Field(alias="webserver-port", default=8080, gt=0)
-    uvicorn_host: str = Field(alias="webserver-host", default="0.0.0.0")
+    uvicorn_host: str = Field(alias="webserver-host", default="0.0.0.0")  # nosec
     web_concurrency: int = Field(alias="webserver-workers", default=1, gt=0)
     uvicorn_log_level: typing.Literal["critical", "error", "warning", "info", "debug", "trace"] = (
         Field(alias="webserver-log-level", default="info")
