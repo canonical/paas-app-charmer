@@ -53,8 +53,14 @@ and uploading the rock to a k8s registry, you can juju deploy your flask
 application, integrate it with ingress and start serving traffic to your users!
 
 Read the
-[comprehensive getting started tutorial](https://juju.is/docs/sdk/write-your-first-kubernetes-charm-using-the-paas-app-charmer)
+[comprehensive getting started tutorial](https://juju.is/docs/sdk/write-your-first-kubernetes-charm-for-a-flask-app)
 for more!
+
+Additional resources:
+* [Tutorial to build a rock for a Flask application](https://documentation.ubuntu.com/rockcraft/en/latest/tutorial/flask/)
+* [Charmcraft `flask-framework` reference](https://juju.is/docs/sdk/charmcraft-extension-flask-framework)
+* [Charmcraft `flask-framework` how to guides](https://juju.is/docs/sdk/build-a-paas-charm)
+* [Rockcraft `flask-framework` reference](https://documentation.ubuntu.com/rockcraft/en/latest/reference/extensions/flask-framework/)
 
 ## Contributing
 
@@ -79,8 +85,9 @@ through below.
   * The proposed implementation in `paas-app-charmer`. Take a look at
     [`charm.py`](paas_app_charmer/_gunicorn/charm.py) for `gunicorn` based
     frameworks for integration examples.
-1. Update the [tutorials](docs/tutorials) with the appropriate `fetch-lib`
-  command
+1. Update the
+  [reference](https://juju.is/docs/sdk/charmcraft-extension-flask-framework)
+  with the new integration
 1. Raise a pull request to this repository adding support for the integration.
 1. Add a commented entry for `requires` to all the relevant Charmcraft
   [templates](https://github.com/canonical/charmcraft/tree/main/charmcraft/templates)
@@ -96,12 +103,12 @@ below.
   should cover things like:
   * The programming language and framework you are thinking of
   * Create an example `rockcraft.yaml` file and build a working OCI image. To
-    see an example for `flask`, install the `latest/edge` version of `rockcraft`
-    and run `rockcraft init --profile flask-framework` and run
+    see an example for `flask`, install Rockcraft and run
+    `rockcraft init --profile flask-framework` and run
     `rockcraft expand-extensions` and inspect the output.
   * Create an example `charmcraft.yaml` file and build a working charm. To see
-    an example for `flask`, install the `latest/edge` version of Charmcraft
-    and run `charmcraft init --profile flask-framework` and run
+    an example for `flask`, install Charmcraft and run
+    `charmcraft init --profile flask-framework` and run
     `charmcraft expand-extensions` and inspect the output.
   * How the configuration options of the charm map to environment variables,
     configurations or another method of passing the information to the app
@@ -125,5 +132,7 @@ below.
   and
   [extension](https://github.com/canonical/charmcraft/blob/b6baa10566e3f3933cbd42392a0fe62cc79d2b6b/charmcraft/extensions/gunicorn.py#L167).
 1. Write a tutorial and reference documentation for the framework. As an
-  example, this is the flask [tutorial](docs/tutorials/flask.md) and
-  [reference](docs/reference/flask.md) documentation.
+  example, this is the flask
+  [tutorial](https://juju.is/docs/sdk/write-your-first-kubernetes-charm-for-a-flask-app)
+  and [reference](https://juju.is/docs/sdk/charmcraft-extension-flask-framework)
+  documentation.
