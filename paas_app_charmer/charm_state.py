@@ -109,7 +109,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         app_config = {
             k.replace("-", "_"): v
             for k, v in charm.config.items()
-            if not any(k.startswith(prefix) for prefix in (f"{framework}-", "webserver-"))
+            if not any(k.startswith(prefix) for prefix in (f"{framework}-", "webserver-", "app-"))
         }
         app_config = {
             k: v for k, v in app_config.items() if k not in framework_config.dict().keys()

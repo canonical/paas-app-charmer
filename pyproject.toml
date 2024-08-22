@@ -49,7 +49,8 @@ extend-exclude = '''
 (
   examples/flask/lib/.*
   |   examples/django/charm/lib/.*
-  |   examples/fastapi/charm/lib/.*  
+  |   examples/fastapi/charm/lib/.*
+  |   examples/go/charm/lib/.*
 )
 '''
 

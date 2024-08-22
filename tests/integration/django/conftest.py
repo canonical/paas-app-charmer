@@ -37,7 +37,9 @@ async def charm_file_fixture(
     pytestconfig: pytest.Config, ops_test: OpsTest, tmp_path_factory
 ) -> str:
     """Get the existing charm file."""
-    charm_file = next(f for f in pytestconfig.getoption("--charm-file") if "django-k8s" in f)
+    charm_file = next(
+        (f for f in pytestconfig.getoption("--charm-file") if "django-k8s" in f), None
+    )
     if not charm_file:
         charm_file = await ops_test.build_charm(PROJECT_ROOT / "examples/django/charm")
     elif charm_file[0] != "/":

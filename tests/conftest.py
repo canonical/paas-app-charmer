@@ -11,4 +11,5 @@ def pytest_addoption(parser):
     parser.addoption("--test-db-flask-image", action="store")
     parser.addoption("--django-app-image", action="store")
     parser.addoption("--fastapi-app-image", action="store")
+    parser.addoption("--go-app-image", action="store")
     parser.addoption("--localstack-address", action="store")

@@ -1,0 +1,79 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: go-k8s
+
+base: ubuntu@24.04
+
+platforms:
+  amd64:
+
+summary: An example Go application.
+
+description: An example Go application.
+
+actions:
+  rotate-secret-key:
+    description: Rotate the secret key. Users will be forced to log in again.
+      This might be useful if a security breach occurs.
+
+assumes:
+  - k8s-api
+
+config:
+  options:
+    app-port:
+      type: int
+      description: Default port where the application will listen
+      default: 8080
+    metrics-port:
+      type: int
+      description: Port where the prometheus metrics will be scraped.
+      default: 8080
+    metrics-path:
+      type: string
+      description: Path where the prometheus metrics will be scraped.
+      default: /metrics
+    app-secret-key:
+      type: string
+      description: Long secret you can use for sessions, csrf or any other thing where
+         you need a random secret shared by all units
+    user-defined-config:
+      type: string
+      description: Example of a user defined configuration.
+containers:
+  app:
+    resource: app-image
+peers:
+  secret-storage:
+    interface: secret-storage
+provides:
+  grafana-dashboard:
+    interface: grafana_dashboard
+  metrics-endpoint:
+    interface: prometheus_scrape
+requires:
+  ingress:
+    interface: ingress
+    limit: 1
+  logging:
+    interface: loki_push_api
+  postgresql:
+    interface: postgresql_client
+    optional: True
+    limit: 1
+resources:
+  app-image:
+    description: go application image.
+    type: oci-image
+type: charm
+
+parts:
+  charm:
+    charm-strict-dependencies: false
+    plugin: charm
+    build-snaps:
+    - rustup
+    override-build: |-
+      rustup default stable
+      craftctl default
