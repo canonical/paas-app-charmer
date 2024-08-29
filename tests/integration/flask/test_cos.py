@@ -7,8 +7,8 @@ import asyncio
 import logging
 import typing
 
-import juju.model
 import juju.client.client
+import juju.model
 import requests
 from juju.application import Application
 
