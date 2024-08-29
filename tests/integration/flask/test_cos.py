@@ -4,9 +4,11 @@
 
 """Integration tests for Flask charm COS integration."""
 import asyncio
+import logging
 import typing
 
-import juju
+import juju.model
+import juju.client.client
 import requests
 from juju.application import Application
 
@@ -60,11 +62,18 @@ async def test_loki_integration(
         await asyncio.sleep(1)
     loki_ip = (await get_unit_ips(loki_app_name))[0]
     log_query = requests.get(
-        f"http://{loki_ip}:3100/loki/api/v1/query",
+        f"http://{loki_ip}:3100/loki/api/v1/query_range",
         timeout=10,
         params={"query": f'{{juju_application="{flask_app.name}"}}'},
     ).json()
-    assert len(log_query["data"]["result"])
+    result = log_query["data"]["result"]
+    assert result
+    log = result[-1]
+    logging.info("retrieve sample application log: %s", log)
+    if model.info.agent_version < juju.client.client.Number.from_json("3.4.0"):
+        assert "filename" in log["stream"]
+    else:
+        assert "filename" not in log["stream"]
 
 
 async def test_grafana_integration(
