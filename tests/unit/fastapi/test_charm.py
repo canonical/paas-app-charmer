@@ -31,10 +31,11 @@ from .constants import DEFAULT_LAYER, FASTAPI_CONTAINER_NAME
         ),
         pytest.param(
             {
-                "secret-key": "foobar",
+                "app-secret-key": "foobar",
                 "webserver-port": 9000,
                 "metrics-port": 9001,
                 "metrics-path": "/othermetrics",
+                "user-defined-config": "userdefined",
             },
             {
                 "UVICORN_PORT": "9000",
@@ -45,6 +46,7 @@ from .constants import DEFAULT_LAYER, FASTAPI_CONTAINER_NAME
                 "METRICS_PORT": "9001",
                 "METRICS_PATH": "/othermetrics",
                 "APP_SECRET_KEY": "foobar",
+                "APP_USER_DEFINED_CONFIG": "userdefined",
             },
             id="custom config",
         ),
