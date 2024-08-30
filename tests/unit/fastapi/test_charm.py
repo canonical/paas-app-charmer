@@ -31,7 +31,7 @@ from .constants import DEFAULT_LAYER, FASTAPI_CONTAINER_NAME
         ),
         pytest.param(
             {
-                "secret-key": "foobar",
+                "app-secret-key": "foobar",
                 "webserver-port": 9000,
                 "metrics-port": 9001,
                 "metrics-path": "/othermetrics",

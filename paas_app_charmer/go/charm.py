@@ -13,7 +13,7 @@ from paas_app_charmer.app import App, WorkloadConfig
 from paas_app_charmer.charm import PaasCharm
 
 
-class GoConfig(BaseModel, extra=Extra.allow):
+class GoConfig(BaseModel, extra=Extra.ignore):
     """Represent Go builtin configuration values.
 
     Attrs:
