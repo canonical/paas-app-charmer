@@ -70,6 +70,7 @@ async def test_loki_integration(
     assert result
     log = result[-1]
     logging.info("retrieve sample application log: %s", log)
+    assert any("python-requests" in line[1] for line in log["values"])
     if model.info.agent_version < juju.client.client.Number.from_json("3.4.0"):
         assert "filename" in log["stream"]
     else:
