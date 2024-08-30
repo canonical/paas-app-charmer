@@ -259,6 +259,17 @@ def map_integrations_to_env(integrations: IntegrationsState, prefix: str = "") -
             if v is not None
         )
 
+    if integrations.rabbitmq_parameters:
+        rabbitmq = integrations.rabbitmq_parameters
+        env.update(
+            (
+                ("RABBITMQ_HOSTNAME", rabbitmq.hostname),
+                ("RABBITMQ_USERNAME", rabbitmq.username),
+                ("RABBITMQ_PASSWORD", rabbitmq.password),
+                ("RABBITMQ_VHOST", rabbitmq.vhost),
+            )
+        )
+
     return {prefix + k: v for k, v in env.items()}
 
 

@@ -127,3 +127,29 @@ async def test_saml_integration(
             entity_id_url._replace(path="sso")
         )
         assert env["SAML_SIGNING_CERTIFICATE"] in saml_helper.CERTIFICATE.replace("\n", "")
+
+
+async def test_rabbitmq_k8s_integration(
+    ops_test: OpsTest,
+    flask_app: Application,
+    model: Model,
+    get_unit_ips,
+):
+    """
+    arrange: TODO
+    act: TODO
+    assert: TODO
+    """
+    assert False
+
+
+# juju deploy rabbitmq-k8s --trust --channel=3.12/edge
+# juju integrate flask-k8s rabbitmq-k8s
+
+# lxd:
+# juju switch lxd
+# juju add-model whatever
+# juju deploy rabbitmq-server
+# juju offer rabbitmq-server:amqp
+# juju switch microk8s
+# juju integrate lxd:admin/welcome-lxd.rabbitmq-server flask-k8s

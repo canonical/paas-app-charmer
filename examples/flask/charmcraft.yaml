@@ -115,6 +115,11 @@ requires:
     interface: saml
     optional: True
     limit: 1
+  amqp:
+    interface: rabbitmq
+    optional: True
+    limit: 1
+
 resources:
   flask-app-image:
     description: flask application image.

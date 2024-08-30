@@ -19,3 +19,4 @@ jobs:
       rockcraft-ref: fastapi-extension
       juju-channel: ${{ matrix.juju-version }}
       channel: 1.29-strict/stable
+      tmate-debug: true

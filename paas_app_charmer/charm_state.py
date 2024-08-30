@@ -88,6 +88,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         redis_uri: str | None = None,
         s3_connection_info: dict[str, str] | None = None,
         saml_relation_data: typing.MutableMapping[str, str] | None = None,
+        rabbitmq_parameters: "RabbitMQParameters | None" = None,
         base_url: str | None = None,
     ) -> "CharmState":
         """Initialize a new instance of the CharmState class from the associated charm.
@@ -101,6 +102,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             redis_uri: The redis uri provided by the redis charm.
             s3_connection_info: Connection info from S3 lib.
             saml_relation_data: Relation data from the SAML app.
+            rabbitmq_parameters: JAVI TODO.
             base_url: Base URL for the service.
 
         Return:
@@ -120,6 +122,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             database_requirers=database_requirers,
             s3_connection_info=s3_connection_info,
             saml_relation_data=saml_relation_data,
+            rabbitmq_parameters=rabbitmq_parameters,
         )
         return cls(
             framework=framework,
@@ -205,20 +208,23 @@ class IntegrationsState:
         databases_uris: Map from interface_name to the database uri.
         s3_parameters: S3 parameters.
         saml_parameters: SAML parameters.
+        rabbitmq_parameters: RabbitMQ parameters.
     """
 
     redis_uri: str | None = None
     databases_uris: dict[str, str] = field(default_factory=dict)
     s3_parameters: "S3Parameters | None" = None
     saml_parameters: "SamlParameters | None" = None
+    rabbitmq_parameters: "RabbitMQParameters | None" = None
 
     @classmethod
-    def build(
+    def build(  # pylint: disable=too-many-arguments
         cls,
         redis_uri: str | None,
         database_requirers: dict[str, DatabaseRequires],
         s3_connection_info: dict[str, str] | None,
         saml_relation_data: typing.MutableMapping[str, str] | None = None,
+        rabbitmq_parameters: "RabbitMQParameters | None" = None,
     ) -> "IntegrationsState":
         """Initialize a new instance of the IntegrationsState class.
 
@@ -229,6 +235,7 @@ class IntegrationsState:
             database_requirers: All database requirers object declared by the charm.
             s3_connection_info: S3 connection info from S3 lib.
             saml_relation_data: Saml relation data from saml lib.
+            rabbitmq_parameters: TODO JAVI
 
         Return:
             The IntegrationsState instance created.
@@ -276,6 +283,7 @@ class IntegrationsState:
             },
             s3_parameters=s3_parameters,
             saml_parameters=saml_parameters,
+            rabbitmq_parameters=rabbitmq_parameters,
         )
 
 
@@ -354,3 +362,25 @@ class SamlParameters(BaseModel, extra=Extra.allow):
         if not certificate:
             raise ValueError("Missing x509certs. There should be at least one certificate.")
         return certificate
+
+
+class RabbitMQParameters(BaseModel, extra=Extra.allow):
+    """Configuration for accessing RabbitMQ.
+
+    Attributes:
+        hostname: Hostname or ip address of broker. It is one of the hostnames.
+        hostnames: List of Hostnames or ip addresses of broker.
+        username: The username to authenticate with
+        password: The password to authenticate with
+        vhost: RabbitMQ virtual host name.
+    """
+
+    # In rabbitmq-k8s, it is the service url
+    # In rabbitmq-server, paas-app-charmer puts one of the ips of hosnames arbitrarily
+    hostname: str
+    # In rabbitmq-k8s, a list of k8s ingress-address (maybe the same one)
+    # In rabbitmq-server, the ips of the machines
+    hostnames: list[str]
+    username: str
+    password: str
+    vhost: str

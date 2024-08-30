@@ -19,6 +19,7 @@ from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigra
 from paas_app_charmer.databases import make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.observability import Observability
+from paas_app_charmer.rabbitmq import RabbitMQRequires
 from paas_app_charmer.secret_storage import KeySecretStorage
 from paas_app_charmer.utils import build_validation_error_message
 
@@ -100,6 +101,26 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             self.framework.observe(self._saml.on.saml_data_available, self._on_saml_data_available)
         else:
             self._saml = None
+
+        self._amqp: RabbitMQRequires | None
+        if "amqp" in requires and requires["amqp"].interface_name == "rabbitmq":
+            logger.info("JAVI PREPARING RABBIT REQUIRES")
+            self._amqp = RabbitMQRequires(
+                self,
+                "amqp",
+                username=self.app.name,
+                vhost="/",
+            )
+            logger.info("JAVI rabbitmq_requires._amqp_rel %s", str(self._amqp._amqp_rel))
+            if self._amqp._amqp_rel is not None:
+                logger.info(
+                    "JAVI rabbitmq_requires._amqp_rel.data %s", str(self._amqp._amqp_rel.data)
+                )
+            self.framework.observe(self._amqp.on.connected, self._on_amqp_connected)
+            self.framework.observe(self._amqp.on.ready, self._on_amqp_ready)
+            self.framework.observe(self._amqp.on.goneaway, self._on_amqp_goneaway)
+        else:
+            self._amqp = None
 
         self._database_migration = DatabaseMigration(
             container=self.unit.get_container(self._workload_config.container_name),
@@ -245,7 +266,8 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
 
         return True
 
-    def _missing_required_integrations(self, charm_state: CharmState) -> list[str]:
+    # JAVI PENDING TO REFACTOR
+    def _missing_required_integrations(self, charm_state: CharmState) -> list[str]:  # noqa: C901
         """Get list of missing integrations that are required.
 
         Args:
@@ -272,6 +294,9 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         if self._saml and not charm_state.integrations.saml_parameters:
             if not requires["saml"].optional:
                 missing_integrations.append("saml")
+        if self._amqp and not charm_state.integrations.rabbitmq_parameters:
+            if not requires["amqp"].optional:
+                missing_integrations.append("amqp")
         return missing_integrations
 
     def restart(self) -> None:
@@ -319,6 +344,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             redis_uri=self._redis.url if self._redis is not None else None,
             s3_connection_info=self._s3.get_s3_connection_info() if self._s3 else None,
             saml_relation_data=saml_relation_data,
+            rabbitmq_parameters=self._amqp.rabbitmq_parameters() if self._amqp else None,
             base_url=self._base_url,
         )
 
@@ -417,4 +443,22 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
     @block_if_invalid_config
     def _on_pebble_ready(self, _: ops.PebbleReadyEvent) -> None:
         """Handle the pebble-ready event."""
+        self.restart()
+
+    @block_if_invalid_config
+    def _on_amqp_connected(self, _event: ops.HookEvent) -> None:
+        """Handle ampq connected event."""
+        logger.info("_ON_AMQP_CONNECTED")
+        self.restart()
+
+    @block_if_invalid_config
+    def _on_amqp_ready(self, _event: ops.HookEvent) -> None:
+        """Handle ampq ready event."""
+        logger.info("_ON_AMQP_READY")
+        self.restart()
+
+    @block_if_invalid_config
+    def _on_amqp_goneaway(self, _event: ops.HookEvent) -> None:
+        """Handle ampq goneaway event."""
+        logger.info("_ON_AMQP_GONEAWAY")
         self.restart()
