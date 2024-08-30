@@ -49,12 +49,14 @@ class Observability(ops.Object):
             relation_name="metrics-endpoint",
         )
         if enable_pebble_log_forwarding():
+            # ignore "import outside toplevel" linting error
             import charms.loki_k8s.v1.loki_push_api  # pylint: disable=import-outside-toplevel
 
             self._logging = charms.loki_k8s.v1.loki_push_api.LogForwarder(
                 charm, relation_name="logging"
             )
         else:
+            # ignore "import outside toplevel" linting error
             import charms.loki_k8s.v0.loki_push_api  # pylint: disable=import-outside-toplevel
 
             self._logging = charms.loki_k8s.v0.loki_push_api.LogProxyConsumer(
