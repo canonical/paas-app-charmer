@@ -31,7 +31,7 @@ from paas_app_charmer.go.charm import GoConfig
         pytest.param(
             {"JUJU_CHARM_HTTP_PROXY": "http://proxy.test"},
             {"extra-config", "extravalue"},
-            {"metrics_port": "9000", "metrics_path": "/m", "secret_key": "notfoobar"},
+            {"metrics-port": "9000", "metrics-path": "/m", "app-secret-key": "notfoobar"},
             IntegrationsState(redis_uri="redis://10.1.88.132:6379"),
             {
                 "APP_PORT": "8080",
