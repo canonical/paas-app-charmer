@@ -48,6 +48,8 @@ class Observability(ops.Object):
             jobs=jobs,
             relation_name="metrics-endpoint",
         )
+        # The charm isn't necessarily bundled with charms.loki_k8s.v1
+        # Dynamically switches between two versions here.
         if enable_pebble_log_forwarding():
             # ignore "import outside toplevel" linting error
             import charms.loki_k8s.v1.loki_push_api  # pylint: disable=import-outside-toplevel
