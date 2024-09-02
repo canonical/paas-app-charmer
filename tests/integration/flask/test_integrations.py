@@ -31,9 +31,8 @@ async def test_rabbitmq_server_integration(
     """
 
     # TODO GET THE OOFFER NAME FROM THE OFFER CREATION?
-    # integration = await model.integrate("lxd:admin/lxd.rabbitmq-server", flask_app.name)
-
-    integration = await model.integrate("rabbitmq-server", flask_app.name)
+    integration = await model.integrate("lxd:lxd.rabbitmq-server", flask_app.name)
+    # integration = await model.integrate("rabbitmq-server", flask_app.name)
 
     lxd_status = await lxd_model.get_status()
     # get ip from lxd_status
