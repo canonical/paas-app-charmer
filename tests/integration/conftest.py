@@ -2,11 +2,55 @@
 # See LICENSE file for licensing details.
 
 import json
+import logging
 
 import pytest
 import pytest_asyncio
-from juju.model import Model
+from juju.application import Application
+from juju.juju import Juju
+from juju.model import Controller, Model
 from pytest_operator.plugin import OpsTest
+
+logger = logging.getLogger(__name__)
+
+
+@pytest_asyncio.fixture(scope="module", name="lxd_controller")
+async def fixture_lxd_controller(ops_test: OpsTest) -> Controller:
+    """Return the current testing juju model."""
+    if not "lxd" in Juju().get_controllers():
+        logger.info("creating lxd controller")
+        _, _, _ = await ops_test.juju("bootstrap", "localhost", "lxd", check=True)
+
+    controller = Controller()
+    logger.info("connecting to lxd controller")
+    await controller.connect("lxd")
+    yield controller
+    logger.info("disconnecting from lxd controller")
+    await controller.disconnect()
+
+
+@pytest_asyncio.fixture(scope="module", name="lxd_model")
+async def fixture_lxd_model(lxd_controller: Controller) -> Model:
+    model = await lxd_controller.add_model("lxd")
+    yield model
+    logger.info("destroy model %s", model.name)
+    # await lxd_controller.destroy_models(model.name, destroy_storage=True, force=True, max_wait=60)
+
+
+@pytest_asyncio.fixture(scope="module", name="rabbitmq_server_app")  # autouse=True)
+async def deploy_rabbitmq_server_fixture(
+    lxd_model: Model,
+) -> Application:
+    """Deploy rabbitmq-server machine app."""
+    app = await lxd_model.deploy(
+        "rabbitmq-server",
+        # channel="3.9/stable",
+        channel="latest/edge",
+    )
+    await lxd_model.wait_for_idle(raise_on_blocked=True)
+    offer = await lxd_model.create_offer("rabbitmq-server:amqp")
+    logger.info("offer: %s", offer)
+    yield app
 
 
 @pytest_asyncio.fixture(scope="module", name="get_unit_ips")

@@ -16,10 +16,12 @@ from saml_test_helper import SamlK8sTestHelper
 logger = logging.getLogger(__name__)
 
 
-async def test_rabbitmq_k8s_integration(
+async def test_rabbitmq_server_integration(
     ops_test: OpsTest,
     flask_app: Application,
+    rabbitmq_server_app: Application,
     model: Model,
+    lxd_model: Model,
     get_unit_ips,
 ):
     """
@@ -27,12 +29,22 @@ async def test_rabbitmq_k8s_integration(
     act: TODO
     assert: TODO
     """
-    assert False
+
+    # TODO GET THE OOFFER NAME FROM THE OFFER CREATION?
+    # integration = await model.integrate("lxd:admin/lxd.rabbitmq-server", flask_app.name)
+
+    integration = await model.integrate("rabbitmq-server", flask_app.name)
+
+    lxd_status = await lxd_model.get_status()
+    # get ip from lxd_status
+
+    assert True
 
 
 # juju deploy rabbitmq-k8s --trust --channel=3.12/edge
 # juju integrate flask-k8s rabbitmq-k8s
 
+# juju bootstrap localhost lxd
 # lxd:
 # juju switch lxd
 # juju add-model whatever
@@ -153,4 +165,3 @@ async def test_saml_integration(
             entity_id_url._replace(path="sso")
         )
         assert env["SAML_SIGNING_CERTIFICATE"] in saml_helper.CERTIFICATE.replace("\n", "")
-
