@@ -17,6 +17,7 @@ from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverCon
 from paas_app_charmer._gunicorn.workload_config import create_workload_config
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
 from paas_app_charmer.charm_state import CharmState
+from paas_app_charmer.utils import enable_pebble_log_forwarding
 
 from .constants import DEFAULT_LAYER, FLASK_CONTAINER_NAME
 
@@ -137,3 +138,59 @@ def test_webserver_reload(monkeypatch, harness: Harness, is_running, database_mi
         command=DEFAULT_LAYER["services"]["flask"]["command"],
     )
     assert send_signal_mock.call_count == (1 if is_running else 0)
+
+
+def test_enable_pebble_log_forwarding(monkeypatch):
+    """
+    arrange: set JUJU_VERSION environment variable to different versions.
+    act: call the enable_pebble_log_forwarding function.
+    assert: enable_pebble_log_forwarding should return True when pebble log forwarding is supported
+        in the given juju version.
+    """
+    monkeypatch.setenv("JUJU_VERSION", "3.3.1")
+    assert not enable_pebble_log_forwarding()
+    monkeypatch.setenv("JUJU_VERSION", "3.4.0")
+    assert enable_pebble_log_forwarding()
+
+
+def test_gunicorn_config_with_pebble_log_forwarding(
+    monkeypatch, harness: Harness, database_migration_mock
+):
+    """
+    arrange: set JUJU_VERSION environment variable to a version supporting pebble log forwarding.
+    act: generate the gunicorn configuration file.
+    assert: access logs and error logs should be sent to standard IO in the configuration.
+    """
+    monkeypatch.setenv("JUJU_VERSION", "3.4.0")
+    harness.begin()
+    container: ops.Container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    harness.set_can_connect(FLASK_CONTAINER_NAME, True)
+    container.add_layer("default", DEFAULT_LAYER)
+    charm_state = CharmState(
+        framework="flask",
+        secret_key="",
+        is_secret_storage_ready=True,
+    )
+    workload_config = create_workload_config(framework_name="flask")
+    webserver_config = WebserverConfig()
+    webserver = GunicornWebserver(
+        webserver_config=webserver_config,
+        workload_config=workload_config,
+        container=container,
+    )
+    flask_app = WsgiApp(
+        container=container,
+        charm_state=charm_state,
+        workload_config=workload_config,
+        webserver=webserver,
+        database_migration=database_migration_mock,
+    )
+    flask_app.restart()
+    webserver.update_config(
+        is_webserver_running=False,
+        environment=flask_app.gen_environment(),
+        command=DEFAULT_LAYER["services"]["flask"]["command"],
+    )
+    config = container.pull(f"/flask/gunicorn.conf.py").read()
+    assert "accesslog = '-'" in config
+    assert "errorlog = '-'" in config

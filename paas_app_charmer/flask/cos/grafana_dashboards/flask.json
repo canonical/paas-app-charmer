@@ -841,7 +841,7 @@
           "refId": "A"
         }
       ],
-      "title": "Access Logs",
+      "title": "Application Logs",
       "type": "logs"
     }
   ],
@@ -980,6 +980,6 @@
   "timezone": "",
   "title": "Flask Operator",
   "uid": null,
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

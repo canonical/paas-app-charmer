@@ -5,6 +5,7 @@
 
 import itertools
 
+import ops
 from pydantic import ValidationError
 
 
@@ -31,3 +32,22 @@ def build_validation_error_message(
         error_fields = (error_field.replace("_", "-") for error_field in error_fields)
     error_field_str = " ".join(error_fields)
     return error_field_str
+
+
+def enable_pebble_log_forwarding() -> bool:
+    """Check if the current environment allows to enable pebble log forwarding feature.
+
+    Returns:
+        True if the current environment allows to enable pebble log forwarding feature.
+    """
+    juju_version = ops.JujuVersion.from_environ()
+    if (juju_version.major, juju_version.minor) < (3, 4):
+        return False
+    try:
+        # disable "imported but unused" and "import outside toplevel" error
+        # pylint: disable=import-outside-toplevel,unused-import
+        import charms.loki_k8s.v1.loki_push_api  # noqa: F401
+
+        return True
+    except ImportError:
+        return False

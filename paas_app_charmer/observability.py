@@ -7,8 +7,9 @@ import pathlib
 
 import ops
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
-from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
+
+from paas_app_charmer.utils import enable_pebble_log_forwarding
 
 
 class Observability(ops.Object):
@@ -47,13 +48,26 @@ class Observability(ops.Object):
             jobs=jobs,
             relation_name="metrics-endpoint",
         )
-        self._logging = LogProxyConsumer(
-            charm,
-            alert_rules_path=os.path.join(cos_dir, "loki_alert_rules"),
-            container_name=container_name,
-            log_files=[str(log_file) for log_file in log_files],
-            relation_name="logging",
-        )
+        # The charm isn't necessarily bundled with charms.loki_k8s.v1
+        # Dynamically switches between two versions here.
+        if enable_pebble_log_forwarding():
+            # ignore "import outside toplevel" linting error
+            import charms.loki_k8s.v1.loki_push_api  # pylint: disable=import-outside-toplevel
+
+            self._logging = charms.loki_k8s.v1.loki_push_api.LogForwarder(
+                charm, relation_name="logging"
+            )
+        else:
+            # ignore "import outside toplevel" linting error
+            import charms.loki_k8s.v0.loki_push_api  # pylint: disable=import-outside-toplevel
+
+            self._logging = charms.loki_k8s.v0.loki_push_api.LogProxyConsumer(
+                charm,
+                alert_rules_path=os.path.join(cos_dir, "loki_alert_rules"),
+                container_name=container_name,
+                log_files=[str(log_file) for log_file in log_files],
+                relation_name="logging",
+            )
         self._grafana_dashboards = GrafanaDashboardProvider(
             charm,
             dashboards_path=os.path.join(cos_dir, "grafana_dashboards"),

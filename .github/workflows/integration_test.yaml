@@ -5,6 +5,9 @@ on:
 
 jobs:
   integration-tests:
+    strategy:
+      matrix:
+        juju-version: [ 3.3/stable, 3.4/stable, 3.5/stable ]
     uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
     with:
@@ -14,5 +17,5 @@ jobs:
       modules: '["test_charm.py", "test_cos.py", "test_database.py", "test_db_migration.py", "test_django.py", "test_django_integrations.py", "test_fastapi.py", "test_go.py", "test_integrations.py", "test_proxy.py"]'
       rockcraft-repository: javierdelapuente/rockcraft
       rockcraft-ref: fastapi-extension
-      juju-channel: 3.5/stable
+      juju-channel: ${{ matrix.juju-version }}
       channel: 1.29-strict/stable

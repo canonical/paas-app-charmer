@@ -8,6 +8,7 @@ import logging
 import pathlib
 import shlex
 import signal
+import textwrap
 import typing
 
 import ops
@@ -20,6 +21,7 @@ from paas_app_charmer._gunicorn.workload_config import (
 )
 from paas_app_charmer.app import WorkloadConfig
 from paas_app_charmer.exceptions import CharmConfigInvalidError
+from paas_app_charmer.utils import enable_pebble_log_forwarding
 
 logger = logging.getLogger(__name__)
 
@@ -118,15 +120,26 @@ class GunicornWebserver:  # pylint: disable=too-few-public-methods
                 else int(setting_value.total_seconds())
             )
             config_entries.append(f"{setting} = {setting_value}")
-        new_line = "\n"
-        config = f"""\
-bind = ['0.0.0.0:{self._workload_config.port}']
-chdir = {repr(str(self._workload_config.app_dir))}
-accesslog = {repr(str.format(APPLICATION_LOG_FILE_FMT, framework=self._workload_config.framework))}
-errorlog = {repr(str.format(APPLICATION_ERROR_LOG_FILE_FMT,
-                            framework=self._workload_config.framework))}
-statsd_host = {repr(STATSD_HOST)}
-{new_line.join(config_entries)}"""
+        if enable_pebble_log_forwarding():
+            access_log = "'-'"
+            error_log = "'-'"
+        else:
+            access_log = repr(
+                APPLICATION_LOG_FILE_FMT.format(framework=self._workload_config.framework)
+            )
+            error_log = repr(
+                APPLICATION_ERROR_LOG_FILE_FMT.format(framework=self._workload_config.framework)
+            )
+        config = textwrap.dedent(
+            f"""\
+                bind = ['0.0.0.0:{self._workload_config.port}']
+                chdir = {repr(str(self._workload_config.app_dir))}
+                accesslog = {access_log}
+                errorlog = {error_log}
+                statsd_host = {repr(STATSD_HOST)}
+                """
+        )
+        config += "\n".join(config_entries)
         return config
 
     @property
