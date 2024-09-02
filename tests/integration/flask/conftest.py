@@ -23,16 +23,16 @@ PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
 
 import asyncio
 
-import nest_asyncio
+# import nest_asyncio
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    nest_asyncio.apply()
-    loop = asyncio.new_event_loop()
-    asyncio._set_running_loop(loop)
-    yield loop
-    loop.close()
+# @pytest.fixture(scope="module")
+# def event_loop():
+#     nest_asyncio.apply()
+#     loop = asyncio.new_event_loop()
+#     asyncio._set_running_loop(loop)
+#     yield loop
+#     loop.close()
 
 
 @pytest.fixture(autouse=True)
