@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest_asyncio.fixture(scope="module", name="ops_test_lxd")
-async def ops_test_lxd_fixture(request, tmp_path_factory):
+async def ops_test_lxd_fixture(request, tmp_path_factory, ops_test: OpsTest):
     # Create lxd controller if it does not exist
     if not "lxd" in Juju().get_controllers():
         jujudata = FileJujuData()
