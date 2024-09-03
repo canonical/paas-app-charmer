@@ -30,10 +30,10 @@ except ImportError as import_error:
     ) from import_error
 try:
     import charms.loki_k8s.v1.loki_push_api  # noqa: F401
-except ImportError:
+except ImportError as import_error:
     try:
         import charms.loki_k8s.v0.loki_push_api  # noqa: F401
-    except ImportError as import_error:
+    except ImportError:
         raise exceptions.MissingCharmLibraryError(
             "Missing charm library, please run "
             "`charmcraft fetch-lib charms.loki_k8s.v1.loki_push_api`"
