@@ -22,7 +22,7 @@ async def ops_test_lxd_fixture(request, tmp_path_factory, ops_test: OpsTest):
         jujudata = FileJujuData()
         previous_controller = jujudata.current_controller()
         logger.info("JAVI controller %s", jujudata.current_controller())
-        logger.info("bootstrapping lxd")q
+        logger.info("bootstrapping lxd")
         _, _, _ = await ops_test.juju("bootstrap", "localhost", "lxd", check=True)
         jujudata = FileJujuData()
         previous_controller = jujudata.current_controller()
