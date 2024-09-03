@@ -21,11 +21,12 @@ async def ops_test_lxd_fixture(request, tmp_path_factory, ops_test: OpsTest):
     if not "lxd" in Juju().get_controllers():
         jujudata = FileJujuData()
         previous_controller = jujudata.current_controller()
-        logger.info("bootstrapping lxd")
+        logger.info("JAVI controller %s", jujudata.current_controller())
+        logger.info("bootstrapping lxd")q
         _, _, _ = await ops_test.juju("bootstrap", "localhost", "lxd", check=True)
-        # go back to the original controller
-        logger.info("switch back to controller: %s", previous_controller)
-        _, _, _ = await ops_test.juju("switch", previous_controller, check=True)
+        jujudata = FileJujuData()
+        previous_controller = jujudata.current_controller()
+        logger.info("JAVI controller %s", jujudata.current_controller())
 
     ops_test = OpsTest(request, tmp_path_factory)
     ops_test.controller_name = "lxd"
