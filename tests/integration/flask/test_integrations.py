@@ -53,7 +53,7 @@ async def test_rabbitmq_server_integration(
     status = await model.get_status()
     logger.info("status: %s", status)
     logger.info("destroying: %s - %s", "amqp", f"{lxd_model_name}:amqp")
-    res = await flask_app.destroy_relation("amqp", f"{lxd_model_name}:amqp")
+    res = await flask_app.destroy_relation("amqp", f"{rabbitmq_server_app.name}:amqp")
     await model.wait_for_idle(apps=[flask_app.name], status="active")
 
     logger.info("destroy relation res %s", res)
