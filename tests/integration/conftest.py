@@ -15,32 +15,31 @@ from pytest_operator.plugin import OpsTest
 logger = logging.getLogger(__name__)
 
 
-@pytest_asyncio.fixture(scope="module", name="lxd_controller")
-async def fixture_lxd_controller(ops_test: OpsTest) -> Controller:
-    """Return the current testing juju model."""
+@pytest_asyncio.fixture(scope="module", name="ops_test_lxd")
+async def ops_test_lxd_fixture(request, tmp_path_factory):
+    # Create lxd controller if it does not exist
     if not "lxd" in Juju().get_controllers():
         jujudata = FileJujuData()
         previous_controller = jujudata.current_controller()
         logger.info("bootstrapping lxd")
         _, _, _ = await ops_test.juju("bootstrap", "localhost", "lxd", check=True)
         # go back to the original controller
-        logger.info("switch back to %s", previous_controller)
+        logger.info("switch back to controller: %s", previous_controller)
         _, _, _ = await ops_test.juju("switch", previous_controller, check=True)
 
-    controller = Controller()
-    logger.info("connecting to lxd controller")
-    await controller.connect("lxd")
-    yield controller
-    logger.info("disconnecting from lxd controller")
-    await controller.disconnect()
+    ops_test = OpsTest(request, tmp_path_factory)
+    ops_test.controller_name = "lxd"
+    await ops_test._setup_model()
+    # The instance is not stored in _instance as that is done for the ops_test fixture
+    yield ops_test
+    await ops_test._cleanup_models()
 
 
 @pytest_asyncio.fixture(scope="module", name="lxd_model")
-async def fixture_lxd_model(lxd_controller: Controller) -> Model:
-    model = await lxd_controller.add_model("lxd")
-    yield model
-    logger.info("destroy model %s", model.name)
-    # await lxd_controller.destroy_models(model.name, destroy_storage=True, force=True, max_wait=60)
+async def lxd_model_fixture(ops_test_lxd: OpsTest) -> Model:
+    """Return the current lxd juju model."""
+    assert ops_test_lxd.model
+    return ops_test_lxd.model
 
 
 @pytest_asyncio.fixture(scope="module", name="rabbitmq_server_app")  # autouse=True)
@@ -56,6 +55,22 @@ async def deploy_rabbitmq_server_fixture(
     await lxd_model.wait_for_idle(raise_on_blocked=True)
     offer = await lxd_model.create_offer("rabbitmq-server:amqp")
     logger.info("offer: %s", offer)
+    offers = await lxd_model.list_offers()
+    logger.info("offers: %s", offers)
+    yield app
+
+
+@pytest_asyncio.fixture(scope="module", name="rabbitmq_k8s_app")  # autouse=True)
+async def deploy_rabbitmq_k8s_fixture(
+    model: Model,
+) -> Application:
+    """Deploy rabbitmq-server machine app."""
+    app = await model.deploy(
+        "rabbitmq-k8s",
+        channel="3.12/edge",
+        trust=True,
+    )
+    await model.wait_for_idle(raise_on_blocked=True)
     yield app
 
 

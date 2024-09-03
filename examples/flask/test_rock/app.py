@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 import boto3
 import botocore.config
+import pika
 import psycopg
 import pymongo
 import pymongo.database
@@ -71,6 +72,22 @@ def get_redis_database() -> redis.Redis | None:
         else:
             return None
     return g.redis_db
+
+
+def get_rabbitmq_connection():
+    """Get rabbitmq connection."""
+    if "rabbitmq" not in g:
+        if "RABBITMQ_HOSTNAME" in os.environ:
+            username = os.environ["RABBITMQ_USERNAME"]
+            password = os.environ["RABBITMQ_PASSWORD"]
+            hostname = os.environ["RABBITMQ_HOSTNAME"]
+            vhost = os.environ["RABBITMQ_VHOST"]
+            credentials = pika.PlainCredentials(username, password)
+            parameters = pika.ConnectionParameters(hostname, 5672, vhost, credentials)
+            g.rabbitmq = pika.BlockingConnection(parameters)
+        else:
+            return None
+    return g.rabbitmq
 
 
 def get_boto3_client():
@@ -185,6 +202,31 @@ def redis_status():
         except pymongo.errors.PyMongoError:
             pass
     return "FAIL"
+
+
+@app.route("/rabbitmq/send")
+def rabbitmq_send():
+    """Send a message to "charm" queue."""
+    if connection := get_rabbitmq_connection():
+        channel = connection.channel()
+        channel.queue_declare(queue="charm")
+        channel.basic_publish(exchange="", routing_key="charm", body="SUCCESS")
+        return "SUCCESS"
+    return "FAIL"
+
+
+@app.route("/rabbitmq/receive")
+def rabbitmq_receive():
+    """Receive a message from "charm" queue in blocking form."""
+    if connection := get_rabbitmq_connection():
+        channel = connection.channel()
+        method_frame, _header_frame, body = channel.basic_get("charm")
+        if method_frame:
+            channel.basic_ack(method_frame.delivery_tag)
+            if body == b"SUCCESS":
+                return "SUCCESS"
+        return "FAIL. INCORRECT MESSAGE."
+    return "FAIL. NO CONNECTION."
 
 
 @app.route("/env")
