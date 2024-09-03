@@ -225,7 +225,8 @@ def rabbitmq_receive():
             channel.basic_ack(method_frame.delivery_tag)
             if body == b"SUCCESS":
                 return "SUCCESS"
-        return "FAIL. INCORRECT MESSAGE."
+            return "FAIL. INCORRECT MESSAGE."
+        return "FAIL. NO MESSAGE."
     return "FAIL. NO CONNECTION."
 
 
