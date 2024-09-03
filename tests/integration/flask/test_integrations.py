@@ -50,6 +50,9 @@ async def test_rabbitmq_server_integration(
         assert response.status_code == 200
         assert "SUCCESS" == response.text
 
+    status = await model.get_status()
+    logger.info("status: %s", status)
+    logger.info("destroying: %s - %s", "amqp", f"{lxd_model_name}:amqp")
     res = await flask_app.destroy_relation("amqp", f"{lxd_model_name}:amqp")
     await model.wait_for_idle(apps=[flask_app.name], status="active")
 
