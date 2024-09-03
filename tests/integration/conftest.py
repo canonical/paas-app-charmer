@@ -7,6 +7,7 @@ import logging
 import pytest
 import pytest_asyncio
 from juju.application import Application
+from juju.client.jujudata import FileJujuData
 from juju.juju import Juju
 from juju.model import Controller, Model
 from pytest_operator.plugin import OpsTest
@@ -18,8 +19,13 @@ logger = logging.getLogger(__name__)
 async def fixture_lxd_controller(ops_test: OpsTest) -> Controller:
     """Return the current testing juju model."""
     if not "lxd" in Juju().get_controllers():
-        logger.info("creating lxd controller")
+        jujudata = FileJujuData()
+        previous_controller = jujudata.current_controller()
+        logger.info("bootstrapping lxd")
         _, _, _ = await ops_test.juju("bootstrap", "localhost", "lxd", check=True)
+        # go back to the original controller
+        logger.info("switch back to %s", previous_controller)
+        _, _, _ = await ops_test.juju("switch", previous_controller, check=True)
 
     controller = Controller()
     logger.info("connecting to lxd controller")
