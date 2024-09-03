@@ -55,7 +55,7 @@ async def test_rabbitmq_server_integration(
 
     logger.info("destroy relation res %s", res)
 
-    
+
 async def test_rabbitmq_k8s_integration(
     ops_test: OpsTest,
     flask_app: Application,
