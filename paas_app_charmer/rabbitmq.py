@@ -14,26 +14,28 @@ The main difference is that rabbitmq-server does not publish the information in 
 part in the relation bag. This python library unifies both charms, using a similar
 approach to the rabbitmq-k8s library.
 
-# rabbitmq-k8s
-# unit-flask-k8s-0: 15:27:43 INFO unit.flask-k8s/0.juju-log JAVI rabbitmq_requires._amqp_rel.data {<ops.model.Unit flask-k8s/0>: {'egress-subnets': '10.152.183.168/32', 'ingress-address': '10.152.183.168', 'private-address': '10.152.183.168'}, <ops.model.Application flask-k8s>: {'username': 'flask-k8s', 'vhost': '/'}, <ops.model.Unit rabbitmq-k8s/0>: {'egress-subnets': '10.12.97.225/32', 'ingress-address': '10.12.97.225', 'private-address': '10.12.97.225'}, <ops.model.Unit rabbitmq-k8s/1>: {'egress-subnets': '10.12.97.225/32', 'ingress-address': '10.12.97.225', 'private-address': '10.12.97.225'}, <ops.model.Application rabbitmq-k8s>: {'hostname': 'rabbitmq-k8s-endpoints.testing.svc.cluster.local', 'password': '3m036hhyiDHs'}} # noqa: W505 # pylint: disable=line-too-long
+For rabbitmq-k8s, the password and hostname are required in the app databag. The full
+list of hostnames can be obtained from the ingress-address in each unit.
 
-# rabbitmq-server
-# unit-flask-k8s-0: 16:00:16 INFO unit.flask-k8s/0.juju-log amqp:3: JAVI rabbitmq_requires._amqp_rel.data {<ops.model.Unit flask-k8s/0>: {'egress-subnets': '10.152.183.168/32', 'ingress-address': '10.152.183.168', 'private-address': '10.152.183.168'}, <ops.model.Application flask-k8s>: {'username': 'flask-k8s', 'vhost': '/'}, <ops.model.Unit rabbitmq-server/2>: {'hostname': '10.58.171.158', 'password': 'LGg6HMJXPF8G3cHMcMg28ZpwSWRfS6hb8s57Jfkt5TW3rtgV5ypZkV8ZY4GcrhW8', 'private-address': '10.58.171.158'}, <ops.model.Unit rabbitmq-server/1>: {'hostname': '10.58.171.70', 'password': 'LGg6HMJXPF8G3cHMcMg28ZpwSWRfS6hb8s57Jfkt5TW3rtgV5ypZkV8ZY4GcrhW8', 'private-address': '10.58.171.70'}, <ops.model.Unit rabbitmq-server/0>: {'egress-subnets': '10.58.171.146/32', 'hostname': '10.58.171.146', 'ingress-address': '10.58.171.146', 'password': 'LGg6HMJXPF8G3cHMcMg28ZpwSWRfS6hb8s57Jfkt5TW3rtgV5ypZkV8ZY4GcrhW8', 'private-address': '10.58.171.146'}, <ops.model.Application rabbitmq-server>: {}}
+For rabbitmq-server, the app databag is empty. The password and hostname are in the units databags,
+being the password equal in all units. Each hostname may point to different addresses. One
+of them will chosen as the in the rabbitmq parameters.
+
+rabbitmq-server support ssl client certificates, but are not implemented in this library.
+
+This library is very similar and uses the same events as
+ the library charms.rabbitmq_k8s.v0.rabbitmq.
+See https://github.com/openstack-charmers/charm-rabbitmq-k8s/blob/main/lib/charms/rabbitmq_k8s/v0/rabbitmq.py  # pylint: disable=line-too-long # noqa: W505
 """
 
 
-# JAVI COPYPASTED FOR NOW!
-# JAVI EXPLAIN NO SSL CLIENT CERFICATES YET
 import logging
-from typing import cast
 
 from ops import CharmBase, HookEvent
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
 from ops.model import Relation
-from pydantic import ValidationError
 
 from paas_app_charmer.charm_state import RabbitMQParameters
-from paas_app_charmer.utils import build_validation_error_message
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +56,9 @@ class RabbitMQServerEvents(ObjectEvents):
     """Events class for `on`.
 
     Attributes:
-        connected: JAVI TODO
-        ready: JAVI TODO
-        goneaway: JAVI TODO
+        connected: rabbitmq relation is connected
+        ready: rabbitmq relation is ready
+        goneaway: rabbitmq relation has been removed
     """
 
     connected = EventSource(RabbitMQConnectedEvent)
@@ -68,19 +70,19 @@ class RabbitMQRequires(Object):
     """RabbitMQRequires class.
 
     Attributes:
-        on: JAVI TODO
+        on: ObjectEvents for RabbitMQRequires
     """
 
     on = RabbitMQServerEvents()
 
     def __init__(self, charm: CharmBase, relation_name: str, username: str, vhost: str):
-        """JAVI TODO.
+        """Initialize the instance.
 
         Args:
-           charm: JAVI TODO
-           relation_name: JAVI TODO
-           username: JAVI TODO
-           vhost: JAVI TODO
+           charm: charm that uses the library.
+           relation_name: name of the RabbitMQ relation
+           username: username to use for RabbitMQ
+           vhost: virtual host to use for RabbitMQ
         """
         super().__init__(charm, relation_name)
         self.charm = charm
@@ -105,20 +107,17 @@ class RabbitMQRequires(Object):
         )
 
     def _on_amqp_relation_joined(self, _: HookEvent) -> None:
-        """JAVI TODO."""
-        logging.debug("RabbitMQRabbitMQRequires on_joined")
+        """Handle RabbitMQ joined."""
         self.on.connected.emit()
         self.request_access(self.username, self.vhost)
 
     def _on_amqp_relation_changed(self, _: HookEvent) -> None:
-        """JAVI TODO."""
-        logging.debug("RabbitMQRabbitMQRequires on_changed/departed")
+        """Handle RabbitMQ changed."""
         if self.rabbitmq_parameters():
             self.on.ready.emit()
 
     def _on_amqp_relation_broken(self, _: HookEvent) -> None:
-        """JAVI TODO."""
-        logging.debug("RabbitMQRabbitMQRequires on_broken")
+        """Handle RabbitMQ broken."""
         self.on.goneaway.emit()
 
     @property
@@ -127,55 +126,94 @@ class RabbitMQRequires(Object):
         return self.framework.model.get_relation(self.relation_name)
 
     def rabbitmq_parameters(self) -> RabbitMQParameters | None:
-        """TODO JAVI.
+        """Return RabbitMQ parameters with the data in the relation.
+
+        It will try to use the format in rabbitmq-k8s or rabbitmq-server.
+        If there is no relation or the data is not complete, it returns None.
 
         Returns:
-            TODO JAVI
+            The parameters for RabbitMQ or None.
         """
-        if self._amqp_rel:
-            # just put everything.
-            hostnames = []
-            password = None
-            for unit in self._amqp_rel.units:
-                unit_data = self._amqp_rel.data[unit]
-                ingress_address = unit_data.get("ingress-address")
-                unit_hostname = unit_data.get("hostname", ingress_address)
-                if unit_hostname:
-                    hostnames.append(unit_hostname)
-                # all of them should be equal
-                password = unit_data.get("password", password)
+        rabbitmq_k8s_params = self._rabbitmq_k8s_parameters()
+        if rabbitmq_k8s_params:
+            return rabbitmq_k8s_params
 
-            password = self._amqp_rel.data[self._amqp_rel.app].get("password", password)
-            first_hostname = hostnames[0] if len(hostnames) > 0 else None
-            hostname = self._amqp_rel.data[self._amqp_rel.app].get("hostname", first_hostname)
-
-            try:
-                return RabbitMQParameters(
-                    hostname=cast(str, hostname),
-                    hostnames=hostnames,
-                    username=self.username,
-                    password=cast(str, password),
-                    vhost=self.vhost,
-                )
-            except ValidationError as exc:
-                # do not crash, as the relation can be starting at this moment, and the
-                # data not being there in the current hook
-                error_message = build_validation_error_message(exc)
-                logger.info("Error validating RabbitMQ parameters %s", error_message)
-                return None
-        return None
+        # rabbitmq-server parameters or None.
+        return self._rabbitmq_server_parameters()
 
     def request_access(self, username: str, vhost: str) -> None:
         """Request access to the RabbitMQ server.
 
         Args:
-           username: JAVI TODO
-           vhost: JAVI TODO
+           username: username requested for RabbitMQ
+           vhost: virtual host requested for RabbitMQ
         """
         if self.model.unit.is_leader():
-            logging.debug("Requesting RabbitMQ user and vhost")
             if self._amqp_rel:
                 self._amqp_rel.data[self.charm.app]["username"] = username
                 self._amqp_rel.data[self.charm.app]["vhost"] = vhost
             else:
                 logger.warning("request_access but no rabbitmq relation")
+
+    def _rabbitmq_server_parameters(self) -> RabbitMQParameters | None:
+        """Return parameters for rabbitmq-server.
+
+        Returns:
+            Returns parameters for rabbitmq-server or None if they are not valid/complete.
+        """
+        if not self._amqp_rel:
+            return None
+
+        password = None
+        hostnames = []
+        for unit in self._amqp_rel.units:
+            unit_data = self._amqp_rel.data[unit]
+            # All of the passwords should be equal. If it is
+            # in the unit data, get it and override the password
+            password = unit_data.get("password", password)
+            unit_hostname = unit_data.get("hostname")
+            if unit_hostname:
+                hostnames.append(unit_hostname)
+
+        if not password or len(hostnames) == 0:
+            return None
+
+        hostname = hostnames[0]
+        return RabbitMQParameters(
+            hostname=hostname,
+            hostnames=hostnames,
+            username=self.username,
+            password=password,
+            vhost=self.vhost,
+        )
+
+    def _rabbitmq_k8s_parameters(self) -> RabbitMQParameters | None:
+        """Return parameters for rabbitmq-k8s.
+
+        Returns:
+            Returns parameters for rabbitmq-k8s or None if they are not valid/complete.
+        """
+        if not self._amqp_rel:
+            return None
+
+        # A password in the _amqp_rel data differentiates rabbitmq-k8s from rabbitmq-server
+        password = self._amqp_rel.data[self._amqp_rel.app].get("password")
+        hostname = self._amqp_rel.data[self._amqp_rel.app].get("hostname")
+
+        hostnames = []
+        for unit in self._amqp_rel.units:
+            unit_data = self._amqp_rel.data[unit]
+            ingress_address = unit_data.get("ingress-address")
+            if ingress_address:
+                hostnames.append(ingress_address)
+
+        if not password or not hostname:
+            return None
+
+        return RabbitMQParameters(
+            hostname=hostname,
+            hostnames=hostnames,
+            username=self.username,
+            password=password,
+            vhost=self.vhost,
+        )

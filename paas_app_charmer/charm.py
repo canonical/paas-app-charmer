@@ -104,18 +104,12 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
 
         self._amqp: RabbitMQRequires | None
         if "amqp" in requires and requires["amqp"].interface_name == "rabbitmq":
-            logger.info("JAVI PREPARING RABBIT REQUIRES")
             self._amqp = RabbitMQRequires(
                 self,
                 "amqp",
                 username=self.app.name,
                 vhost="/",
             )
-            logger.info("JAVI rabbitmq_requires._amqp_rel %s", str(self._amqp._amqp_rel))
-            if self._amqp._amqp_rel is not None:
-                logger.info(
-                    "JAVI rabbitmq_requires._amqp_rel.data %s", str(self._amqp._amqp_rel.data)
-                )
             self.framework.observe(self._amqp.on.connected, self._on_amqp_connected)
             self.framework.observe(self._amqp.on.ready, self._on_amqp_ready)
             self.framework.observe(self._amqp.on.goneaway, self._on_amqp_goneaway)
@@ -266,7 +260,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
 
         return True
 
-    # JAVI PENDING TO REFACTOR
+    # Pending to refactor all integrations
     def _missing_required_integrations(self, charm_state: CharmState) -> list[str]:  # noqa: C901
         """Get list of missing integrations that are required.
 
