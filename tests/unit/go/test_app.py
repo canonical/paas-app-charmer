@@ -9,7 +9,7 @@ import unittest
 import pytest
 
 from paas_app_charmer.app import App, WorkloadConfig
-from paas_app_charmer.charm_state import CharmState, IntegrationsState
+from paas_app_charmer.charm_state import CharmState, IntegrationsState, RabbitMQParameters
 from paas_app_charmer.go.charm import GoConfig
 
 
@@ -32,7 +32,16 @@ from paas_app_charmer.go.charm import GoConfig
             {"JUJU_CHARM_HTTP_PROXY": "http://proxy.test"},
             {"extra-config", "extravalue"},
             {"metrics-port": "9000", "metrics-path": "/m", "app-secret-key": "notfoobar"},
-            IntegrationsState(redis_uri="redis://10.1.88.132:6379"),
+            IntegrationsState(
+                redis_uri="redis://10.1.88.132:6379",
+                rabbitmq_parameters=RabbitMQParameters(
+                    hostname="rabbitmq.example.com",
+                    hostnames=["127.0.0.1"],
+                    username="go-app",
+                    password="nothingspecial",
+                    vhost="./",
+                ),
+            ),
             {
                 "APP_PORT": "8080",
                 "APP_METRICS_PATH": "/m",
@@ -51,6 +60,10 @@ from paas_app_charmer.go.charm import GoConfig
                 "APP_REDIS_DB_PORT": "6379",
                 "APP_REDIS_DB_QUERY": "",
                 "APP_REDIS_DB_SCHEME": "redis",
+                "APP_RABBITMQ_HOSTNAME": "rabbitmq.example.com",
+                "APP_RABBITMQ_PASSWORD": "nothingspecial",
+                "APP_RABBITMQ_USERNAME": "go-app",
+                "APP_RABBITMQ_VHOST": "./",
             },
         ),
     ],

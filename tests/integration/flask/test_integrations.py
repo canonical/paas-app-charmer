@@ -7,6 +7,7 @@ import urllib.parse
 from secrets import token_hex
 
 import ops
+import pytest
 import requests
 from juju.application import Application
 from juju.model import Model
@@ -16,65 +17,35 @@ from saml_test_helper import SamlK8sTestHelper
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.usefixtures("rabbitmq_server_integration")
 async def test_rabbitmq_server_integration(
-    ops_test: OpsTest,
-    ops_test_lxd: OpsTest,
     flask_app: Application,
-    rabbitmq_server_app: Application,
-    model: Model,
-    lxd_model: Model,
     get_unit_ips,
 ):
     """
-    arrange: TODO
-    act: TODO
-    assert: TODO
+    arrange: Flask and rabbitmq-server deployed
+    act: Integrate flask with rabbitmq-server
+    assert: Assert that RabbitMQ works correctly
     """
-
-    lxd_controller = await lxd_model.get_controller()
-    lxd_username = lxd_controller.get_current_username()
-    lxd_controller_name = ops_test_lxd.controller_name
-    lxd_model_name = lxd_model.name
-    offer_name = rabbitmq_server_app.name
-    rabbitmq_offer_url = f"{lxd_controller_name}:{lxd_username}/{lxd_model_name}.{offer_name}"
-
-    integration = await model.integrate(rabbitmq_offer_url, flask_app.name)
-    await model.wait_for_idle(apps=[flask_app.name], status="active")
-
-    for unit_ip in await get_unit_ips(flask_app.name):
-        response = requests.get(f"http://{unit_ip}:8000/rabbitmq/send", timeout=5)
-        assert response.status_code == 200
-        assert "SUCCESS" == response.text
-
-        response = requests.get(f"http://{unit_ip}:8000/rabbitmq/receive", timeout=5)
-        assert response.status_code == 200
-        assert "SUCCESS" == response.text
-
-    status = await model.get_status()
-    logger.info("status: %s", status)
-    logger.info("destroying: %s - %s", "amqp", f"{lxd_model_name}:amqp")
-    res = await flask_app.destroy_relation("amqp", f"{rabbitmq_server_app.name}:amqp")
-    await model.wait_for_idle(apps=[flask_app.name], status="active")
-
-    logger.info("destroy relation res %s", res)
+    await assert_rabbitmq_integration_correct(flask_app, get_unit_ips)
 
 
+@pytest.mark.usefixtures("rabbitmq_k8s_integration")
 async def test_rabbitmq_k8s_integration(
-    ops_test: OpsTest,
     flask_app: Application,
-    rabbitmq_k8s_app: Application,
-    model: Model,
     get_unit_ips,
 ):
     """
-    arrange: TODO
-    act: TODO
-    assert: TODO
+    arrange: Flask and rabbitmq-k8s deployed
+    act: Integrate flask with rabbitmq-k8s
+    assert: Assert that RabbitMQ works correctly
+
     """
+    await assert_rabbitmq_integration_correct(flask_app, get_unit_ips)
 
-    integration = await model.integrate(rabbitmq_k8s_app.name, flask_app.name)
-    await model.wait_for_idle(apps=[flask_app.name], status="active")
 
+async def assert_rabbitmq_integration_correct(flask_app: Application, get_unit_ips):
+    """Assert that rabbitmq works correctly sending and receiving a message."""
     for unit_ip in await get_unit_ips(flask_app.name):
         response = requests.get(f"http://{unit_ip}:8000/rabbitmq/send", timeout=5)
         assert response.status_code == 200
@@ -83,9 +54,6 @@ async def test_rabbitmq_k8s_integration(
         response = requests.get(f"http://{unit_ip}:8000/rabbitmq/receive", timeout=5)
         assert response.status_code == 200
         assert "SUCCESS" == response.text
-
-    res = await flask_app.destroy_relation("amqp", f"{rabbitmq_k8s_app.name}:amqp")
-    logger.info("destroy relation res %s", res)
 
 
 async def test_s3_integration(

@@ -17,16 +17,10 @@ logger = logging.getLogger(__name__)
 
 @pytest_asyncio.fixture(scope="module", name="ops_test_lxd")
 async def ops_test_lxd_fixture(request, tmp_path_factory, ops_test: OpsTest):
-    # Create lxd controller if it does not exist
+    """Return a ops_test fixture for lxd, creating the lxd controller if it does not exist."""
     if not "lxd" in Juju().get_controllers():
-        jujudata = FileJujuData()
-        previous_controller = jujudata.current_controller()
-        logger.info("JAVI controller %s", jujudata.current_controller())
         logger.info("bootstrapping lxd")
         _, _, _ = await ops_test.juju("bootstrap", "localhost", "lxd", check=True)
-        jujudata = FileJujuData()
-        previous_controller = jujudata.current_controller()
-        logger.info("JAVI controller %s", jujudata.current_controller())
 
     ops_test = OpsTest(request, tmp_path_factory)
     ops_test.controller_name = "lxd"
@@ -50,7 +44,6 @@ async def deploy_rabbitmq_server_fixture(
     """Deploy rabbitmq-server machine app."""
     app = await lxd_model.deploy(
         "rabbitmq-server",
-        # channel="3.9/stable",
         channel="latest/edge",
     )
     await lxd_model.wait_for_idle(raise_on_blocked=True)
@@ -65,7 +58,7 @@ async def deploy_rabbitmq_server_fixture(
 async def deploy_rabbitmq_k8s_fixture(
     model: Model,
 ) -> Application:
-    """Deploy rabbitmq-server machine app."""
+    """Deploy rabbitmq-k8s app."""
     app = await model.deploy(
         "rabbitmq-k8s",
         channel="3.12/edge",

@@ -213,16 +213,57 @@ def test_rabbitmq_integration(harness: Harness, amqp_relation_data, expected_env
     assert: The flask service should have environment variables in its plan
         for each of the integrations.
     """
-
     harness.add_relation("amqp", "amqp", **amqp_relation_data)
     container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
     container.add_layer("a_layer", DEFAULT_LAYER)
+
     harness.begin_with_initial_hooks()
+
     assert harness.model.unit.status == ops.ActiveStatus()
     service_env = container.get_plan().services["flask"].environment
     for env, env_val in expected_env_vars.items():
         assert env in service_env
         assert service_env[env] == env_val
+
+
+def test_rabbitmq_integration_with_relation_data_empty(harness: Harness):
+    """
+    arrange: Prepare a amqp integration (RabbitMQ), with missing data.
+    act: Start the flask charm and set flask-app container to be ready.
+    assert: The flask service should not have environment variables related to RabbitMQ
+    """
+    harness.add_relation("amqp", "amqp")
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+
+    harness.begin_with_initial_hooks()
+
+    assert harness.model.unit.status == ops.ActiveStatus()
+    service_env = container.get_plan().services["flask"].environment
+    for env in service_env.keys():
+        assert "RABBITMQ" not in env
+
+
+def test_rabbitmq_remove_integration(harness: Harness):
+    """
+    arrange: Prepare a charm with a complete amqp integration (RabbitMQ).
+    act: Remove the relation.
+    assert: The relation should not have the env variables related to RabbitMQ.
+    """
+    relation_id = harness.add_relation(
+        "amqp", "amqp", app_data={"hostname": "example.com", "password": "p"}
+    )
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+    harness.begin_with_initial_hooks()
+    assert harness.model.unit.status == ops.ActiveStatus()
+    service_env = container.get_plan().services["flask"].environment
+    assert "RABBITMQ_HOSTNAME" in service_env
+
+    harness.remove_relation(relation_id)
+
+    service_env = container.get_plan().services["flask"].environment
+    assert "RABBITMQ_HOSTNAME" not in service_env
 
 
 @pytest.mark.parametrize(
