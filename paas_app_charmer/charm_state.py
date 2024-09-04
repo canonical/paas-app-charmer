@@ -102,7 +102,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             redis_uri: The redis uri provided by the redis charm.
             s3_connection_info: Connection info from S3 lib.
             saml_relation_data: Relation data from the SAML app.
-            rabbitmq_parameters: JAVI TODO.
+            rabbitmq_parameters: RabbitMQ parameters.
             base_url: Base URL for the service.
 
         Return:
@@ -235,7 +235,7 @@ class IntegrationsState:
             database_requirers: All database requirers object declared by the charm.
             s3_connection_info: S3 connection info from S3 lib.
             saml_relation_data: Saml relation data from saml lib.
-            rabbitmq_parameters: TODO JAVI
+            rabbitmq_parameters: RabbitMQ parameters.
 
         Return:
             The IntegrationsState instance created.
@@ -368,18 +368,14 @@ class RabbitMQParameters(BaseModel, extra=Extra.allow):
     """Configuration for accessing RabbitMQ.
 
     Attributes:
-        hostname: Hostname or ip address of broker. It is one of the hostnames.
+        hostname: Hostname or ip address of broker. It could be one of the hostnames.
         hostnames: List of Hostnames or ip addresses of broker.
         username: The username to authenticate with
         password: The password to authenticate with
         vhost: RabbitMQ virtual host name.
     """
 
-    # In rabbitmq-k8s, it is the service url
-    # In rabbitmq-server, paas-app-charmer puts one of the ips of hosnames arbitrarily
     hostname: str
-    # In rabbitmq-k8s, a list of k8s ingress-address (maybe the same one)
-    # In rabbitmq-server, the ips of the machines
     hostnames: list[str]
     username: str
     password: str
