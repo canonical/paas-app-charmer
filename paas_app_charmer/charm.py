@@ -442,17 +442,14 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
     @block_if_invalid_config
     def _on_amqp_connected(self, _event: ops.HookEvent) -> None:
         """Handle ampq connected event."""
-        logger.info("_ON_AMQP_CONNECTED")
         self.restart()
 
     @block_if_invalid_config
     def _on_amqp_ready(self, _event: ops.HookEvent) -> None:
         """Handle ampq ready event."""
-        logger.info("_ON_AMQP_READY")
         self.restart()
 
     @block_if_invalid_config
     def _on_amqp_goneaway(self, _event: ops.HookEvent) -> None:
         """Handle ampq goneaway event."""
-        logger.info("_ON_AMQP_GONEAWAY")
         self.restart()
