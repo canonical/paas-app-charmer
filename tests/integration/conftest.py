@@ -47,10 +47,7 @@ async def deploy_rabbitmq_server_fixture(
         channel="latest/edge",
     )
     await lxd_model.wait_for_idle(raise_on_blocked=True)
-    offer = await lxd_model.create_offer("rabbitmq-server:amqp")
-    logger.info("offer: %s", offer)
-    offers = await lxd_model.list_offers()
-    logger.info("offers: %s", offers)
+    await lxd_model.create_offer("rabbitmq-server:amqp")
     yield app
 
 

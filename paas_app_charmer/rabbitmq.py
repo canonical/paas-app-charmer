@@ -79,7 +79,7 @@ class RabbitMQRequires(Object):
         """Initialize the instance.
 
         Args:
-           charm: charm that uses the library.
+           charm: charm that uses the library
            relation_name: name of the RabbitMQ relation
            username: username to use for RabbitMQ
            vhost: virtual host to use for RabbitMQ
