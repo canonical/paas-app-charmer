@@ -86,12 +86,12 @@ class Integrations:  # pylint: disable=too-many-instance-attributes
         Returns:
             TODO.
         """
-        return IntegrationsState.build(
+        return IntegrationsState(
             redis_uri=self._redis.get_url(),
-            database_uris=self.databases_uris(),
-            s3_connection_info=self._s3.get_connection_info(),
-            saml_relation_data=self._saml.get_relation_data(),
-            rabbitmq_parameters=self._rabbitmq.parameters(),
+            databases_uris=self.databases_uris(),
+            s3_parameters=self._s3.get_parameters(),
+            saml_parameters=self._saml.get_parameters(),
+            rabbitmq_parameters=self._rabbitmq.get_parameters(),
         )
 
 
@@ -421,7 +421,7 @@ class Saml(Integration):
         """
         saml_parameters = None
         saml_relation_data = self.get_relation_data()
-        if saml_relation_data:
+        if saml_relation_data is not None:
             try:
                 saml_parameters = SamlParameters(**saml_relation_data)
             except ValidationError as exc:
@@ -481,12 +481,12 @@ class RabbitMQ(Integration):
         Returns:
             TODO
         """
-        if self._is_defined() and not self._is_optional() and not self.parameters():
+        if self._is_defined() and not self._is_optional() and not self.get_parameters():
             return False
         return True
 
     # returns a RabbitMQ(BaseModel), not good...
-    def parameters(self) -> Any:
+    def get_parameters(self) -> Any:
         """TODO.
 
         Returns:
