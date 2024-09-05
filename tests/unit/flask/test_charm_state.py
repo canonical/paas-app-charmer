@@ -15,7 +15,7 @@ from paas_app_charmer.flask.charm import Charm, FlaskConfig
 
 from .constants import SAML_APP_RELATION_DATA_EXAMPLE
 
-# this is a unit test filen
+# this is a unit test file
 # pylint: disable=protected-access
 
 DEFAULT_CHARM_CONFIG = {"webserver-wsgi-path": "app:app", "flask-preferred-url-scheme": "HTTPS"}
