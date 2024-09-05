@@ -115,7 +115,7 @@ requires:
     interface: saml
     optional: True
     limit: 1
-  amqp:
+  rabbitmq:
     interface: rabbitmq
     optional: True
     limit: 1

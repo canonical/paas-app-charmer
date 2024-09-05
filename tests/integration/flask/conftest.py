@@ -275,7 +275,7 @@ async def rabbitmq_server_integration_fixture(
 
     yield integration
 
-    res = await flask_app.destroy_relation("amqp", f"{rabbitmq_server_app.name}:amqp")
+    res = await flask_app.destroy_relation("rabbitmq", f"{rabbitmq_server_app.name}:amqp")
     await model.wait_for_idle(apps=[flask_app.name], status="active")
 
 
@@ -291,5 +291,5 @@ async def rabbitmq_k8s_integration_fixture(
 
     yield integration
 
-    await flask_app.destroy_relation("amqp", f"{rabbitmq_k8s_app.name}:amqp")
+    await flask_app.destroy_relation("rabbitmq", f"{rabbitmq_k8s_app.name}:amqp")
     await model.wait_for_idle(apps=[flask_app.name], status="active")

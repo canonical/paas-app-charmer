@@ -165,7 +165,7 @@ def test_integrations_wiring(harness: Harness):
 
 
 @pytest.mark.parametrize(
-    "amqp_relation_data,expected_env_vars",
+    "rabbitmq_relation_data,expected_env_vars",
     [
         pytest.param(
             {
@@ -206,14 +206,14 @@ def test_integrations_wiring(harness: Harness):
         ),
     ],
 )
-def test_rabbitmq_integration(harness: Harness, amqp_relation_data, expected_env_vars):
+def test_rabbitmq_integration(harness: Harness, rabbitmq_relation_data, expected_env_vars):
     """
-    arrange: Prepare a amqp integration (RabbitMQ)
+    arrange: Prepare a rabbitmq integration (RabbitMQ)
     act: Start the flask charm and set flask-app container to be ready.
     assert: The flask service should have environment variables in its plan
         for each of the integrations.
     """
-    harness.add_relation("amqp", "amqp", **amqp_relation_data)
+    harness.add_relation("rabbitmq", "rabbitmq", **rabbitmq_relation_data)
     container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
     container.add_layer("a_layer", DEFAULT_LAYER)
 
@@ -228,11 +228,11 @@ def test_rabbitmq_integration(harness: Harness, amqp_relation_data, expected_env
 
 def test_rabbitmq_integration_with_relation_data_empty(harness: Harness):
     """
-    arrange: Prepare a amqp integration (RabbitMQ), with missing data.
+    arrange: Prepare a rabbitmq integration (RabbitMQ), with missing data.
     act: Start the flask charm and set flask-app container to be ready.
     assert: The flask service should not have environment variables related to RabbitMQ
     """
-    harness.add_relation("amqp", "amqp")
+    harness.add_relation("rabbitmq", "rabbitmq")
     container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
     container.add_layer("a_layer", DEFAULT_LAYER)
 
@@ -246,12 +246,12 @@ def test_rabbitmq_integration_with_relation_data_empty(harness: Harness):
 
 def test_rabbitmq_remove_integration(harness: Harness):
     """
-    arrange: Prepare a charm with a complete amqp integration (RabbitMQ).
+    arrange: Prepare a charm with a complete rabbitmq integration (RabbitMQ).
     act: Remove the relation.
     assert: The relation should not have the env variables related to RabbitMQ.
     """
     relation_id = harness.add_relation(
-        "amqp", "amqp", app_data={"hostname": "example.com", "password": "p"}
+        "rabbitmq", "rabbitmq", app_data={"hostname": "example.com", "password": "p"}
     )
     container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
     container.add_layer("a_layer", DEFAULT_LAYER)
@@ -272,7 +272,9 @@ def test_rabbitmq_remove_integration(harness: Harness):
         pytest.param(["saml"], ["s3"], id="s3 fails"),
         pytest.param(["redis", "s3"], ["mysql", "postgresql"], id="postgresql and mysql fail"),
         pytest.param(
-            [], ["mysql", "postgresql", "mongodb", "s3", "redis", "saml", "amqp"], id="all fail"
+            [],
+            ["mysql", "postgresql", "mongodb", "s3", "redis", "saml", "rabbitmq"],
+            id="all fail",
         ),
     ],
 )

@@ -25,23 +25,19 @@ from paas_app_charmer.utils import build_validation_error_message
 
 logger = logging.getLogger(__name__)
 
-# Until charmcraft fetch-libs is implemented, the charm will not fail
-# if new optional libs are not fetched, as it will not be backwards compatible.
+# Do not fail for new integrations to be backwards compatible without forcing
+# the user to run fetch-libs.
 try:
     # pylint: disable=ungrouped-imports
     from charms.data_platform_libs.v0.s3 import S3Requirer
 except ImportError:
-    logger.exception(
-        "Missing charm library, please run `charmcraft fetch-lib charms.data_platform_libs.v0.s3`"
-    )
+    logger.exception("Missing charm library, please run `charmcraft fetch-libs`")
 
 try:
     # pylint: disable=ungrouped-imports
     from charms.saml_integrator.v0.saml import SamlRequires
 except ImportError:
-    logger.exception(
-        "Missing charm library, please run `charmcraft fetch-lib charms.saml_integrator.v0.saml`"
-    )
+    logger.exception("Missing charm library, please run `charmcraft fetch-libs`")
 
 
 class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-attributes
@@ -102,19 +98,19 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         else:
             self._saml = None
 
-        self._amqp: RabbitMQRequires | None
-        if "amqp" in requires and requires["amqp"].interface_name == "rabbitmq":
-            self._amqp = RabbitMQRequires(
+        self._rabbitmq: RabbitMQRequires | None
+        if "rabbitmq" in requires and requires["rabbitmq"].interface_name == "rabbitmq":
+            self._rabbitmq = RabbitMQRequires(
                 self,
-                "amqp",
+                "rabbitmq",
                 username=self.app.name,
                 vhost="/",
             )
-            self.framework.observe(self._amqp.on.connected, self._on_amqp_connected)
-            self.framework.observe(self._amqp.on.ready, self._on_amqp_ready)
-            self.framework.observe(self._amqp.on.goneaway, self._on_amqp_goneaway)
+            self.framework.observe(self._rabbitmq.on.connected, self._on_rabbitmq_connected)
+            self.framework.observe(self._rabbitmq.on.ready, self._on_rabbitmq_ready)
+            self.framework.observe(self._rabbitmq.on.goneaway, self._on_rabbitmq_goneaway)
         else:
-            self._amqp = None
+            self._rabbitmq = None
 
         self._database_migration = DatabaseMigration(
             container=self.unit.get_container(self._workload_config.container_name),
@@ -288,9 +284,9 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         if self._saml and not charm_state.integrations.saml_parameters:
             if not requires["saml"].optional:
                 missing_integrations.append("saml")
-        if self._amqp and not charm_state.integrations.rabbitmq_parameters:
-            if not requires["amqp"].optional:
-                missing_integrations.append("amqp")
+        if self._rabbitmq and not charm_state.integrations.rabbitmq_parameters:
+            if not requires["rabbitmq"].optional:
+                missing_integrations.append("rabbitmq")
         return missing_integrations
 
     def restart(self) -> None:
@@ -338,7 +334,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             redis_uri=self._redis.url if self._redis is not None else None,
             s3_connection_info=self._s3.get_s3_connection_info() if self._s3 else None,
             saml_relation_data=saml_relation_data,
-            rabbitmq_parameters=self._amqp.rabbitmq_parameters() if self._amqp else None,
+            rabbitmq_parameters=self._rabbitmq.rabbitmq_parameters() if self._rabbitmq else None,
             base_url=self._base_url,
         )
 
@@ -440,16 +436,16 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         self.restart()
 
     @block_if_invalid_config
-    def _on_amqp_connected(self, _event: ops.HookEvent) -> None:
+    def _on_rabbitmq_connected(self, _event: ops.HookEvent) -> None:
         """Handle ampq connected event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_amqp_ready(self, _event: ops.HookEvent) -> None:
+    def _on_rabbitmq_ready(self, _event: ops.HookEvent) -> None:
         """Handle ampq ready event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_amqp_goneaway(self, _event: ops.HookEvent) -> None:
+    def _on_rabbitmq_goneaway(self, _event: ops.HookEvent) -> None:
         """Handle ampq goneaway event."""
         self.restart()

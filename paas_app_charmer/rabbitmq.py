@@ -91,37 +91,37 @@ class RabbitMQRequires(Object):
         self.vhost = vhost
         self.framework.observe(
             self.charm.on[relation_name].relation_joined,
-            self._on_amqp_relation_joined,
+            self._on_rabbitmq_relation_joined,
         )
         self.framework.observe(
             self.charm.on[relation_name].relation_changed,
-            self._on_amqp_relation_changed,
+            self._on_rabbitmq_relation_changed,
         )
         self.framework.observe(
             self.charm.on[relation_name].relation_departed,
-            self._on_amqp_relation_changed,
+            self._on_rabbitmq_relation_changed,
         )
         self.framework.observe(
             self.charm.on[relation_name].relation_broken,
-            self._on_amqp_relation_broken,
+            self._on_rabbitmq_relation_broken,
         )
 
-    def _on_amqp_relation_joined(self, _: HookEvent) -> None:
+    def _on_rabbitmq_relation_joined(self, _: HookEvent) -> None:
         """Handle RabbitMQ joined."""
         self.on.connected.emit()
         self.request_access(self.username, self.vhost)
 
-    def _on_amqp_relation_changed(self, _: HookEvent) -> None:
+    def _on_rabbitmq_relation_changed(self, _: HookEvent) -> None:
         """Handle RabbitMQ changed."""
         if self.rabbitmq_parameters():
             self.on.ready.emit()
 
-    def _on_amqp_relation_broken(self, _: HookEvent) -> None:
+    def _on_rabbitmq_relation_broken(self, _: HookEvent) -> None:
         """Handle RabbitMQ broken."""
         self.on.goneaway.emit()
 
     @property
-    def _amqp_rel(self) -> Relation | None:
+    def _rabbitmq_rel(self) -> Relation | None:
         """The RabbitMQ relation."""
         return self.framework.model.get_relation(self.relation_name)
 
@@ -149,9 +149,9 @@ class RabbitMQRequires(Object):
            vhost: virtual host requested for RabbitMQ
         """
         if self.model.unit.is_leader():
-            if self._amqp_rel:
-                self._amqp_rel.data[self.charm.app]["username"] = username
-                self._amqp_rel.data[self.charm.app]["vhost"] = vhost
+            if self._rabbitmq_rel:
+                self._rabbitmq_rel.data[self.charm.app]["username"] = username
+                self._rabbitmq_rel.data[self.charm.app]["vhost"] = vhost
             else:
                 logger.warning("request_access but no rabbitmq relation")
 
@@ -161,13 +161,13 @@ class RabbitMQRequires(Object):
         Returns:
             Returns parameters for rabbitmq-server or None if they are not valid/complete.
         """
-        if not self._amqp_rel:
+        if not self._rabbitmq_rel:
             return None
 
         password = None
         hostnames = []
-        for unit in self._amqp_rel.units:
-            unit_data = self._amqp_rel.data[unit]
+        for unit in self._rabbitmq_rel.units:
+            unit_data = self._rabbitmq_rel.data[unit]
             # All of the passwords should be equal. If it is
             # in the unit data, get it and override the password
             password = unit_data.get("password", password)
@@ -193,16 +193,16 @@ class RabbitMQRequires(Object):
         Returns:
             Returns parameters for rabbitmq-k8s or None if they are not valid/complete.
         """
-        if not self._amqp_rel:
+        if not self._rabbitmq_rel:
             return None
 
-        # A password in the _amqp_rel data differentiates rabbitmq-k8s from rabbitmq-server
-        password = self._amqp_rel.data[self._amqp_rel.app].get("password")
-        hostname = self._amqp_rel.data[self._amqp_rel.app].get("hostname")
+        # A password in the _rabbitmq_rel data differentiates rabbitmq-k8s from rabbitmq-server
+        password = self._rabbitmq_rel.data[self._rabbitmq_rel.app].get("password")
+        hostname = self._rabbitmq_rel.data[self._rabbitmq_rel.app].get("hostname")
 
         hostnames = []
-        for unit in self._amqp_rel.units:
-            unit_data = self._amqp_rel.data[unit]
+        for unit in self._rabbitmq_rel.units:
+            unit_data = self._rabbitmq_rel.data[unit]
             ingress_address = unit_data.get("ingress-address")
             if ingress_address:
                 hostnames.append(ingress_address)
