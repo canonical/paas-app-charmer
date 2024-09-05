@@ -89,7 +89,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             framework_config: The framework specific configurations.
             base_url: Base URL for the service.
             secret_storage: The secret storage manager associated with the charm.
-            integrations: TODO
+            integrations: State for all the Integrations.
 
         Return:
             The CharmState instance created by the provided charm.
