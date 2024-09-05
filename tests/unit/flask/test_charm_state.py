@@ -8,13 +8,14 @@ from secrets import token_hex
 
 import pytest
 
-from paas_app_charmer.charm_state import CharmState, S3Parameters
+from paas_app_charmer.charm_integrations import S3, Integrations, Saml
+from paas_app_charmer.charm_state import CharmState, IntegrationsState, S3Parameters
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.flask.charm import Charm, FlaskConfig
 
 from .constants import SAML_APP_RELATION_DATA_EXAMPLE
 
-# this is a unit test file
+# this is a unit test filen
 # pylint: disable=protected-access
 
 DEFAULT_CHARM_CONFIG = {"webserver-wsgi-path": "app:app", "flask-preferred-url-scheme": "HTTPS"}
@@ -58,7 +59,6 @@ def test_charm_state_flask_config(charm_config: dict, flask_config: dict) -> Non
         framework_config=Charm.get_framework_config(charm),
         secret_storage=SECRET_STORAGE_MOCK,
         charm=charm,
-        database_requirers={},
     )
     assert charm_state.framework_config == flask_config
 
@@ -90,7 +90,6 @@ def test_charm_state_invalid_flask_config(charm_config: dict) -> None:
             framework_config=Charm.get_framework_config(charm),
             secret_storage=SECRET_STORAGE_MOCK,
             charm=charm,
-            database_requirers={},
         )
     for config_key in charm_config:
         assert config_key in exc.value.msg
@@ -113,45 +112,39 @@ def test_charm_state_invalid_flask_config(charm_config: dict) -> None:
         ),
     ],
 )
-def test_s3_integration(s3_connection_info, expected_s3_parameters):
+def test_s3_integration(monkeypatch, s3_connection_info, expected_s3_parameters):
     """
     arrange: Prepare charm and charm config.
     act: Create the CharmState with s3 information.
     assert: Check the S3Parameters generated are the expected ones.
     """
-    config = copy.copy(DEFAULT_CHARM_CONFIG)
-    config.update(config)
-    charm = unittest.mock.MagicMock(config=config)
-    charm_state = CharmState.from_charm(
-        charm=charm,
-        framework_config=Charm.get_framework_config(charm),
-        framework="flask",
-        secret_storage=SECRET_STORAGE_MOCK,
-        database_requirers={},
-        s3_connection_info=s3_connection_info,
+    monkeypatch.setattr(
+        S3, "get_connection_info", unittest.mock.MagicMock(return_value=s3_connection_info)
     )
-    assert charm_state.integrations
-    assert charm_state.integrations.s3_parameters == expected_s3_parameters
+
+    charm = unittest.mock.MagicMock()
+    charm.framework.meta.requires = {"s3": unittest.mock.MagicMock(interface_name="s3")}
+
+    integrations = Integrations(charm)
+    integrations_state = integrations.create_integrations_state()
+    assert integrations_state.s3_parameters == expected_s3_parameters
 
 
-def test_s3_integration_raises():
+def test_s3_integration_raises(harness, monkeypatch):
     """
-    arrange: Prepare charm and charm config.
-    act: Create the CharmState with s3 information that is invalid.
+    arrange: Prepare charm
+    act: Create the IntegrationsState with s3 information that is invalid.
     assert: Check that CharmConfigInvalidError is raised.
     """
-    config = copy.copy(DEFAULT_CHARM_CONFIG)
-    config.update(config)
-    charm = unittest.mock.MagicMock(config=config)
+    charm = unittest.mock.MagicMock()
+    charm.framework.meta.requires = {"s3": unittest.mock.MagicMock(interface_name="s3")}
+    monkeypatch.setattr(
+        S3, "get_connection_info", unittest.mock.MagicMock(return_value={"bucket": "bucket"})
+    )
+
+    integrations = Integrations(charm)
     with pytest.raises(CharmConfigInvalidError) as exc:
-        charm_state = CharmState.from_charm(
-            charm=charm,
-            framework_config=Charm.get_framework_config(charm),
-            framework="flask",
-            secret_storage=SECRET_STORAGE_MOCK,
-            database_requirers={},
-            s3_connection_info={"bucket": "bucket"},
-        )
+        integrations.create_integrations_state()
     assert "S3" in str(exc)
 
 
@@ -176,27 +169,24 @@ def test_s3_addressing_style(s3_uri_style, addressing_style) -> None:
     assert s3_parameters.addressing_style == addressing_style
 
 
-def test_saml_integration():
+def test_saml_integration(monkeypatch):
     """
     arrange: Prepare charm and charm config.
     act: Create the CharmState with saml information.
     assert: Check the SamlParameters generated are the expected ones.
     """
     saml_app_relation_data = dict(SAML_APP_RELATION_DATA_EXAMPLE)
-    config = copy.copy(DEFAULT_CHARM_CONFIG)
-    config.update(config)
-    charm = unittest.mock.MagicMock(config=config)
-    charm_state = CharmState.from_charm(
-        charm=charm,
-        framework_config=Charm.get_framework_config(charm),
-        framework="flask",
-        secret_storage=SECRET_STORAGE_MOCK,
-        database_requirers={},
-        saml_relation_data=saml_app_relation_data,
+
+    charm = unittest.mock.MagicMock()
+    charm.framework.meta.requires = {"saml": unittest.mock.MagicMock(interface_name="saml")}
+    monkeypatch.setattr(
+        Saml, "get_relation_data", unittest.mock.MagicMock(return_value=saml_app_relation_data)
     )
-    assert charm_state.integrations
-    assert charm_state.integrations.saml_parameters
-    saml_parameters = charm_state.integrations.saml_parameters
+
+    integrations = Integrations(charm)
+    integrations_state = integrations.create_integrations_state()
+    saml_parameters = integrations_state.saml_parameters
+    assert saml_app_relation_data
     assert saml_parameters.entity_id == saml_app_relation_data["entity_id"]
     assert saml_parameters.metadata_url == saml_app_relation_data["metadata_url"]
     assert (
@@ -248,23 +238,20 @@ def _test_saml_integration_invalid_parameters():
 @pytest.mark.parametrize(
     "saml_app_relation_data, error_messages", _test_saml_integration_invalid_parameters()
 )
-def test_saml_integration_invalid(saml_app_relation_data, error_messages):
+def test_saml_integration_invalid(monkeypatch, saml_app_relation_data, error_messages):
     """
     arrange: Prepare a saml relation data that is invalid.
     act: Try to build CharmState.
     assert: It should raise CharmConfigInvalidError with a specific error message.
     """
-    config = copy.copy(DEFAULT_CHARM_CONFIG)
-    config.update(config)
-    charm = unittest.mock.MagicMock(config=config)
+    charm = unittest.mock.MagicMock()
+    charm.framework.meta.requires = {"saml": unittest.mock.MagicMock(interface_name="saml")}
+    monkeypatch.setattr(
+        Saml, "get_relation_data", unittest.mock.MagicMock(return_value=saml_app_relation_data)
+    )
+    integrations = Integrations(charm)
+
     with pytest.raises(CharmConfigInvalidError) as exc:
-        charm_state = CharmState.from_charm(
-            charm=charm,
-            framework_config=Charm.get_framework_config(charm),
-            framework="flask",
-            secret_storage=SECRET_STORAGE_MOCK,
-            database_requirers={},
-            saml_relation_data=saml_app_relation_data,
-        )
+        integrations_state = integrations.create_integrations_state()
     for message in error_messages:
         assert message in str(exc)

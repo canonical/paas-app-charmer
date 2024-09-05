@@ -6,42 +6,22 @@ import abc
 import logging
 
 import ops
-from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
-from charms.redis_k8s.v0.redis import RedisRelationCharmEvents, RedisRequires
+from charms.redis_k8s.v0.redis import RedisRelationCharmEvents
 from charms.traefik_k8s.v2.ingress import IngressPerAppRequirer
 from ops.model import Container
 from pydantic import BaseModel, ValidationError
 
 from paas_app_charmer.app import App, WorkloadConfig
+from paas_app_charmer.charm_integrations import Integrations
 from paas_app_charmer.charm_state import CharmState
 from paas_app_charmer.charm_utils import block_if_invalid_config
 from paas_app_charmer.database_migration import DatabaseMigration, DatabaseMigrationStatus
-from paas_app_charmer.databases import make_database_requirers
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.observability import Observability
-from paas_app_charmer.rabbitmq import RabbitMQRequires
 from paas_app_charmer.secret_storage import KeySecretStorage
 from paas_app_charmer.utils import build_validation_error_message
 
 logger = logging.getLogger(__name__)
-
-# Until charmcraft fetch-libs is implemented, the charm will not fail
-# if new optional libs are not fetched, as it will not be backwards compatible.
-try:
-    # pylint: disable=ungrouped-imports
-    from charms.data_platform_libs.v0.s3 import S3Requirer
-except ImportError:
-    logger.exception(
-        "Missing charm library, please run `charmcraft fetch-lib charms.data_platform_libs.v0.s3`"
-    )
-
-try:
-    # pylint: disable=ungrouped-imports
-    from charms.saml_integrator.v0.saml import SamlRequires
-except ImportError:
-    logger.exception(
-        "Missing charm library, please run `charmcraft fetch-lib charms.saml_integrator.v0.saml`"
-    )
 
 
 class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-attributes
@@ -80,41 +60,9 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         self._framework_name = framework_name
 
         self._secret_storage = KeySecretStorage(charm=self, key=f"{framework_name}_secret_key")
-        self._database_requirers = make_database_requirers(self, self.app.name)
 
-        requires = self.framework.meta.requires
-        if "redis" in requires and requires["redis"].interface_name == "redis":
-            self._redis = RedisRequires(charm=self, relation_name="redis")
-            self.framework.observe(self.on.redis_relation_updated, self._on_redis_relation_updated)
-        else:
-            self._redis = None
-
-        if "s3" in requires and requires["s3"].interface_name == "s3":
-            self._s3 = S3Requirer(charm=self, relation_name="s3", bucket_name=self.app.name)
-            self.framework.observe(self._s3.on.credentials_changed, self._on_s3_credential_changed)
-            self.framework.observe(self._s3.on.credentials_gone, self._on_s3_credential_gone)
-        else:
-            self._s3 = None
-
-        if "saml" in requires and requires["saml"].interface_name == "saml":
-            self._saml = SamlRequires(self)
-            self.framework.observe(self._saml.on.saml_data_available, self._on_saml_data_available)
-        else:
-            self._saml = None
-
-        self._amqp: RabbitMQRequires | None
-        if "amqp" in requires and requires["amqp"].interface_name == "rabbitmq":
-            self._amqp = RabbitMQRequires(
-                self,
-                "amqp",
-                username=self.app.name,
-                vhost="/",
-            )
-            self.framework.observe(self._amqp.on.connected, self._on_amqp_connected)
-            self.framework.observe(self._amqp.on.ready, self._on_amqp_ready)
-            self.framework.observe(self._amqp.on.goneaway, self._on_amqp_goneaway)
-        else:
-            self._amqp = None
+        self.charm_integrations = Integrations(self)
+        self.charm_integrations.register(self._on_generic_integration_event)
 
         self._database_migration = DatabaseMigration(
             container=self.unit.get_container(self._workload_config.container_name),
@@ -143,19 +91,6 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             self._on_secret_storage_relation_changed,
         )
         self.framework.observe(self.on.update_status, self._on_update_status)
-        for database, database_requirer in self._database_requirers.items():
-            self.framework.observe(
-                database_requirer.on.database_created,
-                getattr(self, f"_on_{database}_database_database_created"),
-            )
-            self.framework.observe(
-                database_requirer.on.endpoints_changed,
-                getattr(self, f"_on_{database}_database_endpoints_changed"),
-            )
-            self.framework.observe(
-                self.on[database_requirer.relation_name].relation_broken,
-                getattr(self, f"_on_{database}_database_relation_broken"),
-            )
         self.framework.observe(self._ingress.on.ready, self._on_ingress_ready)
         self.framework.observe(self._ingress.on.revoked, self._on_ingress_revoked)
         self.framework.observe(
@@ -249,7 +184,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             self.update_app_and_unit_status(ops.WaitingStatus("Waiting for peer integration"))
             return False
 
-        missing_integrations = self._missing_required_integrations(charm_state)
+        missing_integrations = self.charm_integrations.missing_integrations()
         if missing_integrations:
             self._create_app().stop_all_services()
             self._database_migration.set_status_to_pending()
@@ -259,39 +194,6 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             return False
 
         return True
-
-    # Pending to refactor all integrations
-    def _missing_required_integrations(self, charm_state: CharmState) -> list[str]:  # noqa: C901
-        """Get list of missing integrations that are required.
-
-        Args:
-            charm_state: the charm state
-
-        Returns:
-            list of names of missing integrations
-        """
-        missing_integrations = []
-        requires = self.framework.meta.requires
-        for name in self._database_requirers.keys():
-            if (
-                name not in charm_state.integrations.databases_uris
-                or charm_state.integrations.databases_uris[name] is None
-            ):
-                if not requires[name].optional:
-                    missing_integrations.append(name)
-        if self._redis and not charm_state.integrations.redis_uri:
-            if not requires["redis"].optional:
-                missing_integrations.append("redis")
-        if self._s3 and not charm_state.integrations.s3_parameters:
-            if not requires["s3"].optional:
-                missing_integrations.append("s3")
-        if self._saml and not charm_state.integrations.saml_parameters:
-            if not requires["saml"].optional:
-                missing_integrations.append("saml")
-        if self._amqp and not charm_state.integrations.rabbitmq_parameters:
-            if not requires["amqp"].optional:
-                missing_integrations.append("amqp")
-        return missing_integrations
 
     def restart(self) -> None:
         """Restart or start the service if not started with the latest configuration."""
@@ -325,20 +227,12 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         Returns:
             New CharmState
         """
-        saml_relation_data = None
-        if self._saml and (saml_data := self._saml.get_relation_data()):
-            saml_relation_data = saml_data.to_relation_data()
-
         return CharmState.from_charm(
             charm=self,
             framework=self._framework_name,
             framework_config=self.get_framework_config(),
             secret_storage=self._secret_storage,
-            database_requirers=self._database_requirers,
-            redis_uri=self._redis.url if self._redis is not None else None,
-            s3_connection_info=self._s3.get_s3_connection_info() if self._s3 else None,
-            saml_relation_data=saml_relation_data,
-            rabbitmq_parameters=self._amqp.rabbitmq_parameters() if self._amqp else None,
+            integrations=self.charm_integrations.create_integrations_state(),
             base_url=self._base_url,
         )
 
@@ -358,66 +252,6 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         """Handle the update-status event."""
         if self._database_migration.get_status() == DatabaseMigrationStatus.FAILED:
             self.restart()
-
-    @block_if_invalid_config
-    def _on_mysql_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle mysql's database-created event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_mysql_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle mysql's endpoints-changed event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_mysql_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
-        """Handle mysql's relation-broken event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_postgresql_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle postgresql's database-created event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_postgresql_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle mysql's endpoints-changed event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_postgresql_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
-        """Handle postgresql's relation-broken event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_mongodb_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle mongodb's database-created event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_mongodb_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle mysql's endpoints-changed event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_mongodb_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
-        """Handle postgresql's relation-broken event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_redis_relation_updated(self, _event: DatabaseRequiresEvent) -> None:
-        """Handle redis's database-created event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_s3_credential_changed(self, _event: ops.HookEvent) -> None:
-        """Handle s3 credentials-changed event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_s3_credential_gone(self, _event: ops.HookEvent) -> None:
-        """Handle s3 credentials-gone event."""
-        self.restart()
 
     @block_if_invalid_config
     def _on_saml_data_available(self, _event: ops.HookEvent) -> None:
@@ -440,16 +274,6 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         self.restart()
 
     @block_if_invalid_config
-    def _on_amqp_connected(self, _event: ops.HookEvent) -> None:
-        """Handle ampq connected event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_amqp_ready(self, _event: ops.HookEvent) -> None:
-        """Handle ampq ready event."""
-        self.restart()
-
-    @block_if_invalid_config
-    def _on_amqp_goneaway(self, _event: ops.HookEvent) -> None:
-        """Handle ampq goneaway event."""
+    def _on_generic_integration_event(self, _event: ops.HookEvent) -> None:
+        """Handle generic integration event."""
         self.restart()

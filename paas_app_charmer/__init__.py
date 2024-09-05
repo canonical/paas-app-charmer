@@ -5,7 +5,11 @@
 
 """Module __init__."""
 
+import logging
+
 from paas_app_charmer import exceptions
+
+logger = logging.getLogger(__name__)
 
 # Try the charm library imports to check whether they are present
 try:
@@ -55,3 +59,17 @@ except ImportError as import_error:
     raise exceptions.MissingCharmLibraryError(
         "Missing charm library, please run `charmcraft fetch-lib charms.redis_k8s.v0.redis`"
     ) from import_error
+# The following ones are not errors, as they were added after the initial version and
+# making them error will not be backward compatible.
+try:
+    import charms.data_platform_libs.v0.s3  # noqa: F401
+except ImportError:
+    logger.exception(
+        "Missing charm library, please run `charmcraft fetch-lib charms.data_platform_libs.v0.s3`"
+    )
+try:
+    import charms.saml_integrator.v0.saml  # noqa: F401
+except ImportError:
+    logger.exception(
+        "Missing charm library, please run `charmcraft fetch-lib charms.saml_integrator.v0.saml`"
+    )

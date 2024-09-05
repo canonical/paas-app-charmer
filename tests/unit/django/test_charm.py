@@ -58,7 +58,6 @@ def test_django_config(harness: Harness, config: dict, env: dict) -> None:
         framework="django",
         framework_config=harness.charm.get_framework_config(),
         secret_storage=secret_storage,
-        database_requirers={},
     )
     webserver_config = WebserverConfig.from_charm_config(harness.charm.config)
     workload_config = create_workload_config(framework_name="django")

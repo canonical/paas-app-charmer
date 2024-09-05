@@ -41,6 +41,9 @@ from paas_app_charmer.go.charm import GoConfig
                     password="nothingspecial",
                     vhost="./",
                 ),
+                s3_parameters=None,
+                databases_uris={},
+                saml_parameters=None,
             ),
             {
                 "APP_PORT": "8080",

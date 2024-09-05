@@ -6,14 +6,11 @@ import logging
 import os
 import re
 import typing
-from dataclasses import dataclass, field
 from typing import Optional
 
 import ops
-from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
-from pydantic import BaseModel, Extra, Field, ValidationError, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, ValidationError, ValidationInfo, field_validator
 
-from paas_app_charmer.databases import get_uri
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.secret_storage import KeySecretStorage
 from paas_app_charmer.utils import build_validation_error_message
@@ -84,12 +81,8 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         framework: str,
         framework_config: BaseModel,
         secret_storage: KeySecretStorage,
-        database_requirers: dict[str, DatabaseRequires],
-        redis_uri: str | None = None,
-        s3_connection_info: dict[str, str] | None = None,
-        saml_relation_data: typing.MutableMapping[str, str] | None = None,
-        rabbitmq_parameters: "RabbitMQParameters | None" = None,
         base_url: str | None = None,
+        integrations: "IntegrationsState | None" = None,
     ) -> "CharmState":
         """Initialize a new instance of the CharmState class from the associated charm.
 
@@ -97,13 +90,9 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             charm: The charm instance associated with this state.
             framework: The framework name.
             framework_config: The framework specific configurations.
-            secret_storage: The secret storage manager associated with the charm.
-            database_requirers: All database requirers object declared by the charm.
-            redis_uri: The redis uri provided by the redis charm.
-            s3_connection_info: Connection info from S3 lib.
-            saml_relation_data: Relation data from the SAML app.
-            rabbitmq_parameters: RabbitMQ parameters.
             base_url: Base URL for the service.
+            secret_storage: The secret storage manager associated with the charm.
+            integrations: TODO
 
         Return:
             The CharmState instance created by the provided charm.
@@ -117,23 +106,16 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             k: v for k, v in app_config.items() if k not in framework_config.dict().keys()
         }
 
-        integrations = IntegrationsState.build(
-            redis_uri=redis_uri,
-            database_requirers=database_requirers,
-            s3_connection_info=s3_connection_info,
-            saml_relation_data=saml_relation_data,
-            rabbitmq_parameters=rabbitmq_parameters,
-        )
         return cls(
             framework=framework,
             framework_config=framework_config.dict(exclude_none=True),
+            base_url=base_url,
             app_config=typing.cast(dict[str, str | int | bool], app_config),
             secret_key=(
                 secret_storage.get_secret_key() if secret_storage.is_initialized else None
             ),
             is_secret_storage_ready=secret_storage.is_initialized,
             integrations=integrations,
-            base_url=base_url,
         )
 
     @property
@@ -197,8 +179,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         return self._is_secret_storage_ready
 
 
-@dataclass
-class IntegrationsState:
+class IntegrationsState(BaseModel):
     """State of the integrations.
 
     This state is related to all the relations that can be optional, like databases, redis...
@@ -212,7 +193,7 @@ class IntegrationsState:
     """
 
     redis_uri: str | None = None
-    databases_uris: dict[str, str] = field(default_factory=dict)
+    databases_uris: dict[str, str] = Field(default_factory=dict)
     s3_parameters: "S3Parameters | None" = None
     saml_parameters: "SamlParameters | None" = None
     rabbitmq_parameters: "RabbitMQParameters | None" = None
@@ -221,7 +202,7 @@ class IntegrationsState:
     def build(  # pylint: disable=too-many-arguments
         cls,
         redis_uri: str | None,
-        database_requirers: dict[str, DatabaseRequires],
+        database_uris: dict[str, str],
         s3_connection_info: dict[str, str] | None,
         saml_relation_data: typing.MutableMapping[str, str] | None = None,
         rabbitmq_parameters: "RabbitMQParameters | None" = None,
@@ -232,7 +213,7 @@ class IntegrationsState:
 
         Args:
             redis_uri: The redis uri provided by the redis charm.
-            database_requirers: All database requirers object declared by the charm.
+            database_uris: Database valid uris.
             s3_connection_info: S3 connection info from S3 lib.
             saml_relation_data: Saml relation data from saml lib.
             rabbitmq_parameters: RabbitMQ parameters.
@@ -276,11 +257,7 @@ class IntegrationsState:
 
         return cls(
             redis_uri=redis_uri,
-            databases_uris={
-                interface_name: uri
-                for interface_name, requirers in database_requirers.items()
-                if (uri := get_uri(requirers)) is not None
-            },
+            databases_uris=database_uris,
             s3_parameters=s3_parameters,
             saml_parameters=saml_parameters,
             rabbitmq_parameters=rabbitmq_parameters,
@@ -326,7 +303,7 @@ class S3Parameters(BaseModel):
         return self.s3_uri_style
 
 
-class SamlParameters(BaseModel, extra=Extra.allow):
+class SamlParameters(BaseModel):
     """Configuration for accessing SAML.
 
     Attributes:
@@ -364,7 +341,7 @@ class SamlParameters(BaseModel, extra=Extra.allow):
         return certificate
 
 
-class RabbitMQParameters(BaseModel, extra=Extra.allow):
+class RabbitMQParameters(BaseModel):
     """Configuration for accessing RabbitMQ.
 
     Attributes:

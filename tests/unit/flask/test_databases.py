@@ -7,7 +7,7 @@ import unittest.mock
 
 import pytest
 
-from paas_app_charmer.databases import get_uri
+from paas_app_charmer.charm_integrations import get_database_uri
 
 DATABASE_GET_URI_TEST_PARAMS = [
     (
@@ -50,8 +50,8 @@ def test_database_get_uri_mocked(
 ) -> None:
     """
     arrange: mock relation database
-    act: run get_uri over the mocked database requires
-    assert: get_uri() should return the correct database uri
+    act: run get_databse_uri over the mocked database requires
+    assert: get_database_uri() should return the correct database uri
     """
     # Create the databases mock with the relation data
     interface = relation["interface"]
@@ -61,4 +61,4 @@ def test_database_get_uri_mocked(
         return_value={"data": relation["data"]}
     )
     database_require.database = relation["data"].get("database", "flask-app")
-    assert get_uri(database_require) == expected_output
+    assert get_database_uri(database_require) == expected_output

@@ -198,7 +198,6 @@ def test_integrations_env(
                 databases_uris={
                     "postgresql": "postgresql://test-username:test-password@test-postgresql:5432/test-database?connect_timeout=10",
                     "mysql": "mysql://test-username:test-password@test-mysql:3306/flask-app",
-                    "mongodb": None,
                     "futuredb": "futuredb://foobar/",
                 },
             ),
