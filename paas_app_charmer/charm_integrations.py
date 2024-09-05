@@ -13,7 +13,12 @@ from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from charms.redis_k8s.v0.redis import RedisRequires
 from pydantic import ValidationError
 
-from paas_app_charmer.charm_state import IntegrationsState, S3Parameters, SamlParameters
+from paas_app_charmer.charm_state import (
+    IntegrationsState,
+    RabbitMQParameters,
+    S3Parameters,
+    SamlParameters,
+)
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.rabbitmq import RabbitMQRequires
 from paas_app_charmer.utils import build_validation_error_message
@@ -21,28 +26,27 @@ from paas_app_charmer.utils import build_validation_error_message
 logger = logging.getLogger(__name__)
 
 
-class Integrations:  # pylint: disable=too-many-instance-attributes
-    """TODO."""
+class Integrations:
+    """Manages Charm Integrations for the Charm."""
 
     def __init__(self, charm: ops.CharmBase) -> None:
-        """TODO.
+        """Initialise the instance.
 
         Args:
-            charm: TODO
+            charm: The charm instance managed by this instance.
         """
         self._charm = charm
-        self._mysql = Database(charm, "mysql", "mysql_client")
-        self._postgresql = Database(charm, "postgresql", "postgresql_client")
-        self._mongodb = Database(charm, "mongodb", "mongodb_client")
         self._redis = Redis(charm)
         self._s3 = S3(charm)
         self._saml = Saml(charm)
         self._rabbitmq = RabbitMQ(charm)
-        self._databases: list[Database] = [self._mysql, self._postgresql, self._mongodb]
+        self._databases: list[Database] = [
+            Database(charm, "mysql", "mysql_client"),
+            Database(charm, "postgresql", "postgresql_client"),
+            Database(charm, "mongodb", "mongodb_client"),
+        ]
         self._integrations: list[Integration] = [
-            self._mysql,
-            self._postgresql,
-            self._mongodb,
+            *self._databases,
             self._redis,
             self._s3,
             self._saml,
@@ -50,41 +54,41 @@ class Integrations:  # pylint: disable=too-many-instance-attributes
         ]
 
     def register(self, callback: Callable[[Any], None]) -> None:
-        """TODO.
+        """Register all the integrations using the same callback if necessary.
 
         Args:
-            callback: TODO
+            callback: Callback function for the hooks
         """
         for integration in self._integrations:
             integration.register(callback)
 
     def missing_integrations(self) -> list[str]:
-        """TODO.
+        """Return a list of integrations that are not optional and are missing.
 
         Returns:
-            TODO.
+            list of missing integrations.
         """
         return [
             integration.name for integration in self._integrations if not integration.is_ready()
         ]
 
     def databases_uris(self) -> dict[str, str]:
-        """TODO.
+        """Return of database names to uris.
 
         Returns:
-            TODO.
+            dict of database names to uris.
         """
         return dict(
             (k, v) for k, v in ((db.name, db.get_uri()) for db in self._databases) if v is not None
         )
 
     def create_integrations_state(self) -> IntegrationsState:
-        """TODO.
+        """Create the IntegrationState.
 
-        can raise.
+        Can raise CharmConfigInvalidError if some data is invalid for an integration
 
         Returns:
-            TODO.
+            IntegrationState with current integrations.
         """
         return IntegrationsState(
             redis_uri=self._redis.get_url(),
@@ -96,42 +100,38 @@ class Integrations:  # pylint: disable=too-many-instance-attributes
 
 
 class Integration(ABC):
-    """TODO.
+    """Base class for an integration."""
 
-    Attributes:
-        name: TODO
-        interface_name: TODO
-    """
-
-    name: str
-    interface_name: str
-
-    def __init__(self, charm: ops.CharmBase):
-        """TODO.
+    def __init__(self, charm: ops.CharmBase, name: str, interface_name: str):
+        """Initialise the instance.
 
         Args:
-            charm: TODO
+            charm: The charm instance managed by this instance.
+            name: name of the endpoint as in charmcraft.yaml.
+            interface_name: name of the interface as in charmcraft.yaml.
         """
         self._charm = charm
         self._framework = self._charm.framework
+        self.name = name
+        self.interface_name = interface_name
 
     @abstractmethod
     def register(self, callback: Callable[[Any], None]) -> None:
-        """TODO.
+        """Register all the observers.
 
         Args:
-            callback: TODO
+            callback: Callback function for the hooks
         """
 
     @abstractmethod
     def is_ready(self) -> bool:
-        """TODO."""
+        """Check if the integration is ready."""
 
     def _is_defined(self) -> bool:
-        """TODO.
+        """Check if the integration is defined in charmcraft.yaml.
 
         Returns:
-            TODO.
+            True if the integration is defined in charmcraft.yaml.
         """
         requires = self._framework.meta.requires
         if self.name in requires and requires[self.name].interface_name == self.interface_name:
@@ -139,10 +139,10 @@ class Integration(ABC):
         return False
 
     def _is_optional(self) -> bool:
-        """TODO.
+        """Check if the integration is optional (and defined)  in charmcraft.yaml.
 
         Returns:
-            TODO.
+            True if the integration is optional in charmcraft.yaml.
         """
         requires = self._framework.meta.requires
         if requires[self.name] and requires[self.name].optional:
@@ -151,26 +151,24 @@ class Integration(ABC):
 
 
 class Database(Integration):
-    """TODO."""
+    """Manage database Integration for the charm."""
 
     def __init__(self, charm: ops.CharmBase, name: str, interface_name: str) -> None:
-        """TODO.
+        """Initialise the instance.
 
         Args:
-            charm: TODO
-            name: TODO
-            interface_name: TODO
+            charm: The charm instance managed by this instance.
+            name: name of the endpoint as in charmcraft.yaml.
+            interface_name: name of the interface as in charmcraft.yaml.
         """
-        super().__init__(charm)
-        self.name = name
-        self.interface_name = interface_name
+        super().__init__(charm, name, interface_name)
         self._database_requires: DatabaseRequires | None = None
 
     def register(self, callback: Callable[[Any], None]) -> None:
-        """TODO.
+        """Register all the observers.
 
         Args:
-            callback: TODO
+            callback: Callback function for the hooks
         """
         if self._is_defined():
             self._database_requires = DatabaseRequires(
@@ -186,74 +184,59 @@ class Database(Integration):
             )
 
     def is_ready(self) -> bool:
-        """TODO.
+        """Check if the integration is ready.
 
         Returns:
-            TODO
+            True if the integration is ready.
         """
-        if self._is_defined() and not self._is_optional() and not self.parameters():
-            return False
-        return True
+        return not self._is_defined() or self._is_optional() or self.get_uri() is not None
 
     def get_uri(self) -> str | None:
-        """TODO.
+        """Get URI for the database.
 
         Returns:
-            TODO
+            URI for the database
         """
         if self._database_requires:
             return get_database_uri(self._database_requires)
         return None
 
-    # returns a str, not good...
-    def parameters(self) -> str | None:
-        """TODO.
-
-        Returns:
-            TODO
-        """
-        return self.get_uri()
-
 
 class Redis(Integration):
-    """TODO."""
+    """Manage Redis Integration for the charm."""
 
     def __init__(self, charm: ops.CharmBase):
-        """TODO.
+        """Initialise the instance.
 
         Args:
-            charm: TODO
+            charm: The charm instance managed by this instance.
         """
-        super().__init__(charm)
-        self.name = "redis"
-        self.interface_name = "redis"
+        super().__init__(charm, "redis", "redis")
         self._redis: RedisRequires | None = None
 
     def register(self, callback: Callable[[Any], None]) -> None:
-        """TODO.
+        """Register all the observers.
 
         Args:
-            callback: TODO
+            callback: Callback function for the hooks
         """
         if self._is_defined():
             self._redis = RedisRequires(charm=self._charm, relation_name="redis")
             self._framework.observe(self._charm.on.redis_relation_updated, callback)
 
     def is_ready(self) -> bool:
-        """TODO.
+        """Check if the integration is ready.
 
         Returns:
-            TODO
+            True if the integration is ready.
         """
-        if self._is_defined() and not self._is_optional() and not self.get_url():
-            return False
-        return True
+        return not self._is_defined() or self._is_optional() or self.get_url() is not None
 
     def get_url(self) -> str | None:
-        """TODO.
+        """Get URL for the Redis instance.
 
         Returns:
-            TODO
+            URL for the Redis instance
         """
         redis_uri = self._redis.url if self._redis else None
         # Workaround as the Redis library temporarily sends the port
@@ -264,24 +247,25 @@ class Redis(Integration):
 
 
 class S3(Integration):
-    """TODO."""
+    """Manage S3 Integration for the charm."""
 
     def __init__(self, charm: ops.CharmBase):
-        """TODO.
+        """Initialise the instance.
 
         Args:
-            charm: TODO
+            charm: The charm instance managed by this instance.
         """
-        super().__init__(charm)
-        self.name = "s3"
-        self.interface_name = "s3"
-        self._s3 = None
+        super().__init__(charm, "s3", "s3")
+        # cannot import S3Requirer in here, as it may fail if the lib is missing.
+        self._s3: Any = None
 
     def _is_defined(self) -> bool:
-        """TODO.
+        """Check if the integration is defined in charmcraft.yaml.
+
+        It will return False also if there is no library for the integration.
 
         Returns:
-            TODO.
+            True if the integration is defined in charmcraft.yaml.
         """
         try:
             # pylint: disable=ungrouped-imports,import-outside-toplevel,unused-import
@@ -292,10 +276,10 @@ class S3(Integration):
         return super()._is_defined()
 
     def register(self, callback: Callable[[Any], None]) -> None:
-        """TODO.
+        """Register all the observers.
 
         Args:
-            callback: TODO
+            callback: Callback function for the hooks
         """
         if self._is_defined():
             # pylint: disable=import-outside-toplevel
@@ -309,27 +293,24 @@ class S3(Integration):
             self._s3 = s3
 
     def get_connection_info(self) -> Dict[str, str] | None:
-        """TODO.
+        """Return connection Info from the S3 library.
 
         Returns:
-            TODO
+            connection info dictionary.
         """
-        if self._s3 is not None:
-            return self._s3.get_s3_connection_info()
-        return None
+        return self._s3.get_s3_connection_info() if self._s3 is not None else None
 
     def get_parameters(self) -> S3Parameters | None:
-        """TODO.
+        """Build S3Parameters from the S3 relation.
 
         Returns:
-            TODO
+            S3Paramaeters or None if there is no S3 relation.
 
         Raises:
             CharmConfigInvalidError: If there is connection info but parameters are invalid.
         """
         s3_parameters = None
-        s3_connection_info = self.get_connection_info()
-        if s3_connection_info:
+        if s3_connection_info := self.get_connection_info():
             try:
                 # s3_connection_info is not really a Dict[str, str] as stated in
                 # charms.data_platform_libs.v0.s3. It is really a
@@ -344,37 +325,33 @@ class S3(Integration):
         return s3_parameters
 
     def is_ready(self) -> bool:
-        """TODO.
-
-        This can raise. TODO is this good? should we protect?
+        """Check if the integration is ready.
 
         Returns:
-            TODO
+            True if the integration is ready.
         """
-        if self._is_defined() and not self._is_optional() and not self.get_parameters():
-            return False
-        return True
+        return not self._is_defined() or self._is_optional() or self.get_parameters() is not None
 
 
 class Saml(Integration):
-    """TODO."""
+    """Manage SAML Integration for the charm."""
 
     def __init__(self, charm: ops.CharmBase):
-        """TODO.
+        """Initialise the instance.
 
         Args:
-            charm: TODO
+            charm: The charm instance managed by this instance.
         """
-        super().__init__(charm)
-        self.name = "saml"
-        self.interface_name = "saml"
+        super().__init__(charm, "saml", "saml")
         self._saml = None
 
     def _is_defined(self) -> bool:
-        """TODO.
+        """Check if the integration is defined in charmcraft.yaml.
+
+        It will return False also if there is no library for the integration.
 
         Returns:
-            TODO.
+            True if the integration is defined in charmcraft.yaml.
         """
         try:
             # pylint: disable=ungrouped-imports,import-outside-toplevel,unused-import
@@ -385,10 +362,10 @@ class Saml(Integration):
         return super()._is_defined()
 
     def register(self, callback: Callable[[Any], None]) -> None:
-        """TODO.
+        """Register all the observers.
 
         Args:
-            callback: TODO
+            callback: Callback function for the hooks
         """
         if self._is_defined():
             # pylint: disable=import-outside-toplevel
@@ -399,10 +376,10 @@ class Saml(Integration):
             self._saml = saml
 
     def get_relation_data(self) -> Dict[str, str] | None:
-        """TODO.
+        """Get relation data from SAML library.
 
         Returns:
-            TODO
+            dict of relation data for SAML or None
         """
         if self._saml is not None:
             relation_data = self._saml.get_relation_data()
@@ -411,10 +388,10 @@ class Saml(Integration):
         return None
 
     def get_parameters(self) -> SamlParameters | None:
-        """TODO.
+        """Build SamlParameters from the SAML relation.
 
         Returns:
-            TODO
+            SamlParameters or None if there is no SAML relation.
 
         Raises:
             CharmConfigInvalidError: If there is connection info but parameters are invalid.
@@ -432,37 +409,31 @@ class Saml(Integration):
         return saml_parameters
 
     def is_ready(self) -> bool:
-        """TODO.
-
-        This can raise. TODO is this good? should we protect?
+        """Check if the integration is ready.
 
         Returns:
-            TODO
+            True if the integration is ready.
         """
-        if self._is_defined() and not self._is_optional() and not self.get_parameters():
-            return False
-        return True
+        return not self._is_defined() or self._is_optional() or self.get_parameters() is not None
 
 
 class RabbitMQ(Integration):
-    """TODO."""
+    """Manage RabbitMQ Integration for the charm."""
 
     def __init__(self, charm: ops.CharmBase):
-        """TODO.
+        """Initialise the instance.
 
         Args:
-            charm: TODO
+            charm: The charm instance managed by this instance.
         """
-        super().__init__(charm)
-        self.name = "amqp"
-        self.interface_name = "rabbitmq"
+        super().__init__(charm, "amqp", "rabbitmq")
         self._amqp: RabbitMQRequires | None = None
 
     def register(self, callback: Callable[[Any], None]) -> None:
-        """TODO.
+        """Register all the observers.
 
         Args:
-            callback: TODO
+            callback: Callback function for the hooks
         """
         if self._is_defined():
             self._amqp = RabbitMQRequires(
@@ -476,21 +447,18 @@ class RabbitMQ(Integration):
             self._framework.observe(self._amqp.on.goneaway, callback)
 
     def is_ready(self) -> bool:
-        """TODO.
+        """Check if the integration is ready.
 
         Returns:
-            TODO
+            True if the integration is ready.
         """
-        if self._is_defined() and not self._is_optional() and not self.get_parameters():
-            return False
-        return True
+        return not self._is_defined() or self._is_optional() or self.get_parameters() is not None
 
-    # returns a RabbitMQ(BaseModel), not good...
-    def get_parameters(self) -> Any:
-        """TODO.
+    def get_parameters(self) -> RabbitMQParameters | None:
+        """Build RabbitMQParameters from the RabbitMQ relation.
 
         Returns:
-            TODO
+            RabbitMQParameters or None if there is no RabbitMQ relation.
         """
         return self._amqp.rabbitmq_parameters() if self._amqp else None
 

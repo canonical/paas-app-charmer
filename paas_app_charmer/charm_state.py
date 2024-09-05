@@ -4,16 +4,13 @@
 """This module defines the CharmState class which represents the state of the charm."""
 import logging
 import os
-import re
 import typing
 from typing import Optional
 
 import ops
-from pydantic import BaseModel, Field, ValidationError, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
-from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.secret_storage import KeySecretStorage
-from paas_app_charmer.utils import build_validation_error_message
 
 logger = logging.getLogger(__name__)
 
