@@ -251,7 +251,7 @@ def test_rabbitmq_remove_integration(harness: Harness):
     assert: The relation should not have the env variables related to RabbitMQ.
     """
     relation_id = harness.add_relation(
-        "rabbitmq", "rabbitmq", app_data={"hostname": "example.com", "password": "p"}
+        "rabbitmq", "rabbitmq", app_data={"hostname": "example.com", "password": token_hex(16)}
     )
     container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
     container.add_layer("a_layer", DEFAULT_LAYER)
