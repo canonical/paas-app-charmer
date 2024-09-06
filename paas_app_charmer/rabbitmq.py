@@ -30,12 +30,11 @@ See https://github.com/openstack-charmers/charm-rabbitmq-k8s/blob/main/lib/charm
 
 
 import logging
+import urllib.parse
 
 from ops import CharmBase, HookEvent
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
 from ops.model import Relation
-
-from paas_app_charmer.charm_state import RabbitMQParameters
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +70,11 @@ class RabbitMQRequires(Object):
 
     Attributes:
         on: ObjectEvents for RabbitMQRequires
+        port: amqp port
     """
 
     on = RabbitMQServerEvents()
+    port = 5672
 
     def __init__(self, charm: CharmBase, relation_name: str, username: str, vhost: str):
         """Initialize the instance.
@@ -113,7 +114,7 @@ class RabbitMQRequires(Object):
 
     def _on_rabbitmq_relation_changed(self, _: HookEvent) -> None:
         """Handle RabbitMQ changed."""
-        if self.rabbitmq_parameters():
+        if self.rabbitmq_uri():
             self.on.ready.emit()
 
     def _on_rabbitmq_relation_broken(self, _: HookEvent) -> None:
@@ -125,8 +126,8 @@ class RabbitMQRequires(Object):
         """The RabbitMQ relation."""
         return self.framework.model.get_relation(self.relation_name)
 
-    def rabbitmq_parameters(self) -> RabbitMQParameters | None:
-        """Return RabbitMQ parameters with the data in the relation.
+    def rabbitmq_uri(self) -> str | None:
+        """Return RabbitMQ urs with the data in the relation.
 
         It will try to use the format in rabbitmq-k8s or rabbitmq-server.
         If there is no relation or the data is not complete, it returns None.
@@ -134,12 +135,12 @@ class RabbitMQRequires(Object):
         Returns:
             The parameters for RabbitMQ or None.
         """
-        rabbitmq_k8s_params = self._rabbitmq_k8s_parameters()
+        rabbitmq_k8s_params = self._rabbitmq_k8s_uri()
         if rabbitmq_k8s_params:
             return rabbitmq_k8s_params
 
         # rabbitmq-server parameters or None.
-        return self._rabbitmq_server_parameters()
+        return self._rabbitmq_server_uri()
 
     def request_access(self, username: str, vhost: str) -> None:
         """Request access to the RabbitMQ server.
@@ -155,11 +156,11 @@ class RabbitMQRequires(Object):
             else:
                 logger.warning("request_access but no rabbitmq relation")
 
-    def _rabbitmq_server_parameters(self) -> RabbitMQParameters | None:
-        """Return parameters for rabbitmq-server.
+    def _rabbitmq_server_uri(self) -> str | None:
+        """Return uri for rabbitmq-server.
 
         Returns:
-            Returns parameters for rabbitmq-server or None if they are not valid/complete.
+            Returns uri for rabbitmq-server or None if the relation data is not valid/complete.
         """
         if not self._rabbitmq_rel:
             return None
@@ -179,19 +180,13 @@ class RabbitMQRequires(Object):
             return None
 
         hostname = hostnames[0]
-        return RabbitMQParameters(
-            hostname=hostname,
-            hostnames=hostnames,
-            username=self.username,
-            password=password,
-            vhost=self.vhost,
-        )
+        return self._build_amqp_uri(password=password, hostname=hostname)
 
-    def _rabbitmq_k8s_parameters(self) -> RabbitMQParameters | None:
-        """Return parameters for rabbitmq-k8s.
+    def _rabbitmq_k8s_uri(self) -> str | None:
+        """Return URI for rabbitmq-k8s.
 
         Returns:
-            Returns parameters for rabbitmq-k8s or None if they are not valid/complete.
+            Returns uri for rabbitmq-k8s or None if the relation data is not valid/complete.
         """
         if not self._rabbitmq_rel:
             return None
@@ -200,20 +195,22 @@ class RabbitMQRequires(Object):
         password = self._rabbitmq_rel.data[self._rabbitmq_rel.app].get("password")
         hostname = self._rabbitmq_rel.data[self._rabbitmq_rel.app].get("hostname")
 
-        hostnames = []
-        for unit in self._rabbitmq_rel.units:
-            unit_data = self._rabbitmq_rel.data[unit]
-            ingress_address = unit_data.get("ingress-address")
-            if ingress_address:
-                hostnames.append(ingress_address)
-
         if not password or not hostname:
             return None
 
-        return RabbitMQParameters(
-            hostname=hostname,
-            hostnames=hostnames,
-            username=self.username,
-            password=password,
-            vhost=self.vhost,
-        )
+        return self._build_amqp_uri(password=password, hostname=hostname)
+
+    def _build_amqp_uri(self, password: str, hostname: str) -> str:
+        """Return amqp URI for rabbitmq from parameters.
+
+        Args:
+           password: password for amqp uri
+           hostname: hostname for amqp uri
+
+        Returns:
+            Returns amqp uri for rabbitmq from parameters
+        """
+        # following https://www.rabbitmq.com/docs/uri-spec#the-amqp-uri-scheme,
+        # vhost component of a uri should be url encoded
+        vhost = urllib.parse.quote(self.vhost, safe="")
+        return f"amqp://{self.username}:{password}@{hostname}:{self.port}/{vhost}"

@@ -284,7 +284,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         if self._saml and not charm_state.integrations.saml_parameters:
             if not requires["saml"].optional:
                 missing_integrations.append("saml")
-        if self._rabbitmq and not charm_state.integrations.rabbitmq_parameters:
+        if self._rabbitmq and not charm_state.integrations.rabbitmq_uri:
             if not requires["rabbitmq"].optional:
                 missing_integrations.append("rabbitmq")
         return missing_integrations
@@ -334,7 +334,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             redis_uri=self._redis.url if self._redis is not None else None,
             s3_connection_info=self._s3.get_s3_connection_info() if self._s3 else None,
             saml_relation_data=saml_relation_data,
-            rabbitmq_parameters=self._rabbitmq.rabbitmq_parameters() if self._rabbitmq else None,
+            rabbitmq_uri=self._rabbitmq.rabbitmq_uri() if self._rabbitmq else None,
             base_url=self._base_url,
         )
 

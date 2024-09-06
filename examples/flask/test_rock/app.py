@@ -82,8 +82,9 @@ def get_rabbitmq_connection():
             password = os.environ["RABBITMQ_PASSWORD"]
             hostname = os.environ["RABBITMQ_HOSTNAME"]
             vhost = os.environ["RABBITMQ_VHOST"]
+            port = os.environ["RABBITMQ_PORT"]
             credentials = pika.PlainCredentials(username, password)
-            parameters = pika.ConnectionParameters(hostname, 5672, vhost, credentials)
+            parameters = pika.ConnectionParameters(hostname, port, vhost, credentials)
             g.rabbitmq = pika.BlockingConnection(parameters)
         else:
             return None
