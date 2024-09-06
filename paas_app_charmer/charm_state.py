@@ -217,6 +217,7 @@ class IntegrationsState:
     saml_parameters: "SamlParameters | None" = None
     rabbitmq_uri: str | None = None
 
+    # This dataclass combines all the integrations, so it is reasonable that they stay together.
     @classmethod
     def build(  # pylint: disable=too-many-arguments
         cls,
