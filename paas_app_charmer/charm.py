@@ -25,19 +25,23 @@ from paas_app_charmer.utils import build_validation_error_message
 
 logger = logging.getLogger(__name__)
 
-# Do not fail for new integrations to be backwards compatible without forcing
-# the user to run fetch-libs.
+# Until charmcraft fetch-libs is implemented, the charm will not fail
+# if new optional libs are not fetched, as it will not be backwards compatible.
 try:
     # pylint: disable=ungrouped-imports
     from charms.data_platform_libs.v0.s3 import S3Requirer
 except ImportError:
-    logger.exception("Missing charm library, please run `charmcraft fetch-libs`")
+    logger.exception(
+        "Missing charm library, please run `charmcraft fetch-lib charms.data_platform_libs.v0.s3`"
+    )
 
 try:
     # pylint: disable=ungrouped-imports
     from charms.saml_integrator.v0.saml import SamlRequires
 except ImportError:
-    logger.exception("Missing charm library, please run `charmcraft fetch-libs`")
+    logger.exception(
+        "Missing charm library, please run `charmcraft fetch-lib charms.saml_integrator.v0.saml`"
+    )
 
 
 class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-attributes
