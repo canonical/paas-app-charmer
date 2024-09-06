@@ -108,7 +108,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             )
             self.framework.observe(self._rabbitmq.on.connected, self._on_rabbitmq_connected)
             self.framework.observe(self._rabbitmq.on.ready, self._on_rabbitmq_ready)
-            self.framework.observe(self._rabbitmq.on.goneaway, self._on_rabbitmq_goneaway)
+            self.framework.observe(self._rabbitmq.on.departed, self._on_rabbitmq_departed)
         else:
             self._rabbitmq = None
 
@@ -437,15 +437,15 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
 
     @block_if_invalid_config
     def _on_rabbitmq_connected(self, _event: ops.HookEvent) -> None:
-        """Handle ampq connected event."""
+        """Handle rabbitmq connected event."""
         self.restart()
 
     @block_if_invalid_config
     def _on_rabbitmq_ready(self, _event: ops.HookEvent) -> None:
-        """Handle ampq ready event."""
+        """Handle rabbitmq ready event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_rabbitmq_goneaway(self, _event: ops.HookEvent) -> None:
-        """Handle ampq goneaway event."""
+    def _on_rabbitmq_departed(self, _event: ops.HookEvent) -> None:
+        """Handle rabbitmq departed event."""
         self.restart()

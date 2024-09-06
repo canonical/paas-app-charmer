@@ -48,8 +48,8 @@ class RabbitMQReadyEvent(EventBase):
     """RabbitMQ ready for use Event."""
 
 
-class RabbitMQGoneAwayEvent(EventBase):
-    """RabbitMQ relation has gone-away Event."""
+class RabbitMQDepartedEvent(EventBase):
+    """RabbitMQ relation departed Event."""
 
 
 class RabbitMQServerEvents(ObjectEvents):
@@ -58,12 +58,12 @@ class RabbitMQServerEvents(ObjectEvents):
     Attributes:
         connected: rabbitmq relation is connected
         ready: rabbitmq relation is ready
-        goneaway: rabbitmq relation has been removed
+        departed: rabbitmq relation has been removed
     """
 
     connected = EventSource(RabbitMQConnectedEvent)
     ready = EventSource(RabbitMQReadyEvent)
-    goneaway = EventSource(RabbitMQGoneAwayEvent)
+    departed = EventSource(RabbitMQDepartedEvent)
 
 
 class RabbitMQRequires(Object):
@@ -118,7 +118,7 @@ class RabbitMQRequires(Object):
 
     def _on_rabbitmq_relation_broken(self, _: HookEvent) -> None:
         """Handle RabbitMQ broken."""
-        self.on.goneaway.emit()
+        self.on.departed.emit()
 
     @property
     def _rabbitmq_rel(self) -> Relation | None:
