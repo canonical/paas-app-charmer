@@ -91,6 +91,18 @@ def get_rabbitmq_connection():
     return g.rabbitmq
 
 
+def get_rabbitmq_connection_from_uri():
+    """Get rabbitmq connection from uri."""
+    if "rabbitmq_from_uri" not in g:
+        if "RABBITMQ_CONNECT_STRING" in os.environ:
+            uri = os.environ["RABBITMQ_CONNECT_STRING"]
+            parameters = pika.URLParameters(uri)
+            g.rabbitmq_from_uri = pika.BlockingConnection(parameters)
+        else:
+            return None
+    return g.rabbitmq_from_uri
+
+
 def get_boto3_client():
     if "boto3_client" not in g:
         if "S3_ACCESS_KEY" in os.environ:
@@ -219,7 +231,7 @@ def rabbitmq_send():
 @app.route("/rabbitmq/receive")
 def rabbitmq_receive():
     """Receive a message from "charm" queue in blocking form."""
-    if connection := get_rabbitmq_connection():
+    if connection := get_rabbitmq_connection_from_uri():
         channel = connection.channel()
         method_frame, _header_frame, body = channel.basic_get("charm")
         if method_frame:
