@@ -836,7 +836,7 @@
             "uid": "${lokids}"
           },
           "editorMode": "builder",
-          "expr": "{juju_charm=\"flask-k8s\",juju_application=~\"$juju_application\",juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\",juju_unit=~\"$juju_unit\"} |= ``",
+          "expr": "{juju_application=~\"$juju_application\",juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\",juju_unit=~\"$juju_unit\"} |= ``",
           "queryType": "range",
           "refId": "A"
         }
@@ -856,7 +856,7 @@
         "datasource": {
           "uid": "${prometheusds}"
         },
-        "definition": "label_values(up{juju_charm=\"flask-k8s\",juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\",juju_application=~\"$juju_application\"},juju_unit)",
+        "definition": "label_values(up{juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\",juju_application=~\"$juju_application\"},juju_unit)",
         "hide": 0,
         "includeAll": true,
         "label": "Juju unit",
@@ -864,7 +864,7 @@
         "name": "juju_unit",
         "options": [],
         "query": {
-          "query": "label_values(up{juju_charm=\"flask-k8s\",juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\",juju_application=~\"$juju_application\"},juju_unit)",
+          "query": "label_values(up{juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\",juju_application=~\"$juju_application\"},juju_unit)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -887,7 +887,7 @@
         "datasource": {
           "uid": "${prometheusds}"
         },
-        "definition": "label_values(up{juju_charm=\"flask-k8s\",juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\"},juju_application)",
+        "definition": "label_values(up{juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\"},juju_application)",
         "hide": 0,
         "includeAll": true,
         "label": "Juju application",
@@ -895,7 +895,7 @@
         "name": "juju_application",
         "options": [],
         "query": {
-          "query": "label_values(up{juju_charm=\"flask-k8s\",juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\"},juju_application)",
+          "query": "label_values(up{juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\"},juju_application)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -918,7 +918,7 @@
         "datasource": {
           "uid": "${prometheusds}"
         },
-        "definition": "label_values(up{juju_charm=\"flask-k8s\",juju_model=~\"$juju_model\"},juju_model_uuid)",
+        "definition": "label_values(up{juju_model=~\"$juju_model\"},juju_model_uuid)",
         "hide": 0,
         "includeAll": true,
         "label": "Juju model uuid",
@@ -926,7 +926,7 @@
         "name": "juju_model_uuid",
         "options": [],
         "query": {
-          "query": "label_values(up{juju_charm=\"flask-k8s\",juju_model=~\"$juju_model\"},juju_model_uuid)",
+          "query": "label_values(up{juju_model=~\"$juju_model\"},juju_model_uuid)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
@@ -980,6 +980,6 @@
   "timezone": "",
   "title": "Flask Operator",
   "uid": null,
-  "version": 2,
+  "version": 3,
   "weekStart": ""
 }
