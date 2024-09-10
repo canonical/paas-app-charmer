@@ -29,12 +29,15 @@ except ImportError as import_error:
         "`charmcraft fetch-lib charms.grafana_k8s.v0.grafana_dashboard`"
     ) from import_error
 try:
-    import charms.loki_k8s.v0.loki_push_api  # noqa: F401
+    import charms.loki_k8s.v1.loki_push_api  # noqa: F401
 except ImportError as import_error:
-    raise exceptions.MissingCharmLibraryError(
-        "Missing charm library, please run "
-        "`charmcraft fetch-lib charms.loki_k8s.v0.loki_push_api`"
-    ) from import_error
+    try:
+        import charms.loki_k8s.v0.loki_push_api  # noqa: F401
+    except ImportError:
+        raise exceptions.MissingCharmLibraryError(
+            "Missing charm library, please run "
+            "`charmcraft fetch-lib charms.loki_k8s.v1.loki_push_api`"
+        ) from import_error
 try:
     import charms.prometheus_k8s.v0.prometheus_scrape  # noqa: F401
 except ImportError as import_error:
