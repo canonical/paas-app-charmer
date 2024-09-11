@@ -100,7 +100,7 @@ class RabbitMQRequires(Object):
         )
         self.framework.observe(
             self.charm.on[relation_name].relation_departed,
-            self._on_rabbitmq_relation_changed,
+            self._on_rabbitmq_relation_departed,
         )
         self.framework.observe(
             self.charm.on[relation_name].relation_broken,
@@ -114,6 +114,11 @@ class RabbitMQRequires(Object):
 
     def _on_rabbitmq_relation_changed(self, _: HookEvent) -> None:
         """Handle RabbitMQ changed."""
+        if self.rabbitmq_uri():
+            self.on.ready.emit()
+
+    def _on_rabbitmq_relation_departed(self, _: HookEvent) -> None:
+        """Handle RabbitMQ departed."""
         if self.rabbitmq_uri():
             self.on.ready.emit()
 
@@ -150,11 +155,11 @@ class RabbitMQRequires(Object):
            vhost: virtual host requested for RabbitMQ
         """
         if self.model.unit.is_leader():
-            if self._rabbitmq_rel:
-                self._rabbitmq_rel.data[self.charm.app]["username"] = username
-                self._rabbitmq_rel.data[self.charm.app]["vhost"] = vhost
-            else:
+            if not self._rabbitmq_rel:
                 logger.warning("request_access but no rabbitmq relation")
+                return
+            self._rabbitmq_rel.data[self.charm.app]["username"] = username
+            self._rabbitmq_rel.data[self.charm.app]["vhost"] = vhost
 
     def _rabbitmq_server_uri(self) -> str | None:
         """Return uri for rabbitmq-server.
