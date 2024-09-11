@@ -2,11 +2,67 @@
 # See LICENSE file for licensing details.
 
 import json
+import logging
 
 import pytest
 import pytest_asyncio
-from juju.model import Model
+from juju.application import Application
+from juju.client.jujudata import FileJujuData
+from juju.juju import Juju
+from juju.model import Controller, Model
 from pytest_operator.plugin import OpsTest
+
+logger = logging.getLogger(__name__)
+
+
+@pytest_asyncio.fixture(scope="module", name="ops_test_lxd")
+async def ops_test_lxd_fixture(request, tmp_path_factory, ops_test: OpsTest):
+    """Return a ops_test fixture for lxd, creating the lxd controller if it does not exist."""
+    if not "lxd" in Juju().get_controllers():
+        logger.info("bootstrapping lxd")
+        _, _, _ = await ops_test.juju("bootstrap", "localhost", "lxd", check=True)
+
+    ops_test = OpsTest(request, tmp_path_factory)
+    ops_test.controller_name = "lxd"
+    await ops_test._setup_model()
+    # The instance is not stored in _instance as that is done for the ops_test fixture
+    yield ops_test
+    await ops_test._cleanup_models()
+
+
+@pytest_asyncio.fixture(scope="module", name="lxd_model")
+async def lxd_model_fixture(ops_test_lxd: OpsTest) -> Model:
+    """Return the current lxd juju model."""
+    assert ops_test_lxd.model
+    return ops_test_lxd.model
+
+
+@pytest_asyncio.fixture(scope="module", name="rabbitmq_server_app")  # autouse=True)
+async def deploy_rabbitmq_server_fixture(
+    lxd_model: Model,
+) -> Application:
+    """Deploy rabbitmq-server machine app."""
+    app = await lxd_model.deploy(
+        "rabbitmq-server",
+        channel="latest/edge",
+    )
+    await lxd_model.wait_for_idle(raise_on_blocked=True)
+    await lxd_model.create_offer("rabbitmq-server:amqp")
+    yield app
+
+
+@pytest_asyncio.fixture(scope="module", name="rabbitmq_k8s_app")  # autouse=True)
+async def deploy_rabbitmq_k8s_fixture(
+    model: Model,
+) -> Application:
+    """Deploy rabbitmq-k8s app."""
+    app = await model.deploy(
+        "rabbitmq-k8s",
+        channel="3.12/edge",
+        trust=True,
+    )
+    await model.wait_for_idle(raise_on_blocked=True)
+    yield app
 
 
 @pytest_asyncio.fixture(scope="module", name="get_unit_ips")
