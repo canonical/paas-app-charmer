@@ -123,7 +123,7 @@ def test_ingress(harness: Harness):
 
 def test_integrations_wiring(harness: Harness):
     """
-    arrange: Prepare a Redis a database and a S3 integration
+    arrange: Prepare a Redis a database, a S3 integration and a SAML integration
     act: Start the flask charm and set flask-app container to be ready.
     assert: The flask service should have environment variables in its plan
         for each of the integrations.
@@ -165,11 +165,119 @@ def test_integrations_wiring(harness: Harness):
 
 
 @pytest.mark.parametrize(
+    "rabbitmq_relation_data,expected_env_vars",
+    [
+        pytest.param(
+            {
+                "app_data": {
+                    "hostname": "rabbitmq-k8s-endpoints.testing.svc.cluster.local",
+                    "password": "3m036hhyiDHs",
+                },
+                "unit_data": {
+                    "egress-subnets": "10.152.183.168/32",
+                    "ingress-address": "10.152.183.168",
+                    "private-address": "10.152.183.168",
+                },
+            },
+            {
+                "RABBITMQ_HOSTNAME": "rabbitmq-k8s-endpoints.testing.svc.cluster.local",
+                "RABBITMQ_USERNAME": "flask-k8s",
+                "RABBITMQ_PASSWORD": "3m036hhyiDHs",
+                "RABBITMQ_VHOST": "/",
+                "RABBITMQ_CONNECT_STRING": "amqp://flask-k8s:3m036hhyiDHs@rabbitmq-k8s-endpoints.testing.svc.cluster.local:5672/%2F",
+            },
+            id="rabbitmq-k8s version",
+        ),
+        pytest.param(
+            {
+                "app_data": {},
+                "unit_data": {
+                    "hostname": "10.58.171.158",
+                    "password": "LGg6HMJXPF8G3cHMcMg28ZpwSWRfS6hb8s57Jfkt5TW3rtgV5ypZkV8ZY4GcrhW8",
+                    "private-address": "10.58.171.158",
+                },
+            },
+            {
+                "RABBITMQ_HOSTNAME": "10.58.171.158",
+                "RABBITMQ_USERNAME": "flask-k8s",
+                "RABBITMQ_PASSWORD": "LGg6HMJXPF8G3cHMcMg28ZpwSWRfS6hb8s57Jfkt5TW3rtgV5ypZkV8ZY4GcrhW8",
+                "RABBITMQ_VHOST": "/",
+                "RABBITMQ_CONNECT_STRING": "amqp://flask-k8s:LGg6HMJXPF8G3cHMcMg28ZpwSWRfS6hb8s57Jfkt5TW3rtgV5ypZkV8ZY4GcrhW8@10.58.171.158:5672/%2F",
+            },
+            id="rabbitmq-server version",
+        ),
+    ],
+)
+def test_rabbitmq_integration(harness: Harness, rabbitmq_relation_data, expected_env_vars):
+    """
+    arrange: Prepare a rabbitmq integration (RabbitMQ)
+    act: Start the flask charm and set flask-app container to be ready.
+    assert: The flask service should have environment variables in its plan
+        for each of the integrations.
+    """
+    harness.add_relation("rabbitmq", "rabbitmq", **rabbitmq_relation_data)
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+
+    harness.begin_with_initial_hooks()
+
+    assert harness.model.unit.status == ops.ActiveStatus()
+    service_env = container.get_plan().services["flask"].environment
+    for env, env_val in expected_env_vars.items():
+        assert env in service_env
+        assert service_env[env] == env_val
+
+
+def test_rabbitmq_integration_with_relation_data_empty(harness: Harness):
+    """
+    arrange: Prepare a rabbitmq integration (RabbitMQ), with missing data.
+    act: Start the flask charm and set flask-app container to be ready.
+    assert: The flask service should not have environment variables related to RabbitMQ
+    """
+    harness.add_relation("rabbitmq", "rabbitmq")
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+
+    harness.begin_with_initial_hooks()
+
+    assert harness.model.unit.status == ops.ActiveStatus()
+    service_env = container.get_plan().services["flask"].environment
+    for env in service_env.keys():
+        assert "RABBITMQ" not in env
+
+
+def test_rabbitmq_remove_integration(harness: Harness):
+    """
+    arrange: Prepare a charm with a complete rabbitmq integration (RabbitMQ).
+    act: Remove the relation.
+    assert: The relation should not have the env variables related to RabbitMQ.
+    """
+    relation_id = harness.add_relation(
+        "rabbitmq", "rabbitmq", app_data={"hostname": "example.com", "password": token_hex(16)}
+    )
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+    harness.begin_with_initial_hooks()
+    assert harness.model.unit.status == ops.ActiveStatus()
+    service_env = container.get_plan().services["flask"].environment
+    assert "RABBITMQ_HOSTNAME" in service_env
+
+    harness.remove_relation(relation_id)
+
+    service_env = container.get_plan().services["flask"].environment
+    assert "RABBITMQ_HOSTNAME" not in service_env
+
+
+@pytest.mark.parametrize(
     "integrate_to,required_integrations",
     [
         pytest.param(["saml"], ["s3"], id="s3 fails"),
         pytest.param(["redis", "s3"], ["mysql", "postgresql"], id="postgresql and mysql fail"),
-        pytest.param([], ["mysql", "postgresql", "mongodb", "s3", "redis", "saml"], id="all fail"),
+        pytest.param(
+            [],
+            ["mysql", "postgresql", "mongodb", "s3", "redis", "saml", "rabbitmq"],
+            id="all fail",
+        ),
     ],
 )
 def test_missing_integrations(harness: Harness, integrate_to, required_integrations):

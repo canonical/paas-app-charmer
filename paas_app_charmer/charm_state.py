@@ -88,6 +88,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         redis_uri: str | None = None,
         s3_connection_info: dict[str, str] | None = None,
         saml_relation_data: typing.MutableMapping[str, str] | None = None,
+        rabbitmq_uri: str | None = None,
         base_url: str | None = None,
     ) -> "CharmState":
         """Initialize a new instance of the CharmState class from the associated charm.
@@ -101,6 +102,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             redis_uri: The redis uri provided by the redis charm.
             s3_connection_info: Connection info from S3 lib.
             saml_relation_data: Relation data from the SAML app.
+            rabbitmq_uri: RabbitMQ uri.
             base_url: Base URL for the service.
 
         Return:
@@ -120,6 +122,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             database_requirers=database_requirers,
             s3_connection_info=s3_connection_info,
             saml_relation_data=saml_relation_data,
+            rabbitmq_uri=rabbitmq_uri,
         )
         return cls(
             framework=framework,
@@ -205,20 +208,24 @@ class IntegrationsState:
         databases_uris: Map from interface_name to the database uri.
         s3_parameters: S3 parameters.
         saml_parameters: SAML parameters.
+        rabbitmq_uri: RabbitMQ uri.
     """
 
     redis_uri: str | None = None
     databases_uris: dict[str, str] = field(default_factory=dict)
     s3_parameters: "S3Parameters | None" = None
     saml_parameters: "SamlParameters | None" = None
+    rabbitmq_uri: str | None = None
 
+    # This dataclass combines all the integrations, so it is reasonable that they stay together.
     @classmethod
-    def build(
+    def build(  # pylint: disable=too-many-arguments
         cls,
         redis_uri: str | None,
         database_requirers: dict[str, DatabaseRequires],
         s3_connection_info: dict[str, str] | None,
         saml_relation_data: typing.MutableMapping[str, str] | None = None,
+        rabbitmq_uri: str | None = None,
     ) -> "IntegrationsState":
         """Initialize a new instance of the IntegrationsState class.
 
@@ -229,6 +236,7 @@ class IntegrationsState:
             database_requirers: All database requirers object declared by the charm.
             s3_connection_info: S3 connection info from S3 lib.
             saml_relation_data: Saml relation data from saml lib.
+            rabbitmq_uri: RabbitMQ uri.
 
         Return:
             The IntegrationsState instance created.
@@ -276,6 +284,7 @@ class IntegrationsState:
             },
             s3_parameters=s3_parameters,
             saml_parameters=saml_parameters,
+            rabbitmq_uri=rabbitmq_uri,
         )
 
 

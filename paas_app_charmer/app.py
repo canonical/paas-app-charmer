@@ -219,10 +219,10 @@ def map_integrations_to_env(integrations: IntegrationsState, prefix: str = "") -
     """
     env = {}
     if integrations.redis_uri:
-        redis_envvars = _db_url_to_env_variables("redis", integrations.redis_uri)
+        redis_envvars = _db_url_to_env_variables("REDIS", integrations.redis_uri)
         env.update(redis_envvars)
     for interface_name, uri in integrations.databases_uris.items():
-        interface_envvars = _db_url_to_env_variables(interface_name, uri)
+        interface_envvars = _db_url_to_env_variables(interface_name.upper(), uri)
         env.update(interface_envvars)
 
     if integrations.s3_parameters:
@@ -259,14 +259,18 @@ def map_integrations_to_env(integrations: IntegrationsState, prefix: str = "") -
             if v is not None
         )
 
+    if integrations.rabbitmq_uri:
+        rabbitmq_envvars = _rabbitmq_uri_to_env_variables("RABBITMQ", integrations.rabbitmq_uri)
+        env.update(rabbitmq_envvars)
+
     return {prefix + k: v for k, v in env.items()}
 
 
-def _db_url_to_env_variables(base_name: str, url: str) -> dict[str, str]:
+def _db_url_to_env_variables(prefix: str, url: str) -> dict[str, str]:
     """Convert a database url to environment variables.
 
     Args:
-      base_name: name of the database.
+      prefix: prefix for the environment variables
       url: url of the database
 
     Return:
@@ -274,31 +278,66 @@ def _db_url_to_env_variables(base_name: str, url: str) -> dict[str, str]:
       all components as returned from urllib.parse and the
       database name extracted from the path
     """
+    prefix = prefix + "_DB"
+    envvars = _url_env_vars(prefix, url)
+    parsed_url = urllib.parse.urlparse(url)
+
+    # database name is usually parsed this way.
+    db_name = parsed_url.path.removeprefix("/") if parsed_url.path else None
+    if db_name is not None:
+        envvars[f"{prefix}_NAME"] = db_name
+    return envvars
+
+
+def _rabbitmq_uri_to_env_variables(prefix: str, url: str) -> dict[str, str]:
+    """Convert a rabbitmq uri to environment variables.
+
+    Args:
+      prefix: prefix for the environment variables
+      url: url of rabbitmq
+
+    Return:
+      All environment variables, that is, the connection string,
+      all components as returned from urllib.parse and the
+      rabbitmq vhost extracted from the path
+    """
+    envvars = _url_env_vars(prefix, url)
+    parsed_url = urllib.parse.urlparse(url)
+    if len(parsed_url.path) > 1:
+        envvars[f"{prefix}_VHOST"] = urllib.parse.unquote(parsed_url.path.split("/")[1])
+    return envvars
+
+
+def _url_env_vars(prefix: str, url: str) -> dict[str, str]:
+    """Convert a url to environment variables using parts from urllib.parse.urlparse.
+
+    Args:
+      prefix: prefix for the environment variables
+      url: url of the database
+
+    Return:
+      All environment variables, that is, the connection string and
+      all components as returned from urllib.parse
+    """
     if not url:
         return {}
 
-    base_name = base_name.upper()
     envvars: dict[str, str | None] = {}
-    envvars[f"{base_name}_DB_CONNECT_STRING"] = url
+    envvars[f"{prefix}_CONNECT_STRING"] = url
 
     parsed_url = urllib.parse.urlparse(url)
 
     # All components of urlparse, using the same convention for default values.
     # See: https://docs.python.org/3/library/urllib.parse.html#url-parsing
-    envvars[f"{base_name}_DB_SCHEME"] = parsed_url.scheme
-    envvars[f"{base_name}_DB_NETLOC"] = parsed_url.netloc
-    envvars[f"{base_name}_DB_PATH"] = parsed_url.path
-    envvars[f"{base_name}_DB_PARAMS"] = parsed_url.params
-    envvars[f"{base_name}_DB_QUERY"] = parsed_url.query
-    envvars[f"{base_name}_DB_FRAGMENT"] = parsed_url.fragment
-    envvars[f"{base_name}_DB_USERNAME"] = parsed_url.username
-    envvars[f"{base_name}_DB_PASSWORD"] = parsed_url.password
-    envvars[f"{base_name}_DB_HOSTNAME"] = parsed_url.hostname
-    envvars[f"{base_name}_DB_PORT"] = str(parsed_url.port) if parsed_url.port is not None else None
-
-    # database name is usually parsed this way.
-    envvars[f"{base_name}_DB_NAME"] = (
-        parsed_url.path.removeprefix("/") if parsed_url.path else None
-    )
+    envvars[f"{prefix}_SCHEME"] = parsed_url.scheme
+    envvars[f"{prefix}_NETLOC"] = parsed_url.netloc
+    envvars[f"{prefix}_PATH"] = parsed_url.path
+    envvars[f"{prefix}_PARAMS"] = parsed_url.params
+    envvars[f"{prefix}_QUERY"] = parsed_url.query
+    envvars[f"{prefix}_FRAGMENT"] = parsed_url.fragment
+    envvars[f"{prefix}_USERNAME"] = parsed_url.username
+    envvars[f"{prefix}_PASSWORD"] = parsed_url.password
+    envvars[f"{prefix}_HOSTNAME"] = parsed_url.hostname
+    envvars[f"{prefix}_PORT"] = str(parsed_url.port) if parsed_url.port is not None else None
 
     return {k: v for k, v in envvars.items() if v is not None}

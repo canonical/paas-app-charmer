@@ -252,3 +252,44 @@ def boto_s3_client_fixture(model: Model, s3_configuration: dict, s3_credentials:
         config=s3_client_config,
     )
     yield s3_client
+
+
+@pytest_asyncio.fixture(scope="function", name="rabbitmq_server_integration")
+async def rabbitmq_server_integration_fixture(
+    ops_test_lxd: OpsTest,
+    flask_app: Application,
+    rabbitmq_server_app: Application,
+    model: Model,
+    lxd_model: Model,
+):
+    """Integrates flask with rabbitmq-server."""
+    lxd_controller = await lxd_model.get_controller()
+    lxd_username = lxd_controller.get_current_username()
+    lxd_controller_name = ops_test_lxd.controller_name
+    lxd_model_name = lxd_model.name
+    offer_name = rabbitmq_server_app.name
+    rabbitmq_offer_url = f"{lxd_controller_name}:{lxd_username}/{lxd_model_name}.{offer_name}"
+
+    integration = await model.integrate(rabbitmq_offer_url, flask_app.name)
+    await model.wait_for_idle(apps=[flask_app.name], status="active")
+
+    yield integration
+
+    res = await flask_app.destroy_relation("rabbitmq", f"{rabbitmq_server_app.name}:amqp")
+    await model.wait_for_idle(apps=[flask_app.name], status="active")
+
+
+@pytest_asyncio.fixture(scope="function", name="rabbitmq_k8s_integration")
+async def rabbitmq_k8s_integration_fixture(
+    model: Model,
+    rabbitmq_k8s_app: Application,
+    flask_app: Application,
+):
+    """Integrates flask with rabbitmq-k8s."""
+    integration = await model.integrate(rabbitmq_k8s_app.name, flask_app.name)
+    await model.wait_for_idle(apps=[flask_app.name], status="active")
+
+    yield integration
+
+    await flask_app.destroy_relation("rabbitmq", f"{rabbitmq_k8s_app.name}:amqp")
+    await model.wait_for_idle(apps=[flask_app.name], status="active")

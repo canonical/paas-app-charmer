@@ -6,3 +6,4 @@ psycopg[binary]
 pymongo
 redis[hiredis]
 boto3
+pika
