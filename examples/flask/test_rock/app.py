@@ -143,6 +143,12 @@ def teardown_database(_):
     boto3_client = g.pop("boto3_client", None)
     if boto3_client is not None:
         boto3_client.close()
+    rabbitmq = g.pop("rabbitmq", None)
+    if rabbitmq is not None:
+        rabbitmq.close()
+    rabbitmq_from_uri = g.pop("rabbitmq_from_uri", None)
+    if rabbitmq_from_uri is not None:
+        rabbitmq_from_uri.close()
 
 
 @app.route("/")
