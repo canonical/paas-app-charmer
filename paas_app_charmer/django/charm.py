@@ -71,6 +71,29 @@ class Charm(GunicornBase):
         """
         return str((pathlib.Path(__file__).parent / "cos").absolute())
 
+    def is_ready(self) -> bool:
+        """Check if the charm is ready to start the workload application.
+
+        For Django, at least one database is needed. Migrations will be run on startup
+        and without that integration it will fail.
+
+        Returns:
+            True if the charm is ready to start the workload application.
+        """
+        if not super().is_ready():
+            return False
+
+        # At this point all integrations are correctly configured. If there is no database uri,
+        # it means that there is no integration for databases or they are optional and no one
+        # is set.
+        charm_state = self._create_charm_state()
+        if not charm_state.integrations.databases_uris:
+            self.update_app_and_unit_status(
+                ops.BlockedStatus("Django requires a database integration to work")
+            )
+            return False
+        return True
+
     def _on_create_superuser_action(self, event: ops.ActionEvent) -> None:
         """Handle the create-superuser action.
 
