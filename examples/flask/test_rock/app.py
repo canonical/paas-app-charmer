@@ -74,7 +74,7 @@ def get_redis_database() -> redis.Redis | None:
     return g.redis_db
 
 
-def get_rabbitmq_connection():
+def get_rabbitmq_connection() -> pika.BlockingConnection | None:
     """Get rabbitmq connection."""
     if "rabbitmq" not in g:
         if "RABBITMQ_HOSTNAME" in os.environ:
@@ -91,7 +91,7 @@ def get_rabbitmq_connection():
     return g.rabbitmq
 
 
-def get_rabbitmq_connection_from_uri():
+def get_rabbitmq_connection_from_uri() -> pika.BlockingConnection | None:
     """Get rabbitmq connection from uri."""
     if "rabbitmq_from_uri" not in g:
         if "RABBITMQ_CONNECT_STRING" in os.environ:
