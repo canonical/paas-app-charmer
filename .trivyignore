@@ -1,8 +1,6 @@
-# stdlib golang: net/netip: Unexpected behavior from Is methods for IPv4-mapped IPv6 addresses
-CVE-2024-24790
-# CVE usr/bin/pebble (gobinary)
-CVE-2023-45288
 # ignore CVE introduced by python3-gunicorn
 CVE-2022-40897
 # pypa/setuptools: Remote code execution via download
 CVE-2024-6345
+# pebble: Calling Decoder.Decode on a message which contains deeply nested structures can cause a panic due to stack exhaustion
+CVE-2024-34156
