@@ -1,16 +1,18 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Flask charm unit tests."""
+"""Django charm unit tests."""
 
 # this is a unit test file
 # pylint: disable=protected-access
 
 import unittest.mock
 
+import ops
 import pytest
 from ops.testing import ExecArgs, ExecResult, Harness
 
+from examples.django.charm.src.charm import DjangoCharm
 from paas_app_charmer._gunicorn.webserver import GunicornWebserver, WebserverConfig
 from paas_app_charmer._gunicorn.workload_config import create_workload_config
 from paas_app_charmer._gunicorn.wsgi_app import WsgiApp
@@ -43,7 +45,7 @@ def test_django_config(harness: Harness, config: dict, env: dict) -> None:
     """
     arrange: none
     act: start the django charm and set django-app container to be ready.
-    assert: flask charm should submit the correct flaks pebble layer to pebble.
+    assert: django charm should submit the correct pebble layer to pebble.
     """
     harness.begin()
     container = harness.charm.unit.get_container("django-app")
@@ -124,3 +126,19 @@ def test_django_create_super_user(harness: Harness) -> None:
     )
     assert "password" in output.results
     assert output.results["password"] == password
+
+
+def test_required_database_integration(harness_no_integrations: Harness):
+    """
+    arrange: Start the Django charm with no integrations specified in the charm.
+    act: Start the django charm and set django-app container to be ready.
+    assert: The charm should be blocked, as Django requires a database to work.
+    """
+    harness = harness_no_integrations
+    container = harness.model.unit.get_container("django-app")
+    container.add_layer("a_layer", DEFAULT_LAYER)
+
+    harness.begin_with_initial_hooks()
+    assert harness.model.unit.status == ops.BlockedStatus(
+        "Django requires a database integration to work"
+    )
