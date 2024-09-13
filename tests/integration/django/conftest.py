@@ -55,26 +55,23 @@ async def charm_file_fixture(
 
 
 @pytest_asyncio.fixture(scope="module", name="django_app")
-async def django_app_fixture(charm_file: str, model: Model, django_app_image: str):
+async def django_app_fixture(charm_file: str, model: Model, django_app_image: str, postgresql_k8s):
     """Build and deploy the django charm."""
     app_name = "django-k8s"
 
     resources = {
         "django-app-image": django_app_image,
     }
-    apps = await asyncio.gather(
-        model.deploy(
-            charm_file,
-            application_name=app_name,
-            config={"django-allowed-hosts": "*"},
-            resources=resources,
-            series="jammy",
-        ),
-        model.deploy("postgresql-k8s", channel="14/stable", trust=True),
+    app = await model.deploy(
+        charm_file,
+        application_name=app_name,
+        config={"django-allowed-hosts": "*"},
+        resources=resources,
+        series="jammy",
     )
     await model.integrate(app_name, "postgresql-k8s")
     await model.wait_for_idle(status="active")
-    return apps[0]
+    return app
 
 
 @pytest_asyncio.fixture

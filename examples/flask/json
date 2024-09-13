@@ -1,0 +1,11 @@
+Model          Controller  Cloud/Region      Version  SLA          Timestamp
+test-chrony-2  work-lxd    work-lxd/default  3.5.2    unsupported  07:44:18Z
+
+App     Version  Status   Scale  Charm   Channel      Rev  Exposed  Message
+chrony           blocked      1  chrony  latest/edge   35  no       no time source configured
+
+Unit       Workload  Agent  Machine  Public address  Ports    Message
+chrony/0*  blocked   idle   0        10.81.171.230   123/udp  no time source configured
+
+Machine  State    Address        Inst id        Base          AZ  Message
+0        started  10.81.171.230  juju-728b65-0  ubuntu@24.04      Running
