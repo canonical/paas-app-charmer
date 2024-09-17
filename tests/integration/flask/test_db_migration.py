@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 async def test_db_migration(
-    flask_db_app: Application,
-    model: juju.model.Model,
-    get_unit_ips,
+    flask_db_app: Application, model: juju.model.Model, get_unit_ips, postgresql_k8s
 ):
     """
     arrange: build and deploy the flask charm.
@@ -23,9 +21,8 @@ async def test_db_migration(
     assert: requesting the charm should return a correct response indicate
         the database migration script has been executed and only executed once.
     """
-    db_app = await model.deploy("postgresql-k8s", channel="14/stable", trust=True)
     await model.wait_for_idle()
-    await model.add_relation(flask_db_app.name, db_app.name)
+    await model.add_relation(flask_db_app.name, postgresql_k8s.name)
     await model.wait_for_idle(status="active", timeout=20 * 60)
 
     for unit_ip in await get_unit_ips(flask_db_app.name):

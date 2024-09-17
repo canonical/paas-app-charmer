@@ -142,6 +142,17 @@ async def deploy_prometheus_fixture(
     return app
 
 
+@pytest_asyncio.fixture(scope="module", name="postgresql_k8s")
+async def deploy_postgres_fixture(ops_test: OpsTest, model: Model):
+    """Deploy postgres k8s charm."""
+    _, status, _ = await ops_test.juju("status", "--format", "json")
+    version = json.loads(status)["model"]["version"]
+    if tuple(map(int, (version.split(".")))) >= (3, 4, 0):
+        return await model.deploy("postgresql-k8s", channel="14/stable", trust=True)
+    else:
+        return await model.deploy("postgresql-k8s", channel="14/stable", revision=300, trust=True)
+
+
 @pytest_asyncio.fixture
 def run_action(ops_test: OpsTest):
     async def _run_action(application_name, action_name, **params):

@@ -48,21 +48,20 @@ async def charm_file_fixture(
 
 
 @pytest_asyncio.fixture(scope="module", name="fastapi_app")
-async def fastapi_app_fixture(charm_file: str, model: Model, fastapi_app_image: str):
+async def fastapi_app_fixture(
+    charm_file: str, model: Model, fastapi_app_image: str, postgresql_k8s
+):
     """Build and deploy the fastapi charm."""
     app_name = "fastapi-k8s"
 
     resources = {
         "app-image": fastapi_app_image,
     }
-    apps = await asyncio.gather(
-        model.deploy(
-            charm_file,
-            application_name=app_name,
-            resources=resources,
-        ),
-        model.deploy("postgresql-k8s", channel="14/stable", trust=True),
+    app = await model.deploy(
+        charm_file,
+        application_name=app_name,
+        resources=resources,
     )
     await model.integrate(app_name, "postgresql-k8s")
     await model.wait_for_idle(status="active")
-    return apps[0]
+    return app
