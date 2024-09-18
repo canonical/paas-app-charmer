@@ -25,6 +25,48 @@ DEFAULT_LAYER = {
         },
     }
 }
+
+LAYER_WITH_WORKER = {
+    "services": {
+        "flask": {
+            "override": "replace",
+            "startup": "enabled",
+            "command": f"/bin/python3 -m gunicorn -c /flask/gunicorn.conf.py app:app",
+            "after": ["statsd-exporter"],
+            "user": "_daemon_",
+        },
+        "statsd-exporter": {
+            "override": "merge",
+            "command": (
+                "/bin/statsd_exporter --statsd.mapping-config=/statsd-mapping.conf "
+                "--statsd.listen-udp=localhost:9125 "
+                "--statsd.listen-tcp=localhost:9125"
+            ),
+            "summary": "statsd exporter service",
+            "startup": "enabled",
+            "user": "_daemon_",
+        },
+        "not-worker-service": {
+            "override": "replace",
+            "startup": "enabled",
+            "command": "/bin/noworker",
+            "user": "_daemon_",
+        },
+        "real-worker": {
+            "override": "replace",
+            "startup": "enabled",
+            "command": "/bin/worker",
+            "user": "_daemon_",
+        },
+        "real-scheduler": {
+            "override": "replace",
+            "startup": "enabled",
+            "command": "/bin/scheduler",
+            "user": "_daemon_",
+        },
+    }
+}
+
 FLASK_CONTAINER_NAME = "flask-app"
 
 SAML_APP_RELATION_DATA_EXAMPLE = {

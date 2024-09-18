@@ -73,7 +73,7 @@ def test_gunicorn_config(
         secret_key="",
         is_secret_storage_ready=True,
     )
-    workload_config = create_workload_config(framework_name="flask")
+    workload_config = create_workload_config(framework_name="flask", unit_name="flask/0")
     webserver_config = WebserverConfig(**charm_state_params)
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
@@ -116,7 +116,7 @@ def test_webserver_reload(monkeypatch, harness: Harness, is_running, database_mi
         is_secret_storage_ready=True,
     )
     webserver_config = WebserverConfig()
-    workload_config = create_workload_config(framework_name="flask")
+    workload_config = create_workload_config(framework_name="flask", unit_name="flask/0")
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
         workload_config=workload_config,
@@ -171,7 +171,7 @@ def test_gunicorn_config_with_pebble_log_forwarding(
         secret_key="",
         is_secret_storage_ready=True,
     )
-    workload_config = create_workload_config(framework_name="flask")
+    workload_config = create_workload_config(framework_name="flask", unit_name="flask/0")
     webserver_config = WebserverConfig()
     webserver = GunicornWebserver(
         webserver_config=webserver_config,

@@ -12,11 +12,12 @@ APPLICATION_LOG_FILE_FMT = "/var/log/{framework}/access.log"
 APPLICATION_ERROR_LOG_FILE_FMT = "/var/log/{framework}/error.log"
 
 
-def create_workload_config(framework_name: str) -> WorkloadConfig:
+def create_workload_config(framework_name: str, unit_name: str) -> WorkloadConfig:
     """Create an WorkloadConfig for Gunicorn.
 
     Args:
         framework_name: framework name.
+        unit_name: name of the app unit.
 
     Returns:
        new WorkloadConfig
@@ -35,4 +36,5 @@ def create_workload_config(framework_name: str) -> WorkloadConfig:
             pathlib.Path(str.format(APPLICATION_ERROR_LOG_FILE_FMT, framework=framework_name)),
         ],
         metrics_target="*:9102",
+        unit_name=unit_name,
     )
