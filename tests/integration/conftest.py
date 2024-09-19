@@ -153,6 +153,26 @@ async def deploy_postgres_fixture(ops_test: OpsTest, model: Model):
         return await model.deploy("postgresql-k8s", channel="14/stable", revision=300, trust=True)
 
 
+@pytest_asyncio.fixture(scope="module", name="redis_k8s_app")
+async def deploy_redisk8s_fixture(ops_test: OpsTest, model: Model):
+    """Deploy Redis k8s charm."""
+    redis_app = await model.deploy("redis-k8s", channel="edge")
+    await model.wait_for_idle(apps=[redis_app.name], status="active")
+    return redis_app
+
+
+@pytest_asyncio.fixture(scope="function", name="integrate_redis_k8s_flask")
+async def integrate_redis_k8s_flask_fixture(
+    ops_test: OpsTest, model: Model, flask_app: Application, redis_k8s_app: Application
+):
+    """Integrate redis_k8s with flask apps."""
+    relation = await model.integrate(flask_app.name, redis_k8s_app.name)
+    await model.wait_for_idle(apps=[redis_k8s_app.name], status="active")
+    yield relation
+    await flask_app.destroy_relation("redis", f"{redis_k8s_app.name}")
+    await model.wait_for_idle()
+
+
 @pytest_asyncio.fixture
 def run_action(ops_test: OpsTest):
     async def _run_action(application_name, action_name, **params):
