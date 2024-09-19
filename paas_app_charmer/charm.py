@@ -21,7 +21,7 @@ from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.observability import Observability
 from paas_app_charmer.rabbitmq import RabbitMQRequires
 from paas_app_charmer.secret_storage import KeySecretStorage
-from paas_app_charmer.utils import build_validation_error_message
+from paas_app_charmer.utils import build_validation_error_message, config_get_3
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +143,8 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             self._on_secret_storage_relation_changed,
         )
         self.framework.observe(self.on.update_status, self._on_update_status)
+        if ops.JujuVersion.from_environ().has_secrets:
+            self.framework.observe(self.on.secret_changed, self._on_secret_changed)
         for database, database_requirer in self._database_requirers.items():
             self.framework.observe(
                 database_requirer.on.database_created,
@@ -173,7 +175,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         """
         # Will raise an AttributeError if it the attribute framework_config_class does not exist.
         framework_config_class = self.framework_config_class
-        config = dict(self.config.items())
+        config = {k: config_get_3(self, k) for k in self.config.keys()}
         try:
             return framework_config_class.model_validate(config)
         except ValidationError as exc:
@@ -191,6 +193,15 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
 
         Args:
             _event: the config-changed event that triggers this callback function.
+        """
+        self.restart()
+
+    @block_if_invalid_config
+    def _on_secret_changed(self, _event: ops.EventBase) -> None:
+        """Configure the application pebble service layer.
+
+        Args:
+            _event: the secret-changed event that triggers this callback function.
         """
         self.restart()
 

@@ -55,6 +55,8 @@ config:
         will set the FLASK_SECRET_KEY environment variable. Run `app.config.from_prefixed_env()`
         in your Flask application in order to receive this configuration.
       type: string
+    flask-secret-key-id:
+      type: secret
     flask-session-cookie-secure:
       description: Set the secure attribute in the Flask application cookies. This
         configuration will set the FLASK_SESSION_COOKIE_SECURE environment variable.
@@ -74,6 +76,9 @@ config:
     webserver-workers:
       description: The number of webserver worker processes for handling requests.
       type: int
+    secret-test:
+      description: A test configuration option for testing user provided juju secrets.
+      type: secret
 containers:
   flask-app:
     resource: flask-app-image

@@ -123,6 +123,43 @@ async def test_flask_config(
 
 
 @pytest.mark.parametrize(
+    "update_secret_config, excepted_config",
+    [
+        pytest.param(
+            {"secret-test": {"bar": "bar", "foo-bar": "foo-bar"}},
+            {"SECRET_TEST_BAR": "bar", "SECRET_TEST_FOO_BAR": "foo-bar"},
+            id="user-secret",
+        ),
+        pytest.param(
+            {"flask-secret-key-id": {"value": "secret-foobar"}},
+            {"SECRET_KEY": "secret-foobar"},
+            id="secret_key",
+        ),
+    ],
+    indirect=["update_secret_config"],
+)
+@pytest.mark.usefixtures("update_secret_config")
+async def test_flask_secret_config(
+    flask_app: Application,
+    get_unit_ips: typing.Callable[[str], typing.Awaitable[tuple[str, ...]]],
+    excepted_config: dict,
+):
+    """
+    arrange: build and deploy the flask charm, and change secret configurations.
+    act: query flask environment variables from the Flask server.
+    assert: the flask environment variables should match secret configuration values.
+    """
+    for unit_ip in await get_unit_ips(flask_app.name):
+        for config_key, config_value in excepted_config.items():
+            assert (
+                requests.get(
+                    f"http://{unit_ip}:{WORKLOAD_PORT}/config/{config_key}", timeout=10
+                ).json()
+                == config_value
+            )
+
+
+@pytest.mark.parametrize(
     "update_config, invalid_configs",
     [
         pytest.param(

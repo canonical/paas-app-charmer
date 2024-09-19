@@ -16,7 +16,7 @@ from pydantic import BaseModel, Extra, Field, ValidationError, ValidationInfo, f
 from paas_app_charmer.databases import get_uri
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.secret_storage import KeySecretStorage
-from paas_app_charmer.utils import build_validation_error_message
+from paas_app_charmer.utils import build_validation_error_message, config_get_3
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         *,
         framework: str,
         is_secret_storage_ready: bool,
-        app_config: dict[str, int | str | bool] | None = None,
+        app_config: dict[str, int | str | bool | dict[str, str]] | None = None,
         framework_config: dict[str, int | str] | None = None,
         secret_key: str | None = None,
         integrations: "IntegrationsState | None" = None,
@@ -109,8 +109,8 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             The CharmState instance created by the provided charm.
         """
         app_config = {
-            k.replace("-", "_"): v
-            for k, v in charm.config.items()
+            k.replace("-", "_"): config_get_3(charm, k)
+            for k in charm.config.keys()
             if not any(k.startswith(prefix) for prefix in (f"{framework}-", "webserver-", "app-"))
         }
         app_config = {
@@ -127,7 +127,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         return cls(
             framework=framework,
             framework_config=framework_config.dict(exclude_none=True),
-            app_config=typing.cast(dict[str, str | int | bool], app_config),
+            app_config=typing.cast(dict[str, str | int | bool | dict[str, str]], app_config),
             secret_key=(
                 secret_storage.get_secret_key() if secret_storage.is_initialized else None
             ),
@@ -162,7 +162,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         return self._framework_config
 
     @property
-    def app_config(self) -> dict[str, str | int | bool]:
+    def app_config(self) -> dict[str, str | int | bool | dict[str, str]]:
         """Get the value of user-defined application configurations.
 
         Returns:

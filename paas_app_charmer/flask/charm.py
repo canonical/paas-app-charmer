@@ -4,9 +4,10 @@
 """Flask Charm service."""
 import logging
 import pathlib
+import typing
 
 import ops
-from pydantic import BaseModel, Extra, Field, field_validator
+from pydantic import BaseModel, Extra, Field, field_validator, model_validator
 
 from paas_app_charmer._gunicorn.charm import GunicornBase
 
@@ -56,6 +57,27 @@ class FlaskConfig(BaseModel, extra=Extra.ignore):
             The string converted to uppercase.
         """
         return value.upper()
+
+    @model_validator(mode="before")
+    @classmethod
+    def secret_key_id(cls, data: dict[str, str | int | bool | dict[str, str] | None]) -> dict:
+        """Read the new *-secret-key-id style configuration.
+
+        Args:
+            data: model input.
+
+        Returns:
+            modified input with *-secret-key replace by the secret content of *-secret-key-id.
+
+        Raises:
+            ValueError: if the *-secret-key-id is invalid.
+        """
+        if "flask-secret-key-id" in data and data["flask-secret-key-id"]:
+            secret_value = typing.cast(dict[str, str], data["flask-secret-key-id"])
+            if "value" not in secret_value:
+                raise ValueError("flask-secret-key-id missing 'value' key in the secret content")
+            data["flask-secret-key"] = secret_value["value"]
+        return data
 
 
 class Charm(GunicornBase):

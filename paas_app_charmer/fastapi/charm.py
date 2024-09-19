@@ -7,7 +7,7 @@ import pathlib
 import typing
 
 import ops
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, Extra, Field, model_validator
 
 from paas_app_charmer.app import App, WorkloadConfig
 from paas_app_charmer.charm import PaasCharm
@@ -36,6 +36,27 @@ class FastAPIConfig(BaseModel, extra=Extra.ignore):
     metrics_port: int | None = Field(alias="metrics-port", default=None, gt=0)
     metrics_path: str | None = Field(alias="metrics-path", default=None, min_length=1)
     app_secret_key: str | None = Field(alias="app-secret-key", default=None, min_length=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def secret_key_id(cls, data: dict[str, str | int | bool | dict[str, str] | None]) -> dict:
+        """Read the new *-secret-key-id style configuration.
+
+        Args:
+            data: model input.
+
+        Returns:
+            modified input with *-secret-key replace by the secret content of *-secret-key-id.
+
+        Raises:
+            ValueError: if the *-secret-key-id is invalid.
+        """
+        if "app-secret-key-id" in data and data["app-secret-key-id"]:
+            secret_value = typing.cast(dict[str, str], data["app-secret-key-id"])
+            if "value" not in secret_value:
+                raise ValueError("app-secret-key-id missing 'value' key in the secret content")
+            data["app-secret-key"] = secret_value["value"]
+        return data
 
 
 class Charm(PaasCharm):

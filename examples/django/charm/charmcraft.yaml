@@ -48,6 +48,8 @@ config:
         for any other security related needs by your Django application. This configuration
         will set the DJANGO_SECRET_KEY environment variable.
       type: string
+    django-secret-key-id:
+      type: secret
     webserver-keepalive:
       description: Time in seconds for webserver to wait for requests on a Keep-Alive
         connection.

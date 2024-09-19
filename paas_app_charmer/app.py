@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Provide the base generic class to represent the application."""
-
+import collections
 import json
 import logging
 import pathlib
@@ -118,9 +118,16 @@ class App:
         Returns:
             A dictionary representing the application environment variables.
         """
-        config = self._charm_state.app_config
         prefix = self.configuration_prefix
-        env = {f"{prefix}{k.upper()}": encode_env(v) for k, v in config.items()}
+        env = {}
+        for app_config_key, app_config_value in self._charm_state.app_config.items():
+            if isinstance(app_config_value, collections.abc.Mapping):
+                for k, v in app_config_value.items():
+                    env[f"{prefix}{app_config_key.upper()}_{k.replace('-', '_').upper()}"] = (
+                        encode_env(v)
+                    )
+            else:
+                env[f"{prefix}{app_config_key.upper()}"] = encode_env(app_config_value)
 
         framework_config = self._charm_state.framework_config
         framework_config_prefix = self.framework_config_prefix

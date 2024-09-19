@@ -8,7 +8,7 @@ import secrets
 import typing
 
 import ops
-from pydantic import BaseModel, Extra, Field, validator
+from pydantic import BaseModel, Extra, Field, model_validator, validator
 
 from paas_app_charmer._gunicorn.charm import GunicornBase
 
@@ -43,6 +43,27 @@ class DjangoConfig(BaseModel, extra=Extra.ignore):
         if not value:
             return []
         return [h.strip() for h in value.split(",")]
+
+    @model_validator(mode="before")
+    @classmethod
+    def secret_key_id(cls, data: dict[str, str | int | bool | dict[str, str] | None]) -> dict:
+        """Read the new *-secret-key-id style configuration.
+
+        Args:
+            data: model input.
+
+        Returns:
+            modified input with *-secret-key replace by the secret content of *-secret-key-id.
+
+        Raises:
+            ValueError: if the *-secret-key-id is invalid.
+        """
+        if "django-secret-key-id" in data and data["django-secret-key-id"]:
+            secret_value = typing.cast(dict[str, str], data["django-secret-key-id"])
+            if "value" not in secret_value:
+                raise ValueError("django-secret-key-id missing 'value' key in the secret content")
+            data["django-secret-key"] = secret_value["value"]
+        return data
 
 
 class Charm(GunicornBase):

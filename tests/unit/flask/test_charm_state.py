@@ -17,7 +17,7 @@ from .constants import SAML_APP_RELATION_DATA_EXAMPLE
 # this is a unit test file
 # pylint: disable=protected-access
 
-DEFAULT_CHARM_CONFIG = {"webserver-wsgi-path": "app:app", "flask-preferred-url-scheme": "HTTPS"}
+DEFAULT_CHARM_CONFIG = {"flask-preferred-url-scheme": "HTTPS"}
 SECRET_STORAGE_MOCK = unittest.mock.MagicMock(is_initialized=True)
 SECRET_STORAGE_MOCK.get_secret_key.return_value = ""
 
@@ -268,3 +268,99 @@ def test_saml_integration_invalid(saml_app_relation_data, error_messages):
         )
     for message in error_messages:
         assert message in str(exc)
+
+
+def test_secret_configuration():
+    """
+    arrange: prepare a juju secret configuration.
+    act: set secret-test charm configurations.
+    assert: app_config in the charm state should contain the value of the secret configuration.
+    """
+    config = copy.copy(DEFAULT_CHARM_CONFIG)
+    config["secret-test"] = "secret://id"
+    charm = unittest.mock.MagicMock(
+        config=config,
+        framework_config_class=Charm.framework_config_class,
+        model=unittest.mock.MagicMock(
+            get_secret=unittest.mock.MagicMock(
+                return_value=unittest.mock.MagicMock(
+                    get_content=unittest.mock.MagicMock(
+                        return_value={"foo": "foo", "bar": "bar", "foo-bar": "foobar"}
+                    ),
+                )
+            ),
+        ),
+    )
+    charm_state = CharmState.from_charm(
+        framework="flask",
+        framework_config=Charm.get_framework_config(charm),
+        secret_storage=SECRET_STORAGE_MOCK,
+        charm=charm,
+        database_requirers={},
+    )
+    assert "secret_test" in charm_state.app_config
+    assert charm_state.app_config["secret_test"] == {
+        "bar": "bar",
+        "foo": "foo",
+        "foo-bar": "foobar",
+    }
+    assert charm.model.get_secret.call_args == unittest.mock.call(id="secret://id")
+
+
+def test_flask_secret_key_id():
+    """
+    arrange: prepare a juju secret configuration.
+    act: set flask-secret-key-id charm configurations.
+    assert: framework_config in the charm state should contain the value of the secret.
+    """
+    config = copy.copy(DEFAULT_CHARM_CONFIG)
+    config["flask-secret-key"] = "foo"
+    config["flask-secret-key-id"] = "secret://id"
+    charm = unittest.mock.MagicMock(
+        config=config,
+        framework_config_class=Charm.framework_config_class,
+        model=unittest.mock.MagicMock(
+            get_secret=unittest.mock.MagicMock(
+                return_value=unittest.mock.MagicMock(
+                    get_content=unittest.mock.MagicMock(return_value={"value": "foobar"}),
+                )
+            ),
+        ),
+    )
+    charm_state = CharmState.from_charm(
+        framework="flask",
+        framework_config=Charm.get_framework_config(charm),
+        secret_storage=SECRET_STORAGE_MOCK,
+        charm=charm,
+        database_requirers={},
+    )
+    assert charm_state.framework_config["secret_key"] == "foobar"
+
+
+def test_flask_secret_key_id_no_value():
+    """
+    arrange: Prepare an invalid flask-secret-key-id secret.
+    act: Try to build CharmState.
+    assert: It should raise CharmConfigInvalidError.
+    """
+    config = copy.copy(DEFAULT_CHARM_CONFIG)
+    config["flask-secret-key-id"] = "secret://id"
+    charm = unittest.mock.MagicMock(
+        config=config,
+        framework_config_class=Charm.framework_config_class,
+        model=unittest.mock.MagicMock(
+            get_secret=unittest.mock.MagicMock(
+                return_value=unittest.mock.MagicMock(
+                    get_content=unittest.mock.MagicMock(return_value={"foobar": "foobar"}),
+                )
+            ),
+        ),
+    )
+    with pytest.raises(CharmConfigInvalidError) as exc:
+        CharmState.from_charm(
+            framework="flask",
+            framework_config=Charm.get_framework_config(charm),
+            secret_storage=SECRET_STORAGE_MOCK,
+            charm=charm,
+            database_requirers={},
+        )
