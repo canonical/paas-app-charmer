@@ -206,13 +206,13 @@ async def update_secret_config(model: Model, request: FixtureRequest, flask_app:
 
     yield request_config
 
-    # await flask_app.set_config(
-    #     {k: v for k, v in orig_config.items() if k in request_config and v is not None}
-    # )
-    # await flask_app.reset_config([k for k in request_config if orig_config[k] is None])
-    # for secret_name in request_config:
-    #     await model.remove_secret(secret_name)
-    # await model.wait_for_idle(apps=[flask_app.name])
+    await flask_app.set_config(
+        {k: v for k, v in orig_config.items() if k in request_config and v is not None}
+    )
+    await flask_app.reset_config([k for k in request_config if orig_config[k] is None])
+    for secret_name in request_config:
+        await model.remove_secret(secret_name)
+    await model.wait_for_idle(apps=[flask_app.name])
 
 
 @pytest.fixture(scope="module", name="localstack_address")
