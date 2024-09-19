@@ -72,7 +72,12 @@ if broker_url:
 
     @celery_app.task
     def scheduled_task(scheduler_hostname):
-        """Function to run a schedule task in a worker."""
+        """Function to run a schedule task in a worker.
+
+        The worker that will run this task will add the scheduler hostname argument
+        to the "schedulers" set in Redis, and the worker's hostname to the "workers"
+        set in Redis.
+        """
         worker_hostname = hostname()
         logging.info(
             "scheduler host received %s in worker host %s", scheduler_hostname, worker_hostname
