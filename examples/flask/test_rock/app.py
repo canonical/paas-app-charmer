@@ -85,7 +85,7 @@ if broker_url:
         # For that it maybe necessary to exhaust all workers, but not to get the pending tasks
         # too big, so all schedulers can manage to run their scheduled tasks.
         # Celery prefetches tasks, and if they cannot be run they are put in reserved.
-        # If all processes have tasks in reserved, this task will finish inmediatly to not make
+        # If all processes have tasks in reserved, this task will finish immediately to not make
         # queues any longer.
         inspect_obj = celery_app.control.inspect()
         reserved_sizes = [len(tasks) for tasks in inspect_obj.reserved().values()]
