@@ -46,7 +46,7 @@ class FastAPIConfig(BaseModel, extra=Extra.ignore):
             data: model input.
 
         Returns:
-            modified input with *-secret-key replace by the secret content of *-secret-key-id.
+            modified input with *-secret-key replaced by the secret content of *-secret-key-id.
 
         Raises:
             ValueError: if the *-secret-key-id is invalid.

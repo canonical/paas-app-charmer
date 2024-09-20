@@ -198,7 +198,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
 
     @block_if_invalid_config
     def _on_secret_changed(self, _event: ops.EventBase) -> None:
-        """Configure the application pebble service layer.
+        """Configure the application Pebble service layer.
 
         Args:
             _event: the secret-changed event that triggers this callback function.
