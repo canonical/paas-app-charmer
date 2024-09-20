@@ -8,14 +8,15 @@ import secrets
 import typing
 
 import ops
-from pydantic import BaseModel, Extra, Field, model_validator, validator
+from pydantic import ConfigDict, Field, validator
 
 from paas_app_charmer._gunicorn.charm import GunicornBase
+from paas_app_charmer.framework import FrameworkConfig
 
 logger = logging.getLogger(__name__)
 
 
-class DjangoConfig(BaseModel, extra=Extra.ignore):
+class DjangoConfig(FrameworkConfig):
     """Represent Django builtin configuration values.
 
     Attrs:
@@ -23,11 +24,14 @@ class DjangoConfig(BaseModel, extra=Extra.ignore):
         secret_key: a secret key that will be used for security related needs by your
             Django application.
         allowed_hosts: a list of host/domain names that this Django site can serve.
+        model_config: Pydantic model configuration.
     """
 
     debug: bool | None = Field(alias="django-debug", default=None)
     secret_key: str | None = Field(alias="django-secret-key", default=None, min_length=1)
     allowed_hosts: str | None = Field(alias="django-allowed-hosts", default=[])
+
+    model_config = ConfigDict(extra="ignore")
 
     @validator("allowed_hosts")
     @classmethod
@@ -43,27 +47,6 @@ class DjangoConfig(BaseModel, extra=Extra.ignore):
         if not value:
             return []
         return [h.strip() for h in value.split(",")]
-
-    @model_validator(mode="before")
-    @classmethod
-    def secret_key_id(cls, data: dict[str, str | int | bool | dict[str, str] | None]) -> dict:
-        """Read the new *-secret-key-id style configuration.
-
-        Args:
-            data: model input.
-
-        Returns:
-            modified input with *-secret-key replaced by the secret content of *-secret-key-id.
-
-        Raises:
-            ValueError: if the *-secret-key-id is invalid.
-        """
-        if "django-secret-key-id" in data and data["django-secret-key-id"]:
-            secret_value = typing.cast(dict[str, str], data["django-secret-key-id"])
-            if "value" not in secret_value:
-                raise ValueError("django-secret-key-id missing 'value' key in the secret content")
-            data["django-secret-key"] = secret_value["value"]
-        return data
 
 
 class Charm(GunicornBase):

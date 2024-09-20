@@ -4,17 +4,17 @@
 """Flask Charm service."""
 import logging
 import pathlib
-import typing
 
 import ops
-from pydantic import BaseModel, Extra, Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator
 
 from paas_app_charmer._gunicorn.charm import GunicornBase
+from paas_app_charmer.framework import FrameworkConfig
 
 logger = logging.getLogger(__name__)
 
 
-class FlaskConfig(BaseModel, extra=Extra.ignore):
+class FlaskConfig(FrameworkConfig):
     """Represent Flask builtin configuration values.
 
     Attrs:
@@ -29,6 +29,7 @@ class FlaskConfig(BaseModel, extra=Extra.ignore):
         session_cookie_secure: set the secure attribute in the Flask application cookies.
         preferred_url_scheme: use this scheme for generating external URLs when not in a request
             context in the Flask application.
+        model_config: Pydantic model configuration.
     """
 
     env: str | None = Field(alias="flask-env", default=None, min_length=1)
@@ -44,6 +45,7 @@ class FlaskConfig(BaseModel, extra=Extra.ignore):
     preferred_url_scheme: str | None = Field(
         alias="flask-preferred-url-scheme", default=None, pattern="(?i)^(HTTP|HTTPS)$"
     )
+    model_config = ConfigDict(extra="ignore")
 
     @field_validator("preferred_url_scheme")
     @staticmethod
@@ -57,27 +59,6 @@ class FlaskConfig(BaseModel, extra=Extra.ignore):
             The string converted to uppercase.
         """
         return value.upper()
-
-    @model_validator(mode="before")
-    @classmethod
-    def secret_key_id(cls, data: dict[str, str | int | bool | dict[str, str] | None]) -> dict:
-        """Read the new *-secret-key-id style configuration.
-
-        Args:
-            data: model input.
-
-        Returns:
-            modified input with *-secret-key replaced by the secret content of *-secret-key-id.
-
-        Raises:
-            ValueError: if the *-secret-key-id is invalid.
-        """
-        if "flask-secret-key-id" in data and data["flask-secret-key-id"]:
-            secret_value = typing.cast(dict[str, str], data["flask-secret-key-id"])
-            if "value" not in secret_value:
-                raise ValueError("flask-secret-key-id missing 'value' key in the secret content")
-            data["flask-secret-key"] = secret_value["value"]
-        return data
 
 
 class Charm(GunicornBase):
