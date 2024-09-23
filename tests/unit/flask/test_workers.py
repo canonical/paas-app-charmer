@@ -4,11 +4,11 @@
 """Unit tests for worker services."""
 
 import copy
-import pytest
 import unittest.mock
 from secrets import token_hex
 
 import ops
+import pytest
 from ops.testing import Harness
 
 from .constants import FLASK_CONTAINER_NAME, LAYER_WITH_WORKER
