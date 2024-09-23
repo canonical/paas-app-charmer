@@ -13,9 +13,10 @@ from .constants import DEFAULT_LAYER, FASTAPI_CONTAINER_NAME
 
 
 @pytest.mark.parametrize(
-    "config, env",
+    "config, postgresql_relation_data, env",
     [
         pytest.param(
+            {},
             {},
             {
                 "UVICORN_PORT": "8080",
@@ -38,6 +39,12 @@ from .constants import DEFAULT_LAYER, FASTAPI_CONTAINER_NAME
                 "user-defined-config": "userdefined",
             },
             {
+                "database": "test-database",
+                "endpoints": "test-postgresql:5432,test-postgresql-2:5432",
+                "password": "test-password",
+                "username": "test-username",
+            },
+            {
                 "UVICORN_PORT": "9000",
                 "WEB_CONCURRENCY": "1",
                 "UVICORN_LOG_LEVEL": "info",
@@ -47,19 +54,36 @@ from .constants import DEFAULT_LAYER, FASTAPI_CONTAINER_NAME
                 "METRICS_PATH": "/othermetrics",
                 "APP_SECRET_KEY": "foobar",
                 "APP_USER_DEFINED_CONFIG": "userdefined",
+                "APP_POSTGRESQL_DB_CONNECT_STRING": "postgresql://test-username:test-password@test-postgresql:5432/test-database",
+                "APP_POSTGRESQL_DB_FRAGMENT": "",
+                "APP_POSTGRESQL_DB_HOSTNAME": "test-postgresql",
+                "APP_POSTGRESQL_DB_NAME": "test-database",
+                "APP_POSTGRESQL_DB_NETLOC": "test-username:test-password@test-postgresql:5432",
+                "APP_POSTGRESQL_DB_PARAMS": "",
+                "APP_POSTGRESQL_DB_PASSWORD": "test-password",
+                "APP_POSTGRESQL_DB_PATH": "/test-database",
+                "APP_POSTGRESQL_DB_PORT": "5432",
+                "APP_POSTGRESQL_DB_QUERY": "",
+                "APP_POSTGRESQL_DB_SCHEME": "postgresql",
+                "APP_POSTGRESQL_DB_USERNAME": "test-username",
             },
             id="custom config",
         ),
     ],
 )
-def test_fastapi_config(harness: Harness, config: dict, env: dict) -> None:
+def test_fastapi_config(
+    harness: Harness, config: dict, postgresql_relation_data: dict, env: dict
+) -> None:
     """
-    arrange: none
-    act: start the fastapi charm and set the container to be ready.
+    arrange: prepare the charm optionally with the postgresql relation.
+    act: start the fastapi charm update the config options.
     assert: fastapi charm should submit the correct fastapi pebble layer to pebble.
     """
     container = harness.model.unit.get_container(FASTAPI_CONTAINER_NAME)
     container.add_layer("a_layer", DEFAULT_LAYER)
+    if postgresql_relation_data:
+        harness.add_relation("postgresql", "postgresql-k8s", app_data=postgresql_relation_data)
+
     harness.begin_with_initial_hooks()
     harness.charm._secret_storage.get_secret_key = unittest.mock.MagicMock(return_value="test")
     harness.update_config(config)
