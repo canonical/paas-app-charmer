@@ -75,6 +75,7 @@ class DatabaseMigration:
     # pylint: disable=too-many-arguments
     def run(
         self,
+        *,
         command: list[str],
         environment: dict[str, str],
         working_dir: pathlib.Path,

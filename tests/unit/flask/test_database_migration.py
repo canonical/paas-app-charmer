@@ -150,8 +150,12 @@ def test_database_migration_status(harness: Harness):
     )
     assert database_migration.get_status() == DatabaseMigrationStatus.PENDING
     with pytest.raises(CharmConfigInvalidError):
-        database_migration.run(["migrate"], {}, pathlib.Path("/flask/app"))
+        database_migration.run(
+            command=["migrate"], environment={}, working_dir=pathlib.Path("/flask/app")
+        )
     assert database_migration.get_status() == DatabaseMigrationStatus.FAILED
     harness.handle_exec(container, [], result=0)
-    database_migration.run(["migrate"], {}, pathlib.Path("/flask/app"))
+    database_migration.run(
+        command=["migrate"], environment={}, working_dir=pathlib.Path("/flask/app")
+    )
     assert database_migration.get_status() == DatabaseMigrationStatus.COMPLETED
