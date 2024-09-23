@@ -3,6 +3,8 @@
 
 """Unit tests for worker services."""
 
+import copy
+import pytest
 import unittest.mock
 from secrets import token_hex
 
@@ -14,12 +16,13 @@ from .constants import FLASK_CONTAINER_NAME, LAYER_WITH_WORKER
 
 def test_worker(harness: Harness):
     """
-    arrange: Prepare a unit with workers
+    arrange: Prepare a unit with workers and schedulers.
     act: Run initial hooks.
     assert: The workers should have all the environment variables. Also the schedulers, as
             the unit is 0.
     """
     container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    flask_layer = copy.deepcopy(LAYER_WITH_WORKER)
     container.add_layer("a_layer", LAYER_WITH_WORKER)
 
     harness.begin_with_initial_hooks()
@@ -28,8 +31,11 @@ def test_worker(harness: Harness):
     services = container.get_plan().services
     assert "FLASK_SECRET_KEY" in services["flask"].environment
     assert services["flask"].environment == services["real-worker"].environment
+    assert services["flask"].environment == services["Another-Real-WorkeR"].environment
     assert services["real-scheduler"].startup == "enabled"
     assert services["flask"].environment == services["real-scheduler"].environment
+    assert services["ANOTHER-REAL-SCHEDULER"].startup == "enabled"
+    assert services["flask"].environment == services["ANOTHER-REAL-SCHEDULER"].environment
     assert "FLASK_SECRET_KEY" not in services["not-worker-service"].environment
 
 

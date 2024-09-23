@@ -208,12 +208,13 @@ class App:
         services[self._workload_config.service_name]["environment"] = self.gen_environment()
 
         for service_name, service in services.items():
+            normalised_service_name = service_name.lower()
             # Add environment variables to all worker processes.
-            if service_name.endswith(WORKER_SUFFIX):
+            if normalised_service_name.endswith(WORKER_SUFFIX):
                 service["environment"] = self.gen_environment()
             # For scheduler processes, add environment variables if
             # the scheduler should run in the unit, disable it otherwise.
-            if service_name.endswith(SCHEDULER_SUFFIX):
+            if normalised_service_name.endswith(SCHEDULER_SUFFIX):
                 if self._workload_config.should_run_scheduler():
                     service["environment"] = self.gen_environment()
                 else:

@@ -58,10 +58,22 @@ LAYER_WITH_WORKER = {
             "command": "/bin/worker",
             "user": "_daemon_",
         },
+        "Another-Real-WorkeR": {
+            "override": "replace",
+            "startup": "enabled",
+            "command": "/bin/worker",
+            "user": "_daemon_",
+        },
         "real-scheduler": {
             "override": "replace",
             "startup": "enabled",
             "command": "/bin/scheduler",
+            "user": "_daemon_",
+        },
+        "ANOTHER-REAL-SCHEDULER": {
+            "override": "replace",
+            "startup": "enabled",
+            "command": "/bin/worker",
             "user": "_daemon_",
         },
     }
