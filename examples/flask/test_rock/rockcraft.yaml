@@ -11,3 +11,19 @@ platforms:
 
 extensions:
   - flask-framework
+
+services:
+  celery-worker:
+    override: replace
+    # redis is not mandatory in the charm. We do not want the charm to fail immediately, so the sleep
+    command: bash -c "sleep 5; celery -A app:celery_app worker -c 2 --loglevel DEBUG"
+    startup: enabled
+    user: _daemon_
+    working-dir: /flask/app
+  celery-beat-scheduler:
+    override: replace
+    # redis is not mandatory in the charm. We do not want the charm to fail immediately, so the sleep
+    command: bash -c "sleep 5; celery -A app:celery_app beat --loglevel DEBUG -s /tmp/celerybeat-schedule"
+    startup: enabled
+    user: _daemon_
+    working-dir: /flask/app

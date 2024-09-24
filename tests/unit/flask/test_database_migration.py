@@ -35,7 +35,7 @@ def test_database_migration(harness: Harness):
         is_secret_storage_ready=True,
         secret_key="",
     )
-    workload_config = create_workload_config(framework_name="flask")
+    workload_config = create_workload_config(framework_name="flask", unit_name="flask/0")
     webserver_config = WebserverConfig()
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
@@ -109,7 +109,7 @@ def test_database_migrate_command(harness: Harness, file: str, command: list[str
         secret_key="",
     )
     webserver_config = WebserverConfig()
-    workload_config = create_workload_config(framework_name="flask")
+    workload_config = create_workload_config(framework_name="flask", unit_name="flask/0")
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
         workload_config=workload_config,
@@ -150,8 +150,12 @@ def test_database_migration_status(harness: Harness):
     )
     assert database_migration.get_status() == DatabaseMigrationStatus.PENDING
     with pytest.raises(CharmConfigInvalidError):
-        database_migration.run(["migrate"], {}, pathlib.Path("/flask/app"))
+        database_migration.run(
+            command=["migrate"], environment={}, working_dir=pathlib.Path("/flask/app")
+        )
     assert database_migration.get_status() == DatabaseMigrationStatus.FAILED
     harness.handle_exec(container, [], result=0)
-    database_migration.run(["migrate"], {}, pathlib.Path("/flask/app"))
+    database_migration.run(
+        command=["migrate"], environment={}, working_dir=pathlib.Path("/flask/app")
+    )
     assert database_migration.get_status() == DatabaseMigrationStatus.COMPLETED

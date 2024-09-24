@@ -1,7 +1,9 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import logging
 import os
+import socket
 import time
 import urllib.parse
 from urllib.parse import urlparse
@@ -16,10 +18,85 @@ import pymongo.errors
 import pymysql
 import pymysql.cursors
 import redis
+from celery import Celery, Task
 from flask import Flask, g, jsonify, request
+
+
+def hostname():
+    """Get the hostname of the current machine."""
+    return socket.gethostbyname(socket.gethostname())
+
+
+def celery_init_app(app: Flask, broker_url: str) -> Celery:
+    """Initialise celery using the redis connection string.
+
+    See https://flask.palletsprojects.com/en/3.0.x/patterns/celery/#integrate-celery-with-flask.
+    """
+
+    class FlaskTask(Task):
+        def __call__(self, *args: object, **kwargs: object) -> object:
+            with app.app_context():
+                return self.run(*args, **kwargs)
+
+    celery_app = Celery(app.name, task_cls=FlaskTask)
+    celery_app.set_default()
+    app.extensions["celery"] = celery_app
+    app.config.from_mapping(
+        CELERY=dict(
+            broker_url=broker_url,
+            result_backend=broker_url,
+            task_ignore_result=True,
+        ),
+    )
+    celery_app.config_from_object(app.config["CELERY"])
+    return celery_app
+
 
 app = Flask(__name__)
 app.config.from_prefixed_env()
+
+broker_url = os.environ.get("REDIS_DB_CONNECT_STRING")
+# Configure Celery only if Redis is configured
+if broker_url:
+    celery_app = celery_init_app(app, broker_url)
+    redis_client = redis.Redis.from_url(broker_url)
+
+    @celery_app.on_after_configure.connect
+    def setup_periodic_tasks(sender, **kwargs):
+        """Set up periodic tasks in the scheduler."""
+        try:
+            # This will only have an effect in the beat scheduler.
+            sender.add_periodic_task(0.5, scheduled_task.s(hostname()), name="every 0.5s")
+        except NameError as e:
+            logging.exception("Failed to configure the periodic task")
+
+    @celery_app.task
+    def scheduled_task(scheduler_hostname):
+        """Function to run a schedule task in a worker.
+
+        The worker that will run this task will add the scheduler hostname argument
+        to the "schedulers" set in Redis, and the worker's hostname to the "workers"
+        set in Redis.
+        """
+        worker_hostname = hostname()
+        logging.info(
+            "scheduler host received %s in worker host %s", scheduler_hostname, worker_hostname
+        )
+        redis_client.sadd("schedulers", scheduler_hostname)
+        redis_client.sadd("workers", worker_hostname)
+        logging.info("schedulers: %s", redis_client.smembers("schedulers"))
+        logging.info("workers: %s", redis_client.smembers("workers"))
+        # The goal is to have all workers busy in all processes.
+        # For that it maybe necessary to exhaust all workers, but not to get the pending tasks
+        # too big, so all schedulers can manage to run their scheduled tasks.
+        # Celery prefetches tasks, and if they cannot be run they are put in reserved.
+        # If all processes have tasks in reserved, this task will finish immediately to not make
+        # queues any longer.
+        inspect_obj = celery_app.control.inspect()
+        reserved_sizes = [len(tasks) for tasks in inspect_obj.reserved().values()]
+        logging.info("number of reserved tasks %s", reserved_sizes)
+        delay = 0 if min(reserved_sizes) > 0 else 5
+        time.sleep(delay)
 
 
 def get_mysql_database():
@@ -213,14 +290,40 @@ def mongodb_status():
 
 @app.route("/redis/status")
 def redis_status():
-    """Mongodb status endpoint."""
+    """Redis status endpoint."""
     if database := get_redis_database():
         try:
             database.set("foo", "bar")
             return "SUCCESS"
-        except pymongo.errors.PyMongoError:
-            pass
+        except redis.exceptions.RedisError:
+            logging.exception("Error querying redis")
     return "FAIL"
+
+
+@app.route("/redis/clear_celery_stats")
+def redis_celery_clear_stats():
+    """Reset Redis statistics about workers and schedulers."""
+    if database := get_redis_database():
+        try:
+            database.delete("workers")
+            database.delete("schedulers")
+            return "SUCCESS"
+        except redis.exceptions.RedisError:
+            logging.exception("Error querying redis")
+    return "FAIL", 500
+
+
+@app.route("/redis/celery_stats")
+def redis_celery_stats():
+    """Read Redis statistics about workers and schedulers."""
+    if database := get_redis_database():
+        try:
+            worker_set = [str(host) for host in database.smembers("workers")]
+            beat_set = [str(host) for host in database.smembers("schedulers")]
+            return jsonify({"workers": worker_set, "schedulers": beat_set})
+        except redis.exceptions.RedisError:
+            logging.exception("Error querying redis")
+    return "FAIL", 500
 
 
 @app.route("/rabbitmq/send")
