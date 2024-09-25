@@ -20,6 +20,7 @@ class WsgiApp(App):
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
+        *,
         container: ops.Container,
         charm_state: CharmState,
         workload_config: WorkloadConfig,

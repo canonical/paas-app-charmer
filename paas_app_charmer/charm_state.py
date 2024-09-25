@@ -79,6 +79,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
     @classmethod
     def from_charm(  # pylint: disable=too-many-arguments
         cls,
+        *,
         config: dict[str, bool | int | float | str | dict[str, str]],
         framework: str,
         framework_config: BaseModel,
@@ -220,6 +221,7 @@ class IntegrationsState:
     @classmethod
     def build(  # pylint: disable=too-many-arguments
         cls,
+        *,
         redis_uri: str | None,
         database_requirers: dict[str, DatabaseRequires],
         s3_connection_info: dict[str, str] | None,

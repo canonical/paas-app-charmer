@@ -17,6 +17,7 @@ class Observability(ops.Object):
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
+        *,
         charm: ops.CharmBase,
         container_name: str,
         cos_dir: str,

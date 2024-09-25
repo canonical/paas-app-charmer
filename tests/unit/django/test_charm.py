@@ -63,7 +63,7 @@ def test_django_config(harness: Harness, config: dict, env: dict) -> None:
         database_requirers={},
     )
     webserver_config = WebserverConfig.from_charm_config(harness.charm.config)
-    workload_config = create_workload_config(framework_name="django")
+    workload_config = create_workload_config(framework_name="django", unit_name="django/0")
     webserver = GunicornWebserver(
         webserver_config=webserver_config,
         workload_config=workload_config,

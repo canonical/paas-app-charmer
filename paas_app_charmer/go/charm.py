@@ -68,6 +68,7 @@ class Charm(PaasCharm):
             log_files=[],
             metrics_target=f"*:{framework_config.metrics_port}",
             metrics_path=framework_config.metrics_path,
+            unit_name=self.unit.name,
         )
 
     def get_cos_dir(self) -> str:

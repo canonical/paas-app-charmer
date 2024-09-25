@@ -94,6 +94,7 @@ def test_go_environment_vars(
         log_files=[],
         metrics_target=f"*:{framework_config.metrics_port}",
         metrics_path=framework_config.metrics_path,
+        unit_name="go/0",
     )
 
     charm_state = CharmState(

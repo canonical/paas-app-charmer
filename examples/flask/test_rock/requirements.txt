@@ -7,3 +7,4 @@ pymongo
 redis[hiredis]
 boto3
 pika
+celery

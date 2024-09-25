@@ -46,7 +46,7 @@ def test_flask_env(flask_config: dict, app_config: dict, database_migration_mock
         framework_config=flask_config,
         app_config=app_config,
     )
-    workload_config = create_workload_config(framework_name="flask")
+    workload_config = create_workload_config(framework_name="flask", unit_name="flask/0")
     flask_app = WsgiApp(
         container=unittest.mock.MagicMock(),
         charm_state=charm_state,
@@ -123,7 +123,7 @@ def test_http_proxy(
         secret_key="foobar",
         is_secret_storage_ready=True,
     )
-    workload_config = create_workload_config(framework_name="flask")
+    workload_config = create_workload_config(framework_name="flask", unit_name="flask/0")
     flask_app = WsgiApp(
         container=unittest.mock.MagicMock(),
         charm_state=charm_state,
@@ -176,7 +176,7 @@ def test_integrations_env(
         is_secret_storage_ready=True,
         integrations=integrations,
     )
-    workload_config = create_workload_config(framework_name="flask")
+    workload_config = create_workload_config(framework_name="flask", unit_name="flask/0")
     flask_app = WsgiApp(
         container=unittest.mock.MagicMock(),
         charm_state=charm_state,

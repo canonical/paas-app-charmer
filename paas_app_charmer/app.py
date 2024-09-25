@@ -17,6 +17,9 @@ from paas_app_charmer.database_migration import DatabaseMigration
 
 logger = logging.getLogger(__name__)
 
+WORKER_SUFFIX = "-worker"
+SCHEDULER_SUFFIX = "-scheduler"
+
 
 @dataclass(kw_only=True)
 class WorkloadConfig:  # pylint: disable=too-many-instance-attributes
@@ -37,6 +40,7 @@ class WorkloadConfig:  # pylint: disable=too-many-instance-attributes
         log_files: list of files to monitor.
         metrics_target: target to scrape for metrics.
         metrics_path: path to scrape for metrics.
+        unit_name: Name of the unit. Needed to know if schedulers should run here.
     """
 
     framework: str
@@ -51,6 +55,16 @@ class WorkloadConfig:  # pylint: disable=too-many-instance-attributes
     log_files: List[pathlib.Path]
     metrics_target: str | None = None
     metrics_path: str | None = "/metrics"
+    unit_name: str
+
+    def should_run_scheduler(self) -> bool:
+        """Return if the unit should run scheduler processes.
+
+        Return:
+            True if the unit should run scheduler processes, False otherwise.
+        """
+        unit_id = self.unit_name.split("/")[1]
+        return unit_id == "0"
 
 
 class App:
@@ -58,6 +72,7 @@ class App:
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
+        *,
         container: ops.Container,
         charm_state: CharmState,
         workload_config: WorkloadConfig,
@@ -198,6 +213,19 @@ class App:
 
         services[self._workload_config.service_name]["override"] = "replace"
         services[self._workload_config.service_name]["environment"] = self.gen_environment()
+
+        for service_name, service in services.items():
+            normalised_service_name = service_name.lower()
+            # Add environment variables to all worker processes.
+            if normalised_service_name.endswith(WORKER_SUFFIX):
+                service["environment"] = self.gen_environment()
+            # For scheduler processes, add environment variables if
+            # the scheduler should run in the unit, disable it otherwise.
+            if normalised_service_name.endswith(SCHEDULER_SUFFIX):
+                if self._workload_config.should_run_scheduler():
+                    service["environment"] = self.gen_environment()
+                else:
+                    service["startup"] = "disabled"
 
         return ops.pebble.LayerDict(services=services)
 
