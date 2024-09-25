@@ -4,6 +4,7 @@
 """The base charm class for all application charms."""
 import abc
 import logging
+import typing
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
@@ -21,7 +22,7 @@ from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.observability import Observability
 from paas_app_charmer.rabbitmq import RabbitMQRequires
 from paas_app_charmer.secret_storage import KeySecretStorage
-from paas_app_charmer.utils import build_validation_error_message, config_get_3
+from paas_app_charmer.utils import build_validation_error_message, config_get_with_secret
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +175,14 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         """
         # Will raise an AttributeError if it the attribute framework_config_class does not exist.
         framework_config_class = self.framework_config_class
-        config = {k: config_get_3(self, k) for k in self.config.keys()}
+        charm_config = {k: config_get_with_secret(self, k) for k in self.config.keys()}
+        config = typing.cast(
+            dict,
+            {
+                k: v.get_content(refresh=True) if isinstance(v, ops.Secret) else v
+                for k, v in charm_config.items()
+            },
+        )
         try:
             return framework_config_class.model_validate(config)
         except ValidationError as exc:
@@ -326,9 +334,16 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         saml_relation_data = None
         if self._saml and (saml_data := self._saml.get_relation_data()):
             saml_relation_data = saml_data.to_relation_data()
-
+        charm_config = {k: config_get_with_secret(self, k) for k in self.config.keys()}
+        config = typing.cast(
+            dict,
+            {
+                k: v.get_content(refresh=True) if isinstance(v, ops.Secret) else v
+                for k, v in charm_config.items()
+            },
+        )
         return CharmState.from_charm(
-            charm=self,
+            config=config,
             framework=self._framework_name,
             framework_config=self.get_framework_config(),
             secret_storage=self._secret_storage,

@@ -9,14 +9,13 @@ import typing
 from dataclasses import dataclass, field
 from typing import Optional
 
-import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from pydantic import BaseModel, Extra, Field, ValidationError, ValidationInfo, field_validator
 
 from paas_app_charmer.databases import get_uri
 from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.secret_storage import KeySecretStorage
-from paas_app_charmer.utils import build_validation_error_message, config_get_3
+from paas_app_charmer.utils import build_validation_error_message
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +79,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
     @classmethod
     def from_charm(  # pylint: disable=too-many-arguments
         cls,
-        charm: ops.CharmBase,
+        config: dict[str, bool | int | float | str | dict[str, str]],
         framework: str,
         framework_config: BaseModel,
         secret_storage: KeySecretStorage,
@@ -94,7 +93,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         """Initialize a new instance of the CharmState class from the associated charm.
 
         Args:
-            charm: The charm instance associated with this state.
+            config: The charm configuration.
             framework: The framework name.
             framework_config: The framework specific configurations.
             secret_storage: The secret storage manager associated with the charm.
@@ -109,8 +108,8 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
             The CharmState instance created by the provided charm.
         """
         app_config = {
-            k.replace("-", "_"): config_get_3(charm, k)
-            for k in charm.config.keys()
+            k.replace("-", "_"): v
+            for k, v in config.items()
             if not any(k.startswith(prefix) for prefix in (f"{framework}-", "webserver-", "app-"))
         }
         app_config = {

@@ -79,13 +79,13 @@ def _config_metadata(charm_dir: pathlib.Path) -> dict:
     raise ValueError("charm configuration metadata doesn't exist")
 
 
-def config_get_3(
+def config_get_with_secret(
     charm: ops.CharmBase, key: str
-) -> str | int | bool | float | dict[str, str] | None:
+) -> str | int | bool | float | ops.Secret | None:
     """Get charm configuration values.
 
     This function differs from ``ops.CharmBase.config.get`` in that for secret-typed configuration
-    options, it returns the content of the secret instead of the secret ID in the configuration
+    options, it returns the secret object instead of the secret ID in the configuration
     value. In other instances, this function is equivalent to ops.CharmBase.config.get.
 
     Args:
@@ -102,5 +102,4 @@ def config_get_3(
     secret_id = charm.config.get(key)
     if secret_id is None:
         return None
-    secret = charm.model.get_secret(id=typing.cast(str, secret_id))
-    return secret.get_content(refresh=True)
+    return charm.model.get_secret(id=typing.cast(str, secret_id))

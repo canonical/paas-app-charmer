@@ -45,7 +45,7 @@ def test_flask_pebble_layer(harness: Harness) -> None:
     secret_storage.get_secret_key.return_value = test_key
     charm_state = CharmState.from_charm(
         framework_config=Charm.get_framework_config(harness.charm),
-        charm=harness.charm,
+        config=harness.charm.config,
         framework="flask",
         secret_storage=secret_storage,
         database_requirers={},

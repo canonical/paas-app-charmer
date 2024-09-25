@@ -57,7 +57,7 @@ def test_charm_state_flask_config(charm_config: dict, flask_config: dict) -> Non
         framework="flask",
         framework_config=Charm.get_framework_config(charm),
         secret_storage=SECRET_STORAGE_MOCK,
-        charm=charm,
+        config=config,
         database_requirers={},
     )
     assert charm_state.framework_config == flask_config
@@ -89,7 +89,7 @@ def test_charm_state_invalid_flask_config(charm_config: dict) -> None:
         CharmState.from_charm(
             framework_config=Charm.get_framework_config(charm),
             secret_storage=SECRET_STORAGE_MOCK,
-            charm=charm,
+            config=config,
             database_requirers={},
         )
     for config_key in charm_config:
@@ -123,7 +123,7 @@ def test_s3_integration(s3_connection_info, expected_s3_parameters):
     config.update(config)
     charm = unittest.mock.MagicMock(config=config)
     charm_state = CharmState.from_charm(
-        charm=charm,
+        config=config,
         framework_config=Charm.get_framework_config(charm),
         framework="flask",
         secret_storage=SECRET_STORAGE_MOCK,
@@ -145,7 +145,7 @@ def test_s3_integration_raises():
     charm = unittest.mock.MagicMock(config=config)
     with pytest.raises(CharmConfigInvalidError) as exc:
         charm_state = CharmState.from_charm(
-            charm=charm,
+            config=config,
             framework_config=Charm.get_framework_config(charm),
             framework="flask",
             secret_storage=SECRET_STORAGE_MOCK,
@@ -187,7 +187,7 @@ def test_saml_integration():
     config.update(config)
     charm = unittest.mock.MagicMock(config=config)
     charm_state = CharmState.from_charm(
-        charm=charm,
+        config=config,
         framework_config=Charm.get_framework_config(charm),
         framework="flask",
         secret_storage=SECRET_STORAGE_MOCK,
@@ -259,7 +259,7 @@ def test_saml_integration_invalid(saml_app_relation_data, error_messages):
     charm = unittest.mock.MagicMock(config=config)
     with pytest.raises(CharmConfigInvalidError) as exc:
         charm_state = CharmState.from_charm(
-            charm=charm,
+            config=config,
             framework_config=Charm.get_framework_config(charm),
             framework="flask",
             secret_storage=SECRET_STORAGE_MOCK,
@@ -277,25 +277,16 @@ def test_secret_configuration():
     assert: app_config in the charm state should contain the value of the secret configuration.
     """
     config = copy.copy(DEFAULT_CHARM_CONFIG)
-    config["secret-test"] = "secret://id"
+    config["secret-test"] = {"foo": "foo", "bar": "bar", "foo-bar": "foobar"}
     charm = unittest.mock.MagicMock(
         config=config,
         framework_config_class=Charm.framework_config_class,
-        model=unittest.mock.MagicMock(
-            get_secret=unittest.mock.MagicMock(
-                return_value=unittest.mock.MagicMock(
-                    get_content=unittest.mock.MagicMock(
-                        return_value={"foo": "foo", "bar": "bar", "foo-bar": "foobar"}
-                    ),
-                )
-            ),
-        ),
     )
     charm_state = CharmState.from_charm(
         framework="flask",
         framework_config=Charm.get_framework_config(charm),
         secret_storage=SECRET_STORAGE_MOCK,
-        charm=charm,
+        config=config,
         database_requirers={},
     )
     assert "secret_test" in charm_state.app_config
@@ -304,36 +295,6 @@ def test_secret_configuration():
         "foo": "foo",
         "foo-bar": "foobar",
     }
-    assert charm.model.get_secret.call_args == unittest.mock.call(id="secret://id")
-
-
-def test_flask_secret_key_id():
-    """
-    arrange: prepare a juju secret configuration.
-    act: set flask-secret-key-id charm configurations.
-    assert: framework_config in the charm state should contain the value of the secret.
-    """
-    config = copy.copy(DEFAULT_CHARM_CONFIG)
-    config["flask-secret-key-id"] = "secret://id"
-    charm = unittest.mock.MagicMock(
-        config=config,
-        framework_config_class=Charm.framework_config_class,
-        model=unittest.mock.MagicMock(
-            get_secret=unittest.mock.MagicMock(
-                return_value=unittest.mock.MagicMock(
-                    get_content=unittest.mock.MagicMock(return_value={"value": "foobar"}),
-                )
-            ),
-        ),
-    )
-    charm_state = CharmState.from_charm(
-        framework="flask",
-        framework_config=Charm.get_framework_config(charm),
-        secret_storage=SECRET_STORAGE_MOCK,
-        charm=charm,
-        database_requirers={},
-    )
-    assert charm_state.framework_config["secret_key"] == "foobar"
 
 
 def test_flask_secret_key_id_no_value():
@@ -343,24 +304,17 @@ def test_flask_secret_key_id_no_value():
     assert: It should raise CharmConfigInvalidError.
     """
     config = copy.copy(DEFAULT_CHARM_CONFIG)
-    config["flask-secret-key-id"] = "secret://id"
+    config["flask-secret-key-id"] = {"value": "foobar"}
     charm = unittest.mock.MagicMock(
         config=config,
         framework_config_class=Charm.framework_config_class,
-        model=unittest.mock.MagicMock(
-            get_secret=unittest.mock.MagicMock(
-                return_value=unittest.mock.MagicMock(
-                    get_content=unittest.mock.MagicMock(return_value={"foobar": "foobar"}),
-                )
-            ),
-        ),
     )
     with pytest.raises(CharmConfigInvalidError) as exc:
         CharmState.from_charm(
             framework="flask",
             framework_config=Charm.get_framework_config(charm),
             secret_storage=SECRET_STORAGE_MOCK,
-            charm=charm,
+            config=config,
             database_requirers={},
         )
 
@@ -373,23 +327,16 @@ def test_flask_secret_key_id_duplication():
     """
     config = copy.copy(DEFAULT_CHARM_CONFIG)
     config["flask-secret-key"] = "test"
-    config["flask-secret-key-id"] = "secret://id"
+    config["flask-secret-key-id"] = {"value": "foobar"}
     charm = unittest.mock.MagicMock(
         config=config,
         framework_config_class=Charm.framework_config_class,
-        model=unittest.mock.MagicMock(
-            get_secret=unittest.mock.MagicMock(
-                return_value=unittest.mock.MagicMock(
-                    get_content=unittest.mock.MagicMock(return_value={"foobar": "foobar"}),
-                )
-            ),
-        ),
     )
     with pytest.raises(CharmConfigInvalidError) as exc:
         CharmState.from_charm(
             framework="flask",
             framework_config=Charm.get_framework_config(charm),
             secret_storage=SECRET_STORAGE_MOCK,
-            charm=charm,
+            config=config,
             database_requirers={},
         )
