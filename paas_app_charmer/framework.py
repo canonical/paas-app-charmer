@@ -28,7 +28,8 @@ class FrameworkConfig(pydantic.BaseModel):
         if secret_key_field not in cls.model_fields:
             secret_key_field = "app_secret_key"
         secret_key_config_name = cls.model_fields[secret_key_field].alias
-        assert secret_key_config_name
+        if not secret_key_config_name:
+            raise NotImplementedError("framework configuration secret_key field has no alias")
         secret_key_id_config_name = f"{secret_key_config_name}-id"
         if data.get(secret_key_id_config_name):
             if data.get(secret_key_config_name):
