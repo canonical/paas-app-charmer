@@ -23,6 +23,7 @@ class FrameworkConfig(pydantic.BaseModel):
 
         Raises:
             ValueError: if the *-secret-key-id is invalid.
+            NotImplementedError: ill-formed subclasses.
         """
         secret_key_field = "secret_key"
         if secret_key_field not in cls.model_fields:
