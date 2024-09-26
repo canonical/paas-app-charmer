@@ -299,11 +299,13 @@ async def rabbitmq_server_integration_fixture(
     rabbitmq_offer_url = f"{lxd_controller_name}:{lxd_username}/{lxd_model_name}.{offer_name}"
 
     integration = await model.integrate(rabbitmq_offer_url, flask_app.name)
+    await lxd_model.wait_for_idle(status="active")
     await model.wait_for_idle(apps=[flask_app.name], status="active")
 
     yield integration
 
     res = await flask_app.destroy_relation("rabbitmq", f"{rabbitmq_server_app.name}:amqp")
+    await lxd_model.wait_for_idle(status="active")
     await model.wait_for_idle(apps=[flask_app.name], status="active")
 
 
@@ -315,9 +317,9 @@ async def rabbitmq_k8s_integration_fixture(
 ):
     """Integrates flask with rabbitmq-k8s."""
     integration = await model.integrate(rabbitmq_k8s_app.name, flask_app.name)
-    await model.wait_for_idle(apps=[flask_app.name], status="active")
+    await model.wait_for_idle(apps=[flask_app.name, rabbitmq_k8s_app.name], status="active")
 
     yield integration
 
     await flask_app.destroy_relation("rabbitmq", f"{rabbitmq_k8s_app.name}:amqp")
-    await model.wait_for_idle(apps=[flask_app.name], status="active")
+    await model.wait_for_idle(apps=[flask_app.name, rabbitmq_k8s_app.name], status="active")
