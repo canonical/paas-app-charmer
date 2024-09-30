@@ -26,6 +26,11 @@ from paas_app_charmer.charm_state import CharmState, IntegrationsState, S3Parame
         pytest.param({"permanent_session_lifetime": 1}, {}, id="permanent_session_lifetime"),
         pytest.param({"debug": True}, {}, id="debug"),
         pytest.param({"application_root": "/"}, {"application_root": "/foo"}, id="duplicate"),
+        pytest.param(
+            {"application_root": "/"},
+            {"secret_test": {"foo": "foo", "foo-bar": "foobar"}},
+            id="secrets",
+        ),
     ],
 )
 def test_flask_env(flask_config: dict, app_config: dict, database_migration_mock):
@@ -52,10 +57,24 @@ def test_flask_env(flask_config: dict, app_config: dict, database_migration_mock
     env = flask_app.gen_environment()
     assert env["FLASK_SECRET_KEY"] == "foobar"
     del env["FLASK_SECRET_KEY"]
-    assert env == {
-        f"FLASK_{k.upper()}": v if isinstance(v, str) else json.dumps(v)
-        for k, v in flask_config.items()
-    }
+    expected_env = {}
+    for config_key, config_value in app_config.items():
+        if isinstance(config_value, dict):
+            for secret_key, secret_value in config_value.items():
+                expected_env[
+                    f"FLASK_{config_key.replace('-', '_').upper()}_{secret_key.replace('-', '_').upper()}"
+                ] = secret_value
+        else:
+            expected_env[f"FLASK_{config_key.replace('-', '_').upper()}"] = (
+                config_value if isinstance(config_value, str) else json.dumps(config_value)
+            )
+    expected_env.update(
+        {
+            f"FLASK_{k.upper()}": v if isinstance(v, str) else json.dumps(v)
+            for k, v in flask_config.items()
+        }
+    )
+    assert env == expected_env
 
 
 HTTP_PROXY_TEST_PARAMS = [

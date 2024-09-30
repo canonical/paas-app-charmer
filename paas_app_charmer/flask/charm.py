@@ -6,14 +6,15 @@ import logging
 import pathlib
 
 import ops
-from pydantic import BaseModel, Extra, Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
 from paas_app_charmer._gunicorn.charm import GunicornBase
+from paas_app_charmer.framework import FrameworkConfig
 
 logger = logging.getLogger(__name__)
 
 
-class FlaskConfig(BaseModel, extra=Extra.ignore):
+class FlaskConfig(FrameworkConfig):
     """Represent Flask builtin configuration values.
 
     Attrs:
@@ -28,6 +29,7 @@ class FlaskConfig(BaseModel, extra=Extra.ignore):
         session_cookie_secure: set the secure attribute in the Flask application cookies.
         preferred_url_scheme: use this scheme for generating external URLs when not in a request
             context in the Flask application.
+        model_config: Pydantic model configuration.
     """
 
     env: str | None = Field(alias="flask-env", default=None, min_length=1)
@@ -43,6 +45,7 @@ class FlaskConfig(BaseModel, extra=Extra.ignore):
     preferred_url_scheme: str | None = Field(
         alias="flask-preferred-url-scheme", default=None, pattern="(?i)^(HTTP|HTTPS)$"
     )
+    model_config = ConfigDict(extra="ignore")
 
     @field_validator("preferred_url_scheme")
     @staticmethod

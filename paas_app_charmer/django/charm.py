@@ -8,14 +8,15 @@ import secrets
 import typing
 
 import ops
-from pydantic import BaseModel, Extra, Field, validator
+from pydantic import ConfigDict, Field, validator
 
 from paas_app_charmer._gunicorn.charm import GunicornBase
+from paas_app_charmer.framework import FrameworkConfig
 
 logger = logging.getLogger(__name__)
 
 
-class DjangoConfig(BaseModel, extra=Extra.ignore):
+class DjangoConfig(FrameworkConfig):
     """Represent Django builtin configuration values.
 
     Attrs:
@@ -23,11 +24,14 @@ class DjangoConfig(BaseModel, extra=Extra.ignore):
         secret_key: a secret key that will be used for security related needs by your
             Django application.
         allowed_hosts: a list of host/domain names that this Django site can serve.
+        model_config: Pydantic model configuration.
     """
 
     debug: bool | None = Field(alias="django-debug", default=None)
     secret_key: str | None = Field(alias="django-secret-key", default=None, min_length=1)
     allowed_hosts: str | None = Field(alias="django-allowed-hosts", default=[])
+
+    model_config = ConfigDict(extra="ignore")
 
     @validator("allowed_hosts")
     @classmethod

@@ -56,7 +56,7 @@ def test_django_config(harness: Harness, config: dict, env: dict) -> None:
     secret_storage.get_secret_key.return_value = "test"
     harness.update_config(config)
     charm_state = CharmState.from_charm(
-        charm=harness.charm,
+        config=harness.charm.config,
         framework="django",
         framework_config=harness.charm.get_framework_config(),
         secret_storage=secret_storage,

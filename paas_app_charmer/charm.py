@@ -4,6 +4,7 @@
 """The base charm class for all application charms."""
 import abc
 import logging
+import typing
 
 import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequiresEvent
@@ -21,7 +22,7 @@ from paas_app_charmer.exceptions import CharmConfigInvalidError
 from paas_app_charmer.observability import Observability
 from paas_app_charmer.rabbitmq import RabbitMQRequires
 from paas_app_charmer.secret_storage import KeySecretStorage
-from paas_app_charmer.utils import build_validation_error_message
+from paas_app_charmer.utils import build_validation_error_message, config_get_with_secret
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +144,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             self._on_secret_storage_relation_changed,
         )
         self.framework.observe(self.on.update_status, self._on_update_status)
+        self.framework.observe(self.on.secret_changed, self._on_secret_changed)
         for database, database_requirer in self._database_requirers.items():
             self.framework.observe(
                 database_requirer.on.database_created,
@@ -173,7 +175,14 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         """
         # Will raise an AttributeError if it the attribute framework_config_class does not exist.
         framework_config_class = self.framework_config_class
-        config = dict(self.config.items())
+        charm_config = {k: config_get_with_secret(self, k) for k in self.config.keys()}
+        config = typing.cast(
+            dict,
+            {
+                k: v.get_content(refresh=True) if isinstance(v, ops.Secret) else v
+                for k, v in charm_config.items()
+            },
+        )
         try:
             return framework_config_class.model_validate(config)
         except ValidationError as exc:
@@ -186,12 +195,13 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         return self.unit.get_container(self._workload_config.container_name)
 
     @block_if_invalid_config
-    def _on_config_changed(self, _event: ops.EventBase) -> None:
-        """Configure the application pebble service layer.
+    def _on_config_changed(self, _: ops.EventBase) -> None:
+        """Configure the application pebble service layer."""
+        self.restart()
 
-        Args:
-            _event: the config-changed event that triggers this callback function.
-        """
+    @block_if_invalid_config
+    def _on_secret_changed(self, _: ops.EventBase) -> None:
+        """Configure the application Pebble service layer."""
         self.restart()
 
     @block_if_invalid_config
@@ -212,12 +222,8 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         self.restart()
 
     @block_if_invalid_config
-    def _on_secret_storage_relation_changed(self, _event: ops.RelationEvent) -> None:
-        """Handle the secret-storage-relation-changed event.
-
-        Args:
-            _event: the action event that triggers this callback.
-        """
+    def _on_secret_storage_relation_changed(self, _: ops.RelationEvent) -> None:
+        """Handle the secret-storage-relation-changed event."""
         self.restart()
 
     def update_app_and_unit_status(self, status: ops.StatusBase) -> None:
@@ -328,9 +334,16 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         saml_relation_data = None
         if self._saml and (saml_data := self._saml.get_relation_data()):
             saml_relation_data = saml_data.to_relation_data()
-
+        charm_config = {k: config_get_with_secret(self, k) for k in self.config.keys()}
+        config = typing.cast(
+            dict,
+            {
+                k: v.get_content(refresh=True) if isinstance(v, ops.Secret) else v
+                for k, v in charm_config.items()
+            },
+        )
         return CharmState.from_charm(
-            charm=self,
+            config=config,
             framework=self._framework_name,
             framework_config=self.get_framework_config(),
             secret_storage=self._secret_storage,
@@ -360,67 +373,67 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
             self.restart()
 
     @block_if_invalid_config
-    def _on_mysql_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
+    def _on_mysql_database_database_created(self, _: DatabaseRequiresEvent) -> None:
         """Handle mysql's database-created event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_mysql_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
+    def _on_mysql_database_endpoints_changed(self, _: DatabaseRequiresEvent) -> None:
         """Handle mysql's endpoints-changed event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_mysql_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
+    def _on_mysql_database_relation_broken(self, _: ops.RelationBrokenEvent) -> None:
         """Handle mysql's relation-broken event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_postgresql_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
+    def _on_postgresql_database_database_created(self, _: DatabaseRequiresEvent) -> None:
         """Handle postgresql's database-created event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_postgresql_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
+    def _on_postgresql_database_endpoints_changed(self, _: DatabaseRequiresEvent) -> None:
         """Handle mysql's endpoints-changed event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_postgresql_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
+    def _on_postgresql_database_relation_broken(self, _: ops.RelationBrokenEvent) -> None:
         """Handle postgresql's relation-broken event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_mongodb_database_database_created(self, _event: DatabaseRequiresEvent) -> None:
+    def _on_mongodb_database_database_created(self, _: DatabaseRequiresEvent) -> None:
         """Handle mongodb's database-created event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_mongodb_database_endpoints_changed(self, _event: DatabaseRequiresEvent) -> None:
+    def _on_mongodb_database_endpoints_changed(self, _: DatabaseRequiresEvent) -> None:
         """Handle mysql's endpoints-changed event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_mongodb_database_relation_broken(self, _event: ops.RelationBrokenEvent) -> None:
+    def _on_mongodb_database_relation_broken(self, _: ops.RelationBrokenEvent) -> None:
         """Handle postgresql's relation-broken event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_redis_relation_updated(self, _event: DatabaseRequiresEvent) -> None:
+    def _on_redis_relation_updated(self, _: DatabaseRequiresEvent) -> None:
         """Handle redis's database-created event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_s3_credential_changed(self, _event: ops.HookEvent) -> None:
+    def _on_s3_credential_changed(self, _: ops.HookEvent) -> None:
         """Handle s3 credentials-changed event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_s3_credential_gone(self, _event: ops.HookEvent) -> None:
+    def _on_s3_credential_gone(self, _: ops.HookEvent) -> None:
         """Handle s3 credentials-gone event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_saml_data_available(self, _event: ops.HookEvent) -> None:
+    def _on_saml_data_available(self, _: ops.HookEvent) -> None:
         """Handle saml data available event."""
         self.restart()
 
@@ -440,16 +453,16 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
         self.restart()
 
     @block_if_invalid_config
-    def _on_rabbitmq_connected(self, _event: ops.HookEvent) -> None:
+    def _on_rabbitmq_connected(self, _: ops.HookEvent) -> None:
         """Handle rabbitmq connected event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_rabbitmq_ready(self, _event: ops.HookEvent) -> None:
+    def _on_rabbitmq_ready(self, _: ops.HookEvent) -> None:
         """Handle rabbitmq ready event."""
         self.restart()
 
     @block_if_invalid_config
-    def _on_rabbitmq_departed(self, _event: ops.HookEvent) -> None:
+    def _on_rabbitmq_departed(self, _: ops.HookEvent) -> None:
         """Handle rabbitmq departed event."""
         self.restart()

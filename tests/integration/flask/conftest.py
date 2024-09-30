@@ -187,6 +187,34 @@ async def update_config(model: Model, request: FixtureRequest, flask_app: Applic
     await model.wait_for_idle(apps=[flask_app.name])
 
 
+@pytest_asyncio.fixture
+async def update_secret_config(model: Model, request: FixtureRequest, flask_app: Application):
+    """Update a secret flask application configuration.
+
+    This fixture must be parameterized with changing charm configurations.
+    """
+    orig_config = {k: v.get("value") for k, v in (await flask_app.get_config()).items()}
+    request_config = {}
+    for secret_config_option, secret_value in request.param.items():
+        secret_id = await model.add_secret(
+            secret_config_option, [f"{k}={v}" for k, v in secret_value.items()]
+        )
+        await model.grant_secret(secret_config_option, flask_app.name)
+        request_config[secret_config_option] = secret_id
+    await flask_app.set_config(request_config)
+    await model.wait_for_idle(apps=[flask_app.name])
+
+    yield request_config
+
+    await flask_app.set_config(
+        {k: v for k, v in orig_config.items() if k in request_config and v is not None}
+    )
+    await flask_app.reset_config([k for k in request_config if orig_config[k] is None])
+    for secret_name in request_config:
+        await model.remove_secret(secret_name)
+    await model.wait_for_idle(apps=[flask_app.name])
+
+
 @pytest.fixture(scope="module", name="localstack_address")
 def localstack_address_fixture(pytestconfig: Config):
     """Provides localstack IP address to be used in the integration test."""

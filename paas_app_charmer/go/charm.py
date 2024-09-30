@@ -7,13 +7,14 @@ import pathlib
 import typing
 
 import ops
-from pydantic import BaseModel, Extra, Field
+from pydantic import ConfigDict, Field
 
 from paas_app_charmer.app import App, WorkloadConfig
 from paas_app_charmer.charm import PaasCharm
+from paas_app_charmer.framework import FrameworkConfig
 
 
-class GoConfig(BaseModel, extra=Extra.ignore):
+class GoConfig(FrameworkConfig):
     """Represent Go builtin configuration values.
 
     Attrs:
@@ -22,12 +23,15 @@ class GoConfig(BaseModel, extra=Extra.ignore):
         metrics_path: path where the metrics are collected
         secret_key: a secret key that will be used for securely signing the session cookie
             and can be used for any other security related needs by your Flask application.
+        model_config: Pydantic model configuration.
     """
 
     port: int = Field(alias="app-port", default=8080, gt=0)
     metrics_port: int | None = Field(alias="metrics-port", default=None, gt=0)
     metrics_path: str | None = Field(alias="metrics-path", default=None, min_length=1)
     secret_key: str | None = Field(alias="app-secret-key", default=None, min_length=1)
+
+    model_config = ConfigDict(extra="ignore")
 
 
 class Charm(PaasCharm):

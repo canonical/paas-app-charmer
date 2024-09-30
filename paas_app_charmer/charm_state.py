@@ -9,7 +9,6 @@ import typing
 from dataclasses import dataclass, field
 from typing import Optional
 
-import ops
 from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from pydantic import BaseModel, Extra, Field, ValidationError, ValidationInfo, field_validator
 
@@ -52,7 +51,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         *,
         framework: str,
         is_secret_storage_ready: bool,
-        app_config: dict[str, int | str | bool] | None = None,
+        app_config: dict[str, int | str | bool | dict[str, str]] | None = None,
         framework_config: dict[str, int | str] | None = None,
         secret_key: str | None = None,
         integrations: "IntegrationsState | None" = None,
@@ -81,7 +80,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
     def from_charm(  # pylint: disable=too-many-arguments
         cls,
         *,
-        charm: ops.CharmBase,
+        config: dict[str, bool | int | float | str | dict[str, str]],
         framework: str,
         framework_config: BaseModel,
         secret_storage: KeySecretStorage,
@@ -95,7 +94,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         """Initialize a new instance of the CharmState class from the associated charm.
 
         Args:
-            charm: The charm instance associated with this state.
+            config: The charm configuration.
             framework: The framework name.
             framework_config: The framework specific configurations.
             secret_storage: The secret storage manager associated with the charm.
@@ -111,7 +110,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         """
         app_config = {
             k.replace("-", "_"): v
-            for k, v in charm.config.items()
+            for k, v in config.items()
             if not any(k.startswith(prefix) for prefix in (f"{framework}-", "webserver-", "app-"))
         }
         app_config = {
@@ -128,7 +127,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         return cls(
             framework=framework,
             framework_config=framework_config.dict(exclude_none=True),
-            app_config=typing.cast(dict[str, str | int | bool], app_config),
+            app_config=typing.cast(dict[str, str | int | bool | dict[str, str]], app_config),
             secret_key=(
                 secret_storage.get_secret_key() if secret_storage.is_initialized else None
             ),
@@ -163,7 +162,7 @@ class CharmState:  # pylint: disable=too-many-instance-attributes
         return self._framework_config
 
     @property
-    def app_config(self) -> dict[str, str | int | bool]:
+    def app_config(self) -> dict[str, str | int | bool | dict[str, str]]:
         """Get the value of user-defined application configurations.
 
         Returns:
