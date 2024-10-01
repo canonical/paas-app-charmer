@@ -25,9 +25,10 @@ class FrameworkConfig(pydantic.BaseModel):
             ValueError: if the *-secret-key-id is invalid.
             NotImplementedError: ill-formed subclasses.
         """
-        secret_key_field = "secret_key"
+        # Bandit thinks the following are secrets which they are not
+        secret_key_field = "secret_key"  # nosec B105
         if secret_key_field not in cls.model_fields:
-            secret_key_field = "app_secret_key"
+            secret_key_field = "app_secret_key"  # nosec B105
         secret_key_config_name = cls.model_fields[secret_key_field].alias
         if not secret_key_config_name:
             raise NotImplementedError("framework configuration secret_key field has no alias")
