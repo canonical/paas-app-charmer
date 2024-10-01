@@ -57,46 +57,47 @@ app.config.from_prefixed_env()
 
 broker_url = os.environ.get("REDIS_DB_CONNECT_STRING")
 # Configure Celery only if Redis is configured
-if broker_url:
-    celery_app = celery_init_app(app, broker_url)
-    redis_client = redis.Redis.from_url(broker_url)
+celery_app = celery_init_app(app, broker_url)
+redis_client = redis.Redis.from_url(broker_url) if broker_url else None
 
-    @celery_app.on_after_configure.connect
-    def setup_periodic_tasks(sender, **kwargs):
-        """Set up periodic tasks in the scheduler."""
-        try:
-            # This will only have an effect in the beat scheduler.
-            sender.add_periodic_task(0.5, scheduled_task.s(hostname()), name="every 0.5s")
-        except NameError as e:
-            logging.exception("Failed to configure the periodic task")
 
-    @celery_app.task
-    def scheduled_task(scheduler_hostname):
-        """Function to run a schedule task in a worker.
+@celery_app.on_after_configure.connect
+def setup_periodic_tasks(sender, **kwargs):
+    """Set up periodic tasks in the scheduler."""
+    try:
+        # This will only have an effect in the beat scheduler.
+        sender.add_periodic_task(0.5, scheduled_task.s(hostname()), name="every 0.5s")
+    except NameError as e:
+        logging.exception("Failed to configure the periodic task")
 
-        The worker that will run this task will add the scheduler hostname argument
-        to the "schedulers" set in Redis, and the worker's hostname to the "workers"
-        set in Redis.
-        """
-        worker_hostname = hostname()
-        logging.info(
-            "scheduler host received %s in worker host %s", scheduler_hostname, worker_hostname
-        )
-        redis_client.sadd("schedulers", scheduler_hostname)
-        redis_client.sadd("workers", worker_hostname)
-        logging.info("schedulers: %s", redis_client.smembers("schedulers"))
-        logging.info("workers: %s", redis_client.smembers("workers"))
-        # The goal is to have all workers busy in all processes.
-        # For that it maybe necessary to exhaust all workers, but not to get the pending tasks
-        # too big, so all schedulers can manage to run their scheduled tasks.
-        # Celery prefetches tasks, and if they cannot be run they are put in reserved.
-        # If all processes have tasks in reserved, this task will finish immediately to not make
-        # queues any longer.
-        inspect_obj = celery_app.control.inspect()
-        reserved_sizes = [len(tasks) for tasks in inspect_obj.reserved().values()]
-        logging.info("number of reserved tasks %s", reserved_sizes)
-        delay = 0 if min(reserved_sizes) > 0 else 5
-        time.sleep(delay)
+
+@celery_app.task
+def scheduled_task(scheduler_hostname):
+    """Function to run a schedule task in a worker.
+
+    The worker that will run this task will add the scheduler hostname argument
+    to the "schedulers" set in Redis, and the worker's hostname to the "workers"
+    set in Redis.
+    """
+    worker_hostname = hostname()
+    logging.info(
+        "scheduler host received %s in worker host %s", scheduler_hostname, worker_hostname
+    )
+    redis_client.sadd("schedulers", scheduler_hostname)
+    redis_client.sadd("workers", worker_hostname)
+    logging.info("schedulers: %s", redis_client.smembers("schedulers"))
+    logging.info("workers: %s", redis_client.smembers("workers"))
+    # The goal is to have all workers busy in all processes.
+    # For that it maybe necessary to exhaust all workers, but not to get the pending tasks
+    # too big, so all schedulers can manage to run their scheduled tasks.
+    # Celery prefetches tasks, and if they cannot be run they are put in reserved.
+    # If all processes have tasks in reserved, this task will finish immediately to not make
+    # queues any longer.
+    inspect_obj = celery_app.control.inspect()
+    reserved_sizes = [len(tasks) for tasks in inspect_obj.reserved().values()]
+    logging.info("number of reserved tasks %s", reserved_sizes)
+    delay = 0 if min(reserved_sizes) > 0 else 5
+    time.sleep(delay)
 
 
 def get_mysql_database():
