@@ -59,11 +59,11 @@ func (h mainHandler) servePostgresql(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	metricsPort, found := os.LookupEnv("APP_METRICS_PORT")
+	metricsPort, found := os.LookupEnv("METRICS_PORT")
 	if !found {
 		metricsPort = "8080"
 	}
-	metricsPath, found := os.LookupEnv("APP_METRICS_PATH")
+	metricsPath, found := os.LookupEnv("METRICS_PATH")
 	if !found {
 		metricsPath = "/metrics"
 	}
@@ -77,7 +77,7 @@ func main() {
 			Name: "request_count",
 			Help: "No of request handled",
 		})
-	postgresqlURL := os.Getenv("APP_POSTGRESQL_DB_CONNECT_STRING")
+	postgresqlURL := os.Getenv("POSTGRESQL_DB_CONNECT_STRING")
 
 	mux := http.NewServeMux()
 	mainHandler := mainHandler{
