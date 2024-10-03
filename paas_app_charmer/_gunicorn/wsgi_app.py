@@ -43,7 +43,6 @@ class WsgiApp(App):
             database_migration=database_migration,
             configuration_prefix=f"{workload_config.framework.upper()}_",
             framework_config_prefix=f"{workload_config.framework.upper()}_",
-            integrations_prefix="",
         )
         self._webserver = webserver
 
