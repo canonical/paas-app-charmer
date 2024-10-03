@@ -9,7 +9,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 app = FastAPI()
 
-engine = create_engine(os.environ["APP_POSTGRESQL_DB_CONNECT_STRING"], echo=True)
+engine = create_engine(os.environ["POSTGRESQL_DB_CONNECT_STRING"], echo=True)
 
 Session = scoped_session(sessionmaker(bind=engine))
 
