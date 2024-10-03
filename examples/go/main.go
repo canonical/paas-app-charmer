@@ -77,7 +77,7 @@ func main() {
 			Name: "request_count",
 			Help: "No of request handled",
 		})
-	postgresqlURL := os.Getenv("APP_POSTGRESQL_DB_CONNECT_STRING")
+	postgresqlURL := os.Getenv("POSTGRESQL_DB_CONNECT_STRING")
 
 	mux := http.NewServeMux()
 	mainHandler := mainHandler{

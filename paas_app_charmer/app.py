@@ -79,7 +79,7 @@ class App:
         database_migration: DatabaseMigration,
         framework_config_prefix: str = "APP_",
         configuration_prefix: str = "APP_",
-        integrations_prefix: str = "APP_",
+        integrations_prefix: str = "",
     ):
         """Construct the App instance.
 
