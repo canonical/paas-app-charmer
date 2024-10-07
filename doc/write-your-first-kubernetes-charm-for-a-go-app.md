@@ -494,7 +494,7 @@ func helloWorldHandler(w http.ResponseWriter, req *http.Request) {
         postgresqlURL := os.Getenv("POSTGRESQL_DB_CONNECT_STRING")
         db, err := sql.Open("pgx", postgresqlURL)
         if err != nil {
-                log.Printf("An error occured while connecting to postgresql: %v", err)
+                log.Printf("An error occurred while connecting to postgresql: %v", err)
                 return
         }
         defer db.Close()
@@ -503,7 +503,7 @@ func helloWorldHandler(w http.ResponseWriter, req *http.Request) {
         timestamp := time.Now()
         _, err = db.Exec("INSERT into visitors (timestamp, user_agent) VALUES ($1, $2)", timestamp, ua)
         if err != nil {
-                log.Printf("An error occured while executing query: %v", err)
+                log.Printf("An error occurred while executing query: %v", err)
                 return
         }
 
@@ -527,7 +527,7 @@ func visitorsHandler(w http.ResponseWriter, req *http.Request) {
         var numVisitors int
         err = db.QueryRow("SELECT count(*) from visitors").Scan(&numVisitors)
         if err != nil {
-                log.Printf("An error occured while executing query: %v", err)
+                log.Printf("An error occurred while executing query: %v", err)
                 return
         }
         fmt.Fprintf(w, "Number of users in Postgresql %d\n", numVisitors)
