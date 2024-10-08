@@ -580,13 +580,9 @@ This step of the tutorial only works for hosts with the `amd64` architecture. Fo
 As a final step, let's expose the application using ingress. Deploy the `nginx-ingress-integrator` charm and integrate it with the Go app:
 
 ```bash
-juju deploy nginx-ingress-integrator
+juju deploy nginx-ingress-integrator --trust
 juju integrate nginx-ingress-integrator go-hello-world
 ```
-
-[note type=information status]
-RBAC is enabled in the `charm-dev` Multipass blueprint. You will need to run `juju trust nginx-ingress-integrator --scope cluster` if you're using the `charm-dev` blueprint.
-[/note]
 
 The hostname of the app needs to be defined so that it is accessible via the ingress. We will also set the default route to be the root endpoint:
 
