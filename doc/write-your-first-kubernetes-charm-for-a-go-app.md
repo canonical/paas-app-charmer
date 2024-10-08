@@ -180,7 +180,7 @@ func helloWorldHandler(w http.ResponseWriter, req *http.Request) {
 func main() {
 	log.Printf("starting hello world application")
 	http.HandleFunc("/", helloWorldHandler)
-	http.ListenAndServe(":8000", nil)
+	http.ListenAndServe(":8080", nil)
 }
 ```
 
@@ -208,7 +208,7 @@ Now that we have a binary compiled, let's run the go application to verify that 
 Test the Goapplication by using `curl` to send a request to the root endpoint. You may need a new terminal for this; if you are using Multipass use `multipass shell charm-dev` to get another terminal:
 
 ```bash
-curl localhost:8000
+curl localhost:8080
 ```
 
 The Go application should respond with `Hello, world!`. The Go application looks good, so we can stop for now using <kbd>Ctrl</kbd> + <kbd>c</kbd>.
@@ -336,7 +336,7 @@ go-hello-world/0*  active    idle   10.1.157.79
 Test the deployment using `curl` to send a request to the root endpoint. The IP address is the Address listed in the Unit section of the `juju status` output (e.g., `10.1.157.79` in the sample output above):
 
 ```bash
-$ curl 10.1.157.79:8000
+$ curl 10.1.157.79:8080
 Hello, world!
 ```
 
@@ -366,7 +366,7 @@ func helloWorldHandler(w http.ResponseWriter, req *http.Request) {
 func main() {
 	log.Printf("starting hello world application")
 	http.HandleFunc("/", helloWorldHandler)
-	http.ListenAndServe(":8000", nil)
+	http.ListenAndServe(":8080", nil)
 }
 ```
 
@@ -404,13 +404,13 @@ Wait for `juju status` to show that the App is `active` again. Verify that the n
 The `grep` command extracts a portion of the configuration to make it easier to check whether the configuration option has been added.
 [/note]
 
-Get the updated IP address shown in the Unit section of `juju status`. Using `curl 10.1.157.81:8000` shows that the response is still `Hello, world!` as expected. The greeting can be changed using Juju:
+Get the updated IP address shown in the Unit section of `juju status`. Using `curl 10.1.157.81:8080` shows that the response is still `Hello, world!` as expected. The greeting can be changed using Juju:
 
 ```bash
 juju config go-hello-world greeting='Hi!'
 ```
 
-`curl 10.1.157.81:8000` now returns the updated `Hi!` greeting.
+`curl 10.1.157.81:8080` now returns the updated `Hi!` greeting.
 
 [note type=information status]
 It might take a short time for the configuration to take effect.
@@ -532,7 +532,7 @@ func main() {
         log.Printf("starting hello world application")
         http.HandleFunc("/", helloWorldHandler)
         http.HandleFunc("/visitors", visitorsHandler)
-        http.ListenAndServe(":8000", nil)
+        http.ListenAndServe(":8080", nil)
 }
 ```
 
@@ -569,7 +569,7 @@ juju deploy postgresql-k8s --trust
 juju integrate go-hello-world postgresql-k8s
 ```
 
-Wait for `juju status` to show that the App is `active` again. Get the updated IP address shown in the Unit section of `juju status`. `curl 10.1.87.215:8000` should still return the `Hi!` greeting. To check the total visitors, use `curl 10.1.87.215:8000/visitors` which should return `1` after the previous request to the root endpoint and should be incremented each time the root endpoint is requested. If we perform another request to `curl 10.1.87.215:8000`, `curl 10.1.87.215:8000/visitors` will return `2`.
+Wait for `juju status` to show that the App is `active` again. Get the updated IP address shown in the Unit section of `juju status`. `curl 10.1.87.215:8080` should still return the `Hi!` greeting. To check the total visitors, use `curl 10.1.87.215:8080/visitors` which should return `1` after the previous request to the root endpoint and should be incremented each time the root endpoint is requested. If we perform another request to `curl 10.1.87.215:8080`, `curl 10.1.87.215:8080/visitors` will return `2`.
 
 <a href="#heading--expose-the-app-using-ingress"><h2 id="heading--expose-the-app-using-ingress">Expose the app using ingress</h2></a>
 
@@ -589,6 +589,11 @@ The hostname of the app needs to be defined so that it is accessible via the ing
 ```bash
 juju config nginx-ingress-integrator service-hostname=go-hello-world path-routes=/
 ```
+
+[note type=information status]
+By default, the port for the Go application should be 8080. If you want to change the default port, it can be done
+with the configuration option `app-port` that will be exposed as `APP_PORT` to the Go application.
+[/note]
 
 Monitor `juju status` until everything has a status of `active`. Use `curl http://go-hello-world  --resolve go-hello-world:80:127.0.0.1` to send a request via the ingress. It should still be returning the `Hi!` greeting.
 
