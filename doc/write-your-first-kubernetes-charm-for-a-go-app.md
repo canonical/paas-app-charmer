@@ -114,11 +114,6 @@ In order to create the charm, you'll need to install Charmcraft:
 sudo snap install charmcraft --channel latest/edge --classic
 ```
 
-[note type=information status]
-This tutorial requires version `3.0.0` or later of Charmcraft. Check the version of Charmcraft using `charmcraft --version` If you have an older version of Charmcraft installed, use `sudo snap refresh charmcraft --channel latest/edge` to get the latest edge version of Charmcraft.
-[/note]
-
-
 MicroK8s is required to deploy the Go application on Kubernetes. Install MicroK8s:
 
 ```bash
