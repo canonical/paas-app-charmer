@@ -608,8 +608,7 @@ We've reached the end of this tutorial. We have created a Go application, deploy
 If you'd like to reset your working environment, you can run the following in the root directory for the tutorial:
 
 ```bash
-# exit and delete the virtual environment
-deactivate
+cd ..
 rm -rf charm
 # delete all the files created during the tutorial
 rm go-hello-world_0.1_amd64.rock go-hello-world_0.2_amd64.rock go-hello-world_0.3_amd64.rock rockcraft.yaml main.go migrate.sh go-hello-world go.mod go.sum
