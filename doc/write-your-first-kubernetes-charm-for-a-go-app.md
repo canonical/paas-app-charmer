@@ -98,7 +98,7 @@ multipass shell charm-dev
 In order to create the rock, you'll need to install Rockcraft:
 
 ```bash
-sudo snap install rockcraft --classic
+sudo snap install rockcraft --channel latest/edge --classic
 ```
 
 `LXD` will be required for building the rock. Make sure it is installed and initialised:
@@ -148,7 +148,7 @@ juju bootstrap microk8s dev-controller
 <a href="#heading--create-directory"><h3 id="heading--create-directory">Create the tutorial directory</h3></a>
 
 [note type=information status]
-This tutorial requires version `3.0.0` or later of Charmcraft. Check the version of Charmcraft using `charmcraft --version` If you have an older version of Charmcraft installed, use `sudo snap refresh charmcraft --channel latest/edge` to get the latest edge version of Charmcraft.
+This tutorial requires version `3.2.0` or later of Charmcraft. Check the version of Charmcraft using `charmcraft --version` If you have an older version of Charmcraft installed, use `sudo snap refresh charmcraft --channel latest/edge` to get the latest edge version of Charmcraft.
 [/note]
 
 [note type=information status]
