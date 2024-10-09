@@ -3,6 +3,7 @@
 
 """Unit tests for Flask charm database integration."""
 import pathlib
+import unittest.mock
 
 import ops
 import pytest
@@ -159,3 +160,41 @@ def test_database_migration_status(harness: Harness):
         command=["migrate"], environment={}, working_dir=pathlib.Path("/flask/app")
     )
     assert database_migration.get_status() == DatabaseMigrationStatus.COMPLETED
+
+
+def test_migrations_run_second_time_optional_integration_integrated(harness: Harness):
+    """
+    arrange: set up a active charm that has run the migration successfully.
+    act: integrate with a new optional integration.
+    assert: the migration command should be called again.
+    """
+    container = harness.model.unit.get_container(FLASK_CONTAINER_NAME)
+    container.add_layer("a_layer", DEFAULT_LAYER)
+    root = harness.get_filesystem_root(container)
+    (root / "flask/app/migrate.sh").touch()
+    first_exec_handler = unittest.mock.MagicMock()
+    first_exec_handler.return_value = None
+    harness.handle_exec(
+        container, ["bash", "-eo", "pipefail", "migrate.sh"], handler=first_exec_handler
+    )
+    harness.begin_with_initial_hooks()
+    # First migration was called.
+    first_exec_handler.assert_called_once()
+    assert harness.model.unit.status == ops.ActiveStatus()
+
+    second_exec_handler = unittest.mock.MagicMock()
+    second_exec_handler.return_value = None
+    harness.handle_exec(
+        container, ["bash", "-eo", "pipefail", "migrate.sh"], handler=second_exec_handler
+    )
+    postgresql_relation_data = {
+        "database": "test-database",
+        "endpoints": "test-postgresql:5432,test-postgresql-2:5432",
+        "password": "test-password",
+        "username": "test-username",
+    }
+    harness.add_relation("postgresql", "postgresql-k8s", app_data=postgresql_relation_data)
+
+    # The second migration was called.
+    second_exec_handler.assert_called_once()
+    assert harness.model.unit.status == ops.ActiveStatus()
