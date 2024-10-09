@@ -172,17 +172,21 @@ def test_migrations_run_second_time_optional_integration_integrated(harness: Har
     container.add_layer("a_layer", DEFAULT_LAYER)
     root = harness.get_filesystem_root(container)
     (root / "flask/app/migrate.sh").touch()
-    exec_handler = unittest.mock.MagicMock()
-    exec_handler.return_value = None
-    harness.handle_exec(container, ["bash", "-eo", "pipefail", "migrate.sh"], handler=exec_handler)
+    first_exec_handler = unittest.mock.MagicMock()
+    first_exec_handler.return_value = None
+    harness.handle_exec(
+        container, ["bash", "-eo", "pipefail", "migrate.sh"], handler=first_exec_handler
+    )
     harness.begin_with_initial_hooks()
     # First migration was called.
-    exec_handler.assert_called_once()
+    first_exec_handler.assert_called_once()
     assert harness.model.unit.status == ops.ActiveStatus()
 
-    exec_handler = unittest.mock.MagicMock()
-    exec_handler.return_value = None
-    harness.handle_exec(container, ["bash", "-eo", "pipefail", "migrate.sh"], handler=exec_handler)
+    second_exec_handler = unittest.mock.MagicMock()
+    second_exec_handler.return_value = None
+    harness.handle_exec(
+        container, ["bash", "-eo", "pipefail", "migrate.sh"], handler=second_exec_handler
+    )
     postgresql_relation_data = {
         "database": "test-database",
         "endpoints": "test-postgresql:5432,test-postgresql-2:5432",
@@ -192,5 +196,5 @@ def test_migrations_run_second_time_optional_integration_integrated(harness: Har
     harness.add_relation("postgresql", "postgresql-k8s", app_data=postgresql_relation_data)
 
     # The second migration was called.
-    exec_handler.assert_called_once()
+    second_exec_handler.assert_called_once()
     assert harness.model.unit.status == ops.ActiveStatus()
