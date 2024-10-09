@@ -299,8 +299,15 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
                 missing_integrations.append("rabbitmq")
         return missing_integrations
 
-    def restart(self) -> None:
-        """Restart or start the service if not started with the latest configuration."""
+    def restart(self, rerun_migrations: bool = False) -> None:
+        """Restart or start the service if not started with the latest configuration.
+
+        Args:
+            rerun_migrations: whether it is necessary to run the migrations again.
+        """
+        if rerun_migrations:
+            self._database_migration.set_status_to_pending()
+
         if not self.is_ready():
             return
         try:
@@ -375,12 +382,12 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
     @block_if_invalid_config
     def _on_mysql_database_database_created(self, _: DatabaseRequiresEvent) -> None:
         """Handle mysql's database-created event."""
-        self.restart()
+        self.restart(rerun_migrations=True)
 
     @block_if_invalid_config
     def _on_mysql_database_endpoints_changed(self, _: DatabaseRequiresEvent) -> None:
         """Handle mysql's endpoints-changed event."""
-        self.restart()
+        self.restart(rerun_migrations=True)
 
     @block_if_invalid_config
     def _on_mysql_database_relation_broken(self, _: ops.RelationBrokenEvent) -> None:
@@ -390,12 +397,12 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
     @block_if_invalid_config
     def _on_postgresql_database_database_created(self, _: DatabaseRequiresEvent) -> None:
         """Handle postgresql's database-created event."""
-        self.restart()
+        self.restart(rerun_migrations=True)
 
     @block_if_invalid_config
     def _on_postgresql_database_endpoints_changed(self, _: DatabaseRequiresEvent) -> None:
         """Handle mysql's endpoints-changed event."""
-        self.restart()
+        self.restart(rerun_migrations=True)
 
     @block_if_invalid_config
     def _on_postgresql_database_relation_broken(self, _: ops.RelationBrokenEvent) -> None:
@@ -405,12 +412,12 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
     @block_if_invalid_config
     def _on_mongodb_database_database_created(self, _: DatabaseRequiresEvent) -> None:
         """Handle mongodb's database-created event."""
-        self.restart()
+        self.restart(rerun_migrations=True)
 
     @block_if_invalid_config
     def _on_mongodb_database_endpoints_changed(self, _: DatabaseRequiresEvent) -> None:
         """Handle mysql's endpoints-changed event."""
-        self.restart()
+        self.restart(rerun_migrations=True)
 
     @block_if_invalid_config
     def _on_mongodb_database_relation_broken(self, _: ops.RelationBrokenEvent) -> None:
@@ -425,7 +432,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
     @block_if_invalid_config
     def _on_s3_credential_changed(self, _: ops.HookEvent) -> None:
         """Handle s3 credentials-changed event."""
-        self.restart()
+        self.restart(rerun_migrations=True)
 
     @block_if_invalid_config
     def _on_s3_credential_gone(self, _: ops.HookEvent) -> None:
@@ -435,7 +442,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
     @block_if_invalid_config
     def _on_saml_data_available(self, _: ops.HookEvent) -> None:
         """Handle saml data available event."""
-        self.restart()
+        self.restart(rerun_migrations=True)
 
     @block_if_invalid_config
     def _on_ingress_revoked(self, _: ops.HookEvent) -> None:
@@ -460,7 +467,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
     @block_if_invalid_config
     def _on_rabbitmq_ready(self, _: ops.HookEvent) -> None:
         """Handle rabbitmq ready event."""
-        self.restart()
+        self.restart(rerun_migrations=True)
 
     @block_if_invalid_config
     def _on_rabbitmq_departed(self, _: ops.HookEvent) -> None:
