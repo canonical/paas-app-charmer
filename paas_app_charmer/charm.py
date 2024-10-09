@@ -427,7 +427,7 @@ class PaasCharm(abc.ABC, ops.CharmBase):  # pylint: disable=too-many-instance-at
     @block_if_invalid_config
     def _on_redis_relation_updated(self, _: DatabaseRequiresEvent) -> None:
         """Handle redis's database-created event."""
-        self.restart()
+        self.restart(rerun_migrations=True)
 
     @block_if_invalid_config
     def _on_s3_credential_changed(self, _: ops.HookEvent) -> None:
