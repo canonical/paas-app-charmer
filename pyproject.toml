@@ -10,7 +10,7 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "paas-charm<=2.0.0"
+    "paas-charm<2"
 ]
 classifiers = [
     "Development Status :: 7 - Inactive",
